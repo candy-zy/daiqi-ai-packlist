@@ -15,7 +15,7 @@ type PackItem = {
   category: CategoryId;
   scope: Scope;
   notes: Note[];
-  owner?: Member;
+  bringers: Member[];
   checkedBy: Partial<Record<Member, boolean>>;
   aiReason?: string;
 };
@@ -82,6 +82,19 @@ const notesByItem: Record<string, [Author, string][]> = {
 
 const sharedItems = new Set(["马桶垫", "消毒湿巾", "小包纸巾？", "喷雾", "洗面奶", "卫生纸", "洗脸巾", "卸妆", "防晒", "牙膏牙刷", "药", "伞", "洗发水", "护发素", "护发精油", "拍立得", "拍立得相纸", "冰凉贴", "清凉喷雾", "香水小样", "充电宝", "应援棒电池", "大王扇"]);
 
+const bringersByItem: Partial<Record<string, Member[]>> = {
+  喷雾: ["我", "小雨"],
+  洗面奶: ["我"],
+  卫生纸: ["小雨"],
+  洗脸巾: ["小雨"],
+  卸妆: ["我"],
+  防晒: ["我"],
+  牙膏牙刷: ["我", "小雨"],
+  药: ["小雨"],
+  护发精油: ["小雨"],
+  香水小样: ["我"],
+};
+
 let itemSequence = 1;
 const seedItems: PackItem[] = categories.flatMap((category) =>
   itemGroups[category.id].map((name) => ({
@@ -90,14 +103,15 @@ const seedItems: PackItem[] = categories.flatMap((category) =>
     category: category.id,
     scope: sharedItems.has(name) ? "共享" as const : "各自" as const,
     notes: (notesByItem[name] ?? []).map(([author, text], index) => ({ id: itemSequence * 100 + index, author, text })),
+    bringers: bringersByItem[name] ?? [],
     checkedBy: {},
   })),
 );
 
 const aiItems: PackItem[] = [
-  { id: 9001, name: "蓝色围巾", category: "clothes", scope: "各自", notes: [{ id: 9101, author: "AI", text: "北海道雪地留白多，蓝色围巾更出片。" }], checkedBy: {}, aiReason: "热门出片" },
-  { id: 9002, name: "防滑鞋套", category: "life", scope: "各自", notes: [{ id: 9102, author: "AI", text: "冬季路面可能结冰，建议放进随身包。" }], checkedBy: {}, aiReason: "目的地特点" },
-  { id: 9003, name: "暖宝宝", category: "life", scope: "共享", notes: [{ id: 9103, author: "AI", text: "一人带整包，同行人按需分用。" }], checkedBy: {}, aiReason: "避免重复" },
+  { id: 9001, name: "蓝色围巾", category: "clothes", scope: "各自", notes: [{ id: 9101, author: "AI", text: "北海道雪地留白多，蓝色围巾更出片。" }], bringers: [], checkedBy: {}, aiReason: "热门出片" },
+  { id: 9002, name: "防滑鞋套", category: "life", scope: "各自", notes: [{ id: 9102, author: "AI", text: "冬季路面可能结冰，建议放进随身包。" }], bringers: [], checkedBy: {}, aiReason: "目的地特点" },
+  { id: 9003, name: "暖宝宝", category: "life", scope: "共享", notes: [{ id: 9103, author: "AI", text: "可以多人分别带，不限制唯一负责人。" }], bringers: [], checkedBy: {}, aiReason: "避免遗漏" },
 ];
 
 const defaultOpenId = seedItems.find((item) => item.name === "防晒")?.id ?? 1;
@@ -128,11 +142,15 @@ export default function Home() {
   function sendNote(itemId: number, quickText?: string) {
     const text = (quickText ?? drafts[itemId] ?? "").trim();
     if (!text) return;
-    setItems((current) => current.map((item) => item.id === itemId ? {
-      ...item,
-      owner: /(我来带|我带|交给我)/.test(text) ? currentMember : item.owner,
-      notes: [...item.notes, { id: Date.now(), author: currentMember, text }],
-    } : item));
+    setItems((current) => current.map((item) => {
+      if (item.id !== itemId) return item;
+      const optsIn = /(我来带|我也带|我会带|我带\s*\d*|交给我)/.test(text);
+      const optsOut = /(我不带|不带了)/.test(text);
+      let bringers = item.bringers;
+      if (item.scope === "共享" && optsOut) bringers = bringers.filter((member) => member !== currentMember);
+      else if (item.scope === "共享" && optsIn && !bringers.includes(currentMember)) bringers = [...bringers, currentMember];
+      return { ...item, bringers, notes: [...item.notes, { id: Date.now(), author: currentMember, text }] };
+    }));
     setDrafts((current) => ({ ...current, [itemId]: "" }));
     notify("已写在这件物品下面");
   }
@@ -157,7 +175,7 @@ export default function Home() {
     const name = newItem.trim();
     if (!name) return;
     const id = Date.now();
-    setItems((current) => [...current, { id, name, category: newCategory, scope: newScope, notes: [], checkedBy: {} }]);
+    setItems((current) => [...current, { id, name, category: newCategory, scope: newScope, notes: [], bringers: [], checkedBy: {} }]);
     setFilter(newCategory);
     setOpenId(id);
     setNewItem("");
@@ -169,6 +187,7 @@ export default function Home() {
     const expanded = openId === item.id;
     const preview = item.notes.at(-1);
     const checked = Boolean(item.checkedBy[currentMember]);
+    const isBringing = item.bringers.includes(currentMember);
 
     return (
       <article className={`item-row ${expanded ? "expanded" : ""} ${checked ? "checked" : ""}`} key={item.id}>
@@ -184,13 +203,22 @@ export default function Home() {
           <span className="note-preview">
             {preview ? <><i className={preview.author === "AI" ? "ai-avatar" : members.find((member) => member.name === preview.author)?.color}>{preview.author === "AI" ? "AI" : members.find((member) => member.name === preview.author)?.short}</i><em>{preview.text}</em></> : <em className="empty-note">还没人写，点开说一句</em>}
           </span>
-          {item.notes.length > 0 && <span className="note-count">{item.notes.length}</span>}
+          {item.scope === "共享" && item.bringers.length > 0
+            ? <span className="bringer-count">{item.bringers.length}人带</span>
+            : item.notes.length > 0 && <span className="note-count">{item.notes.length}</span>}
           <span className="row-arrow">{expanded ? "⌃" : "⌄"}</span>
         </button>
 
         {expanded && (
           <div className="inline-thread">
             <div className="thread-label"><span>这一行的讨论</span><small>{item.scope === "共享" ? "谁带、带多少、用谁的，都写这里" : "每个人写自己的数量或备注"}</small></div>
+            {item.scope === "共享" && <div className="bringer-board">
+              <small>选择会带</small>
+              {item.bringers.length ? <div>{item.bringers.map((name) => {
+                const member = members.find((entry) => entry.name === name);
+                return <span className={member?.color} key={name}><i>{member?.short}</i>{name}会带</span>;
+              })}</div> : <p>暂时没人选择，但可以继续讨论</p>}
+            </div>}
             {item.notes.length ? <div className="note-stack">
               {item.notes.map((note) => {
                 const member = members.find((entry) => entry.name === note.author);
@@ -203,8 +231,8 @@ export default function Home() {
 
             {phase === "discuss" ? <>
               <div className="quick-replies">
-                <button onClick={() => sendNote(item.id, "我来带")}>＋ 我来带</button>
-                <button onClick={() => sendNote(item.id, "我不带，用你们的")}>我不带</button>
+                {item.scope === "共享" && <button className={isBringing ? "selected" : ""} onClick={() => !isBringing && sendNote(item.id, item.bringers.length ? "我也带" : "我来带")} disabled={isBringing}>{isBringing ? "✓ 我会带" : item.bringers.length ? "＋ 我也带" : "＋ 我来带"}</button>}
+                {item.scope === "共享" && <button onClick={() => sendNote(item.id, "我不带，用你们的")}>我不带</button>}
                 <button onClick={() => setDrafts((current) => ({ ...current, [item.id]: "我带 1 个" }))}>写数量</button>
               </div>
               <div className="row-composer">
@@ -293,7 +321,7 @@ export default function Home() {
             <div className="form-label">分类</div>
             <div className="sheet-categories">{categories.map((category) => <button key={category.id} className={newCategory === category.id ? "active" : ""} onClick={() => setNewCategory(category.id)}>{category.name}</button>)}</div>
             <div className="scope-picker">
-              <button className={newScope === "共享" ? "active" : ""} onClick={() => setNewScope("共享")}><b>共享物品</b><small>一个人带，大家用</small></button>
+              <button className={newScope === "共享" ? "active" : ""} onClick={() => setNewScope("共享")}><b>共享物品</b><small>可以多人分别带</small></button>
               <button className={newScope === "各自" ? "active" : ""} onClick={() => setNewScope("各自")}><b>各自物品</b><small>每个人分别准备</small></button>
             </div>
             <button className="sheet-submit" onClick={addCustomItem}>加入清单</button>
