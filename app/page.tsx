@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify";
 type ListFilter = "all" | "mine" | "unassigned";
-type Category = "一次性物品" | "护肤品" | "化妆品" | "生活用品" | "服饰" | "必需品" | "其他";
+type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "出行日用杂物类" | "零食饮料类";
 
 type PackItem = {
   id: number;
@@ -41,40 +41,69 @@ const members: { name: Member; short: string; profile: string; className: string
 ];
 
 const categories: { name: Category; icon: string; note: string }[] = [
-  { name: "一次性物品", icon: "▤", note: "用完即可丢弃" },
-  { name: "护肤品", icon: "◉", note: "水乳、防晒与护理" },
-  { name: "化妆品", icon: "✦", note: "底妆、眼妆与唇妆" },
-  { name: "生活用品", icon: "◇", note: "洗漱与日常使用" },
-  { name: "服饰", icon: "♨", note: "衣物、鞋帽与配饰" },
-  { name: "必需品", icon: "!", note: "证件与随身必带" },
-  { name: "其他", icon: "＋", note: "拍摄、小卡与物料" },
+  { name: "证件与钱财类", icon: "▣", note: "证件、票务、订单与支付" },
+  { name: "电子数码类", icon: "⌁", note: "手机、充电与拍摄设备" },
+  { name: "衣物鞋帽类", icon: "♨", note: "换洗衣物、鞋帽与配饰" },
+  { name: "洗护化妆类", icon: "✦", note: "洗漱、护肤与化妆" },
+  { name: "医药健康类", icon: "✚", note: "常用药物与健康防护" },
+  { name: "出行日用杂物类", icon: "◇", note: "雨具、纸巾与舒适用品" },
+  { name: "零食饮料类", icon: "◉", note: "路途补给与饮品" },
 ];
 
 const seedItems: PackItem[] = [
-  { id: 1, name: "一次性内裤", icon: "▤", group: "一次性物品", owners: [], checked: {} },
-  { id: 2, name: "马桶垫", icon: "○", group: "一次性物品", owners: ["小雨"], checked: {} },
-  { id: 3, name: "消毒湿巾", icon: "▥", group: "一次性物品", owners: [], checked: {} },
-  { id: 4, name: "水乳套装", icon: "◉", group: "护肤品", owners: ["我"], checked: {} },
-  { id: 5, name: "防晒", icon: "☀", group: "护肤品", owners: [], checked: {} },
-  { id: 6, name: "气垫", icon: "●", group: "化妆品", owners: ["我"], checked: {} },
-  { id: 7, name: "眼影盘", icon: "◫", group: "化妆品", owners: ["小雨"], checked: {} },
-  { id: 8, name: "口红", icon: "▰", group: "化妆品", owners: [], checked: {} },
-  { id: 9, name: "牙膏牙刷", icon: "⌁", group: "生活用品", owners: [], checked: {} },
-  { id: 10, name: "常用药", icon: "✚", group: "生活用品", owners: ["阿哲"], checked: {} },
-  { id: 11, name: "长款羽绒服", icon: "♨", group: "服饰", owners: ["我"], checked: {} },
-  { id: 12, name: "换洗衣物", icon: "◫", group: "服饰", owners: [], checked: {} },
-  { id: 13, name: "身份证", icon: "▣", group: "必需品", owners: ["我", "阿哲", "小雨"], checked: {} },
-  { id: 14, name: "充电线", icon: "⌁", group: "必需品", owners: [], checked: {} },
-  { id: 15, name: "充电宝", icon: "▮", group: "必需品", owners: ["我"], checked: {}, aiReason: "你登记了大容量充电宝" },
-  { id: 16, name: "花露水", icon: "◉", group: "必需品", owners: [], checked: {} },
-  { id: 17, name: "相机", icon: "📷", group: "其他", owners: ["阿哲"], checked: {}, aiReason: "阿哲登记了相机" },
-  { id: 18, name: "拍立得相纸", icon: "▧", group: "其他", owners: [], checked: {} },
-  { id: 19, name: "小卡 / 物料", icon: "◇", group: "其他", owners: ["小雨"], checked: {} },
+  { id: 1, name: "身份证", icon: "▣", group: "证件与钱财类", owners: ["我", "阿哲", "小雨"], checked: {} },
+  { id: 2, name: "护照 / 签证", icon: "▦", group: "证件与钱财类", owners: ["我", "阿哲", "小雨"], checked: {} },
+  { id: 3, name: "机票 / 车票", icon: "▤", group: "证件与钱财类", owners: ["我"], checked: {} },
+  { id: 4, name: "酒店订单", icon: "▥", group: "证件与钱财类", owners: ["我"], checked: {} },
+  { id: 5, name: "银行卡 / 现金", icon: "▰", group: "证件与钱财类", owners: [], checked: {} },
+  { id: 6, name: "电子证件截图", icon: "▧", group: "证件与钱财类", owners: [], checked: {} },
+  { id: 7, name: "驾驶证（按需）", icon: "□", group: "证件与钱财类", owners: [], checked: {} },
+
+  { id: 8, name: "手机", icon: "▮", group: "电子数码类", owners: ["我", "阿哲", "小雨"], checked: {} },
+  { id: 9, name: "充电器 / 充电宝", icon: "▰", group: "电子数码类", owners: ["我"], checked: {}, aiReason: "你登记了大容量充电宝" },
+  { id: 10, name: "数据线", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
+  { id: 11, name: "耳机", icon: "◉", group: "电子数码类", owners: ["小雨"], checked: {} },
+  { id: 12, name: "转换插头", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
+  { id: 13, name: "相机", icon: "📷", group: "电子数码类", owners: ["阿哲"], checked: {}, aiReason: "阿哲登记了相机" },
+  { id: 14, name: "自拍杆", icon: "│", group: "电子数码类", owners: [], checked: {} },
+  { id: 15, name: "U 盘（按需）", icon: "▮", group: "电子数码类", owners: [], checked: {} },
+
+  { id: 16, name: "换洗衣物", icon: "◫", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 17, name: "内衣 / 袜子", icon: "▤", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 18, name: "外套", icon: "♨", group: "衣物鞋帽类", owners: ["我"], checked: {} },
+  { id: 19, name: "睡衣", icon: "○", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 20, name: "鞋子 / 拖鞋", icon: "◇", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 21, name: "帽子 / 围巾", icon: "▰", group: "衣物鞋帽类", owners: ["小雨"], checked: {} },
+  { id: 22, name: "墨镜", icon: "●", group: "衣物鞋帽类", owners: [], checked: {} },
+
+  { id: 23, name: "牙刷 / 牙膏", icon: "⌁", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 24, name: "毛巾", icon: "▤", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 25, name: "洗面奶", icon: "◉", group: "洗护化妆类", owners: ["我"], checked: {} },
+  { id: 26, name: "洗发水 / 沐浴露（旅行装）", icon: "◉", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 27, name: "水乳 / 面霜", icon: "○", group: "洗护化妆类", owners: ["小雨"], checked: {} },
+  { id: 28, name: "防晒霜", icon: "☀", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 29, name: "化妆品 / 卸妆用品", icon: "✦", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 30, name: "梳子 / 皮筋", icon: "⌇", group: "洗护化妆类", owners: [], checked: {} },
+
+  { id: 31, name: "个人慢性病药物", icon: "✚", group: "医药健康类", owners: [], checked: {} },
+  { id: 32, name: "驱蚊液", icon: "◉", group: "医药健康类", owners: [], checked: {} },
+  { id: 33, name: "晕车药", icon: "✚", group: "医药健康类", owners: ["阿哲"], checked: {} },
+  { id: 34, name: "过敏药", icon: "✚", group: "医药健康类", owners: [], checked: {} },
+
+  { id: 35, name: "雨伞 / 雨衣", icon: "☂", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 36, name: "纸巾 / 湿巾", icon: "▤", group: "出行日用杂物类", owners: ["小雨"], checked: {} },
+  { id: 37, name: "水杯", icon: "◉", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 38, name: "口罩", icon: "▥", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 39, name: "眼罩", icon: "●", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 40, name: "耳塞", icon: "○", group: "出行日用杂物类", owners: [], checked: {} },
+
+  { id: 41, name: "路上零食", icon: "●", group: "零食饮料类", owners: [], checked: {} },
+  { id: 42, name: "饮料 / 矿泉水", icon: "◉", group: "零食饮料类", owners: [], checked: {} },
 ];
 
 const seedSuggestions: Suggestion[] = [
-  { id: 101, name: "蓝色围巾", icon: "▰", group: "服饰", reason: "北海道雪景中蓝色更显眼，AI 已将它归入服饰。", signal: "热门出片", added: false },
-  { id: 103, name: "暖宝宝整包", icon: "☀", group: "生活用品", reason: "低温行程可能需要持续保暖，AI 已将它归入生活用品。", signal: "低温提醒", added: false },
+  { id: 101, name: "蓝色围巾", icon: "▰", group: "衣物鞋帽类", reason: "北海道雪景中蓝色更显眼，AI 已将它归入衣物鞋帽类。", signal: "热门出片", added: false },
+  { id: 103, name: "暖宝宝整包", icon: "☀", group: "医药健康类", reason: "低温行程可能需要持续保暖，AI 已将它归入医药健康类。", signal: "低温提醒", added: false },
 ];
 
 const seedMessages: ChatMessage[] = [
@@ -91,7 +120,7 @@ export default function Home() {
   const [currentMember, setCurrentMember] = useState<Member>("我");
   const [showChat, setShowChat] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
-  const [addCategory, setAddCategory] = useState<Category>("必需品");
+  const [addCategory, setAddCategory] = useState<Category>("出行日用杂物类");
   const [newItem, setNewItem] = useState("");
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
