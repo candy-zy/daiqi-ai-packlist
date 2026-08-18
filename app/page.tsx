@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 type Member = "我" | "阿哲" | "小雨";
 type Author = Member | "AI";
@@ -106,6 +106,11 @@ const bringersByItem: Partial<Record<string, Member[]>> = {
   眼线膏: ["我"],
   染眉膏: ["我"],
   口红: ["我", "小雨"],
+  消毒湿巾: ["阿哲"],
+  拍立得: ["阿哲"],
+  充电宝: ["阿哲"],
+  应援棒电池: ["阿哲"],
+  大王扇: ["阿哲"],
   香水小样: ["我"],
 };
 
@@ -139,6 +144,13 @@ export default function Home() {
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [aiAdded, setAiAdded] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [verifyMember, setVerifyMember] = useState<Member>("我");
+  const [showHandoff, setShowHandoff] = useState(false);
+  const [handoffItemId, setHandoffItemId] = useState<number | null>(null);
+  const [handoffName, setHandoffName] = useState("");
+  const [handoffTarget, setHandoffTarget] = useState<Exclude<Member, "我">>("阿哲");
+  const [handoffCategory, setHandoffCategory] = useState<CategoryId>("essential");
+  const [remindedMembers, setRemindedMembers] = useState<Member[]>([]);
   const [newItem, setNewItem] = useState("");
   const [newCategory, setNewCategory] = useState<CategoryId>("life");
   const [newScope, setNewScope] = useState<Scope>("共享");
@@ -146,7 +158,8 @@ export default function Home() {
 
   const visibleCategories = useMemo(() => categories.filter((category) => filter === "all" || filter === category.id), [filter]);
   const noteCount = items.reduce((sum, item) => sum + item.notes.length, 0);
-  const checkedCount = items.filter((item) => item.checkedBy[currentMember]).length;
+  const viewedVerifyItems = items.filter((item) => item.bringers.includes(verifyMember));
+  const viewedCheckedCount = viewedVerifyItems.filter((item) => item.checkedBy[verifyMember]).length;
 
   function notify(message: string) {
     setToast(message);
@@ -180,6 +193,53 @@ export default function Home() {
       return { ...item, bringers: selected ? item.bringers.filter((member) => member !== memberName) : [...item.bringers, memberName] };
     }));
     notify(phase === "verify" ? `${memberName}的核对状态已更新` : `${memberName === "我" ? "我" : memberName}的携带状态已更新`);
+  }
+
+  function switchPhase(nextPhase: Phase) {
+    setPhase(nextPhase);
+    if (nextPhase === "verify") setVerifyMember("我");
+  }
+
+  function toggleMyPacked(itemId: number) {
+    if (verifyMember !== "我") return;
+    setItems((current) => current.map((item) => item.id === itemId ? {
+      ...item,
+      checkedBy: { ...item.checkedBy, 我: !item.checkedBy.我 },
+    } : item));
+  }
+
+  function remindToPack(memberName: Exclude<Member, "我">) {
+    setRemindedMembers((current) => current.includes(memberName) ? current : [...current, memberName]);
+    notify(`已提醒${memberName}：快收拾啦，别忘了核对清单`);
+  }
+
+  function openHandoffSheet(itemId?: number) {
+    const item = itemId ? items.find((entry) => entry.id === itemId) : undefined;
+    setHandoffItemId(item?.id ?? null);
+    setHandoffName(item?.name ?? "");
+    setHandoffCategory(item?.category ?? "essential");
+    setShowHandoff(true);
+  }
+
+  function sendHandoffReminder() {
+    const name = handoffName.trim();
+    if (!name) return;
+    if (handoffItemId) {
+      setItems((current) => current.map((item) => item.id === handoffItemId ? {
+        ...item,
+        bringers: [...item.bringers.filter((member) => member !== "我"), ...(item.bringers.includes(handoffTarget) ? [] : [handoffTarget])],
+        notes: [...item.notes, { id: Date.now(), author: "我", text: `我带不了，想请${handoffTarget}带一下` }],
+      } : item));
+    } else {
+      setItems((current) => [...current, {
+        id: Date.now(), name, category: handoffCategory, scope: "共享", bringers: [handoffTarget], checkedBy: {},
+        notes: [{ id: Date.now() + 1, author: "我", text: `临时新增，想请${handoffTarget}带一下` }],
+      }]);
+    }
+    setRemindedMembers((current) => current.includes(handoffTarget) ? current : [...current, handoffTarget]);
+    setShowHandoff(false);
+    setHandoffName("");
+    notify(`已加入${handoffTarget}的清单，并发送提醒`);
   }
 
   function addAiItems() {
@@ -265,6 +325,44 @@ export default function Home() {
     );
   }
 
+  function renderVerifyView() {
+    const isMine = verifyMember === "我";
+    const progress = viewedVerifyItems.length ? Math.round((viewedCheckedCount / viewedVerifyItems.length) * 100) : 0;
+    return <section className="verify-view">
+      <div className="verify-member-tabs">
+        {members.map((member) => {
+          const memberItems = items.filter((item) => item.bringers.includes(member.name));
+          const done = memberItems.filter((item) => item.checkedBy[member.name]).length;
+          return <button key={member.name} className={`${verifyMember === member.name ? "active" : ""} ${member.color}`} onClick={() => setVerifyMember(member.name)}>
+            <i>{member.short}</i><span><b>{member.name === "我" ? "我的清单" : `${member.name}的清单`}</b><small>{done}/{memberItems.length} 已带</small></span>
+          </button>;
+        })}
+      </div>
+
+      <div className={`verify-status ${isMine ? "mine" : "friend"}`}>
+        <div className="progress-ring" style={{ "--progress": `${progress * 3.6}deg` } as CSSProperties}><span>{progress}%</span></div>
+        <div><p>{isMine ? "只核对我负责带的东西" : `正在查看${verifyMember}的清单`}</p><h2>{viewedCheckedCount}/{viewedVerifyItems.length} 件已放进行李</h2><small>{isMine ? "勾选后只改变自己的状态" : "朋友清单为只读，不能替对方打勾"}</small></div>
+        {!isMine && <button className={remindedMembers.includes(verifyMember) ? "sent" : ""} onClick={() => remindToPack(verifyMember as Exclude<Member, "我">)}>{remindedMembers.includes(verifyMember) ? "✓ 已提醒" : "🔔 催他收拾"}</button>}
+      </div>
+
+      {!isMine && <div className="readonly-tip"><span>只读</span> 如果发现有物品需要他带，可以返回“我的清单”发起转交。</div>}
+
+      <div className="verify-list">
+        {viewedVerifyItems.length ? viewedVerifyItems.map((item) => {
+          const done = Boolean(item.checkedBy[verifyMember]);
+          const category = categories.find((entry) => entry.id === item.category);
+          return <article className={`verify-row ${done ? "done" : ""}`} key={item.id}>
+            {isMine ? <button className={`verify-check ${done ? "checked" : ""}`} onClick={() => toggleMyPacked(item.id)} aria-label={`${done ? "取消" : "确认"}${item.name}已带`}>{done ? "✓" : ""}</button> : <span className={`verify-check readonly ${done ? "checked" : ""}`}>{done ? "✓" : ""}</span>}
+            <div><b>{item.name}</b><small><i style={{ background: `var(--${category?.tone ?? "charcoal"})` }}></i>{category?.name} · {item.scope}</small></div>
+            {isMine ? <button className="handoff-link" onClick={() => openHandoffSheet(item.id)}>我带不了</button> : <span className={`friend-state ${done ? "ready" : "pending"}`}>{done ? "已收好" : "待确认"}</span>}
+          </article>;
+        }) : <div className="verify-empty"><span>✓</span><b>这份清单还是空的</b><p>{isMine ? "准备阶段先选择自己要带的物品。" : `${verifyMember}还没有选择要带的物品。`}</p></div>}
+      </div>
+
+      {isMine && <button className="request-friend-button" onClick={() => openHandoffSheet()}><span>＋</span><div><b>临时新增，请朋友带</b><small>加入对方清单，并同时发送提醒</small></div><i>→</i></button>}
+    </section>;
+  }
+
   return (
     <main className="app-shell">
       <section className="phone-frame" aria-label="带齐共享旅行清单原型">
@@ -277,21 +375,22 @@ export default function Home() {
 
         <div className="scroll-area">
           <section className="hero">
-            <div><p>2月12日出发 · 5天 · 3人</p><h1>{phase === "discuss" ? "一起把行李说清楚" : "出发前，再过一遍"}</h1></div>
-            <div className="member-switch" aria-label="切换正在操作的成员">
+            <div><p>2月12日出发 · 5天 · 3人</p><h1>{phase === "discuss" ? "一起把行李说清楚" : "出发前，只核对我的"}</h1></div>
+            {phase === "discuss" ? <div className="member-switch" aria-label="切换正在操作的成员">
               {members.map((member) => <button key={member.name} className={`${member.color} ${currentMember === member.name ? "active" : ""}`} onClick={() => setCurrentMember(member.name)} title={`切换为${member.name}`}>{member.short}</button>)}
-            </div>
+            </div> : <span className="verify-mode-badge">个人核对模式</span>}
           </section>
 
           <div className="phase-tabs">
-            <button className={phase === "discuss" ? "active" : ""} onClick={() => setPhase("discuss")}><span>1</span>准备沟通</button>
-            <button className={phase === "verify" ? "active" : ""} onClick={() => setPhase("verify")}><span>2</span>出发核对</button>
+            <button className={phase === "discuss" ? "active" : ""} onClick={() => switchPhase("discuss")}><span>1</span>准备沟通</button>
+            <button className={phase === "verify" ? "active" : ""} onClick={() => switchPhase("verify")}><span>2</span>出发核对</button>
           </div>
 
+          {phase === "discuss" ? <>
           <section className="sheet-summary">
             <div><span>{items.length}</span><small>物品</small></div>
             <div><span>{noteCount}</span><small>行内留言</small></div>
-            <p>{phase === "discuss" ? <><b>点自己的格子选择“我带”</b>，点物品名称再展开讨论。</> : <><b>{currentMember}已确认 {checkedCount} 件。</b> 点成员格子继续核对。</>}</p>
+            <p><b>点自己的格子选择“我带”</b>，点物品名称再展开讨论。</p>
           </section>
 
           <section className="ai-strip">
@@ -325,12 +424,13 @@ export default function Home() {
               </section>;
             })}
           </div>
+          </> : renderVerifyView()}
         </div>
 
         <footer className="action-bar">
-          <button className="add-button" onClick={() => setShowAdd(true)}>＋</button>
-          <button className={`primary-action ${phase === "verify" ? "verify" : ""}`} onClick={() => setPhase(phase === "discuss" ? "verify" : "discuss")}>
-            {phase === "discuss" ? <><span>进入出发前核对</span><b>→</b></> : <><span>{currentMember}已确认 {checkedCount}/{items.length}</span><b>回到讨论</b></>}
+          <button className="add-button" onClick={() => phase === "discuss" ? setShowAdd(true) : openHandoffSheet()}>＋</button>
+          <button className={`primary-action ${phase === "verify" ? "verify" : ""}`} onClick={() => switchPhase(phase === "discuss" ? "verify" : "discuss")}>
+            {phase === "discuss" ? <><span>进入出发前核对</span><b>→</b></> : <><span>我的清单 {items.filter((item) => item.bringers.includes("我") && item.checkedBy.我).length}/{items.filter((item) => item.bringers.includes("我")).length}</span><b>回到准备</b></>}
           </button>
         </footer>
 
@@ -351,17 +451,34 @@ export default function Home() {
           </section>
         </div>}
 
+        {showHandoff && <div className="bottom-sheet">
+          <button className="sheet-backdrop" onClick={() => setShowHandoff(false)} aria-label="关闭"></button>
+          <section className="sheet-card handoff-card">
+            <span className="sheet-handle"></span>
+            <p className="sheet-kicker">{handoffItemId ? "我临时带不了" : "临时新增物品"}</p>
+            <h2>{handoffItemId ? "请朋友接手这件物品" : "请朋友帮忙带一件"}</h2>
+            <label className="handoff-field"><span>物品</span><input autoFocus={!handoffItemId} readOnly={Boolean(handoffItemId)} value={handoffName} onChange={(event) => setHandoffName(event.target.value)} placeholder="例如：转换插头" /></label>
+            {!handoffItemId && <><div className="form-label">放入分类</div><div className="sheet-categories compact">{categories.map((category) => <button key={category.id} className={handoffCategory === category.id ? "active" : ""} onClick={() => setHandoffCategory(category.id)}>{category.name}</button>)}</div></>}
+            <div className="form-label">希望谁来带</div>
+            <div className="handoff-targets">
+              {members.filter((member) => member.name !== "我").map((member) => <button key={member.name} className={`${member.color} ${handoffTarget === member.name ? "active" : ""}`} onClick={() => setHandoffTarget(member.name as Exclude<Member, "我">)}><i>{member.short}</i><span><b>{member.name}</b><small>加入TA的清单</small></span>{handoffTarget === member.name && <em>✓</em>}</button>)}
+            </div>
+            <div className="reminder-preview"><span>🔔</span><p><b>发送提醒</b><small>“{handoffName || "这件物品"}需要你来带，已经加入你的出发清单。”</small></p></div>
+            <button className="sheet-submit" onClick={sendHandoffReminder}>{handoffItemId ? "转交并提醒" : "加入对方清单并提醒"}</button>
+          </section>
+        </div>}
+
         {toast && <div className="toast">{toast}</div>}
       </section>
 
       <aside className="prototype-note">
-        <p className="version">PROTOTYPE 06 · GRID + THREAD</p>
+        <p className="version">PROTOTYPE 07 · PERSONAL CHECK</p>
         <h2>像共享表格，<br />但更适合手机。</h2>
         <p>保留共享表格最直观的操作：一件物品一行，每个人一格。格子负责快速选择，物品名称负责展开上下文。</p>
         <div className="principle"><span>01</span><p><b>点格子，直接选择“我带”</b><br />多人可以同时选，不互相覆盖</p></div>
         <div className="principle"><span>02</span><p><b>点名称，才展开讨论</b><br />默认列表更干净，也更像表格</p></div>
-        <div className="principle"><span>03</span><p><b>AI 建议也回到清单里</b><br />不另起一个攻略信息流</p></div>
-        <div className="try-card">试试看：直接点「防晒」右侧任意成员格子，再点物品名称展开讨论。</div>
+        <div className="principle"><span>03</span><p><b>核对时回到个人任务</b><br />自己打勾、朋友只读、带不了就转交</p></div>
+        <div className="try-card">试试看：进入「出发核对」，切到阿哲的清单催他收拾，或把自己的物品转交给朋友。</div>
       </aside>
     </main>
   );
