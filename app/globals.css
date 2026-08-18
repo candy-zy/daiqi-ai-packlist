@@ -76,6 +76,8 @@ h1 { margin:0; font-size:27px; line-height:1.12; letter-spacing:-.045em; font-we
 .item-copy { min-width:0; flex:1; }.item-copy > b { display:block; font-size:10px; }.item-copy > small { display:block; margin-top:4px; color:#959691; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:7px; }.item-copy i { margin:0 3px 0 6px; color:var(--violet); font-style:normal; }
 .owner-pill,.claim-button { flex:none; border-radius:99px; cursor:pointer; font-size:7px; font-weight:850; }
 .owner-pill { display:flex; align-items:center; gap:4px; padding:4px 7px 4px 4px; border:0; }.owner-pill span { width:20px; height:20px; display:grid; place-items:center; border-radius:50%; background:rgba(255,255,255,.56); font-size:6px; }
+.multi-owner-pill { white-space:nowrap; }
+.join-owner-button { max-width:112px; display:flex; flex-direction:column; align-items:flex-end; gap:3px; flex:none; padding:4px 6px; border:1px solid #ddd9d0; border-radius:10px; background:white; cursor:pointer; }.join-owner-button>span { min-width:0; display:flex; align-items:center; }.join-owner-button i { width:18px; height:18px; display:grid; place-items:center; margin-left:-4px; border:2px solid white; border-radius:50%; font-size:5px; font-style:normal; font-weight:950; }.join-owner-button i:first-child { margin-left:0; }.join-owner-button em { margin-left:4px; overflow:hidden; color:#777972; font-size:6px; font-style:normal; white-space:nowrap; text-overflow:ellipsis; }.join-owner-button b { color:#5e781b; font-size:6.5px; white-space:nowrap; }
 .claim-button { padding:7px 9px; border:1px dashed #9ec048; color:#5e781b; background:#f1ffc9; }
 .private-pill { flex:none; padding:5px 7px; border-radius:99px; color:#706792; background:#eeeaff; font-size:6px; font-weight:850; }
 

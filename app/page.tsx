@@ -12,7 +12,7 @@ type PackItem = {
   icon: string;
   scope: Scope;
   group: string;
-  owner?: Member | null;
+  owners: Member[];
   checked: Partial<Record<Member, boolean>>;
   aiReason?: string;
 };
@@ -42,22 +42,22 @@ const members: { name: Member; short: string; profile: string; className: string
 ];
 
 const seedItems: PackItem[] = [
-  { id: 1, name: "相机", icon: "📷", scope: "shared", group: "拍摄", owner: "阿哲", checked: {}, aiReason: "根据装备档案分给阿哲" },
-  { id: 2, name: "大容量充电宝", icon: "🔋", scope: "shared", group: "电子", owner: "我", checked: {}, aiReason: "你登记了 20,000mAh" },
-  { id: 3, name: "三脚架", icon: "⌁", scope: "shared", group: "拍摄", owner: null, checked: {} },
-  { id: 4, name: "公共药包", icon: "✚", scope: "shared", group: "应急", owner: null, checked: {} },
-  { id: 5, name: "纸巾 / 湿巾", icon: "▤", scope: "shared", group: "日用", owner: "小雨", checked: {} },
-  { id: 6, name: "护照", icon: "▣", scope: "private", group: "证件", checked: {} },
-  { id: 7, name: "长款羽绒服", icon: "♨", scope: "private", group: "衣物", checked: {} },
-  { id: 8, name: "换洗衣物", icon: "◫", scope: "private", group: "衣物", checked: {} },
-  { id: 9, name: "洗漱包", icon: "◉", scope: "private", group: "日用", checked: {} },
-  { id: 10, name: "日标转换插头", icon: "⌁", scope: "private", group: "电子", checked: {} },
+  { id: 1, name: "相机", icon: "📷", scope: "shared", group: "拍摄", owners: ["阿哲"], checked: {}, aiReason: "根据装备档案分给阿哲" },
+  { id: 2, name: "大容量充电宝", icon: "🔋", scope: "shared", group: "电子", owners: ["我"], checked: {}, aiReason: "你登记了 20,000mAh" },
+  { id: 3, name: "三脚架", icon: "⌁", scope: "shared", group: "拍摄", owners: [], checked: {} },
+  { id: 4, name: "公共药包", icon: "✚", scope: "shared", group: "应急", owners: [], checked: {} },
+  { id: 5, name: "纸巾 / 湿巾", icon: "▤", scope: "shared", group: "日用", owners: ["小雨"], checked: {} },
+  { id: 6, name: "护照", icon: "▣", scope: "private", group: "证件", owners: [], checked: {} },
+  { id: 7, name: "长款羽绒服", icon: "♨", scope: "private", group: "衣物", owners: [], checked: {} },
+  { id: 8, name: "换洗衣物", icon: "◫", scope: "private", group: "衣物", owners: [], checked: {} },
+  { id: 9, name: "洗漱包", icon: "◉", scope: "private", group: "日用", owners: [], checked: {} },
+  { id: 10, name: "日标转换插头", icon: "⌁", scope: "private", group: "电子", owners: [], checked: {} },
 ];
 
 const seedSuggestions: Suggestion[] = [
   { id: 101, name: "蓝色围巾", icon: "▰", scope: "private", group: "穿搭", reason: "北海道雪地留白多，蓝色更显眼；近期旅行笔记常见这种出片搭配。", signal: "热门出片", added: false },
   { id: 102, name: "防滑鞋套", icon: "⌇", scope: "private", group: "雪地装备", reason: "冬季路面可能结冰，放进个人背包更方便随时使用。", signal: "目的地特点", added: false },
-  { id: 103, name: "暖宝宝整包", icon: "☀", scope: "shared", group: "保暖", reason: "一人带一整包，同行人按需分用，避免三个人重复购买。", signal: "智能共用", added: false },
+  { id: 103, name: "暖宝宝整包", icon: "☀", scope: "shared", group: "保暖", reason: "可以有人负责一整包，其他人需要时也能继续选择自己带。", signal: "智能共用", added: false },
 ];
 
 const seedMessages: ChatMessage[] = [
@@ -81,11 +81,11 @@ export default function Home() {
 
   const sharedItems = items.filter((item) => item.scope === "shared");
   const privateItems = items.filter((item) => item.scope === "private");
-  const unassigned = sharedItems.filter((item) => !item.owner).length;
+  const unassigned = sharedItems.filter((item) => item.owners.length === 0).length;
 
   const status = useMemo(() => {
     const mine = privateItems.filter((item) => !item.checked[currentMember]).length;
-    const sharedMine = sharedItems.filter((item) => item.owner === currentMember && !item.checked[currentMember]).length;
+    const sharedMine = sharedItems.filter((item) => item.owners.includes(currentMember) && !item.checked[currentMember]).length;
     return { mine, sharedMine, total: mine + sharedMine + unassigned };
   }, [currentMember, privateItems, sharedItems, unassigned]);
 
@@ -95,17 +95,17 @@ export default function Home() {
   }
 
   function claim(id: number) {
-    setItems((current) => current.map((item) => item.id === id ? { ...item, owner: currentMember } : item));
-    notify(`${currentMember}认领了这件共用品`);
+    setItems((current) => current.map((item) => item.id === id && !item.owners.includes(currentMember) ? { ...item, owners: [...item.owners, currentMember] } : item));
+    notify(`${currentMember}也会带这件共用品`);
   }
 
   function release(id: number) {
-    setItems((current) => current.map((item) => item.id === id ? { ...item, owner: null, checked: {} } : item));
-    notify("已放回待认领");
+    setItems((current) => current.map((item) => item.id === id ? { ...item, owners: item.owners.filter((member) => member !== currentMember), checked: { ...item.checked, [currentMember]: false } } : item));
+    notify("已取消自己的携带状态");
   }
 
   function togglePacked(item: PackItem) {
-    if (item.scope === "shared" && item.owner !== currentMember) return;
+    if (item.scope === "shared" && !item.owners.includes(currentMember)) return;
     setItems((current) => current.map((entry) => entry.id === item.id ? {
       ...entry,
       checked: { ...entry.checked, [currentMember]: !entry.checked[currentMember] },
@@ -120,7 +120,7 @@ export default function Home() {
       icon: suggestion.icon,
       scope: suggestion.scope,
       group: suggestion.group,
-      owner: suggestion.scope === "shared" ? null : undefined,
+      owners: [],
       checked: {},
       aiReason: suggestion.reason,
     }]);
@@ -133,10 +133,10 @@ export default function Home() {
     if (!text) return;
     const additions: ChatMessage[] = [{ id: Date.now(), author: currentMember, text }];
     const wantsToClaim = /(我来带|我带|我有|交给我|算我的)/.test(text);
-    const matched = sharedItems.find((item) => !item.owner && (text.includes(item.name) || text.includes(item.name.slice(0, 2))));
+    const matched = sharedItems.find((item) => !item.owners.includes(currentMember) && (text.includes(item.name) || text.includes(item.name.slice(0, 2))));
     if (wantsToClaim && matched) {
-      setItems((current) => current.map((item) => item.id === matched.id ? { ...item, owner: currentMember } : item));
-      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：${matched.name}由${currentMember}负责`, system: true });
+      setItems((current) => current.map((item) => item.id === matched.id ? { ...item, owners: [...item.owners, currentMember] } : item));
+      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：${currentMember}也会带${matched.name}`, system: true });
     }
     setMessages((current) => [...current, ...additions]);
     setDraft("");
@@ -146,7 +146,7 @@ export default function Home() {
     const name = newItem.trim();
     if (!name) return;
     setItems((current) => [...current, {
-      id: Date.now(), name, icon: addScope === "shared" ? "◇" : "○", scope: addScope, group: "自定义", owner: addScope === "shared" ? null : undefined, checked: {},
+      id: Date.now(), name, icon: addScope === "shared" ? "◇" : "○", scope: addScope, group: "自定义", owners: [], checked: {},
     }]);
     setNewItem("");
     setShowAdd(false);
@@ -154,9 +154,10 @@ export default function Home() {
   }
 
   function renderItem(item: PackItem) {
-    const ownerMeta = members.find((member) => member.name === item.owner);
-    const packed = Boolean(item.checked[item.scope === "private" ? currentMember : item.owner ?? currentMember]);
-    const canCheck = item.scope === "private" || item.owner === currentMember;
+    const ownerMembers = item.owners.map((owner) => members.find((member) => member.name === owner)).filter(Boolean);
+    const currentWillBring = item.owners.includes(currentMember);
+    const packed = Boolean(item.checked[currentMember]);
+    const canCheck = item.scope === "private" || currentWillBring;
 
     return (
       <article className={`list-item ${packed ? "packed" : ""}`} key={item.id}>
@@ -168,11 +169,13 @@ export default function Home() {
           <small>{item.group}{item.aiReason && <><i>✦</i>{item.aiReason}</>}</small>
         </div>
         {item.scope === "shared" ? (
-          item.owner ? (
-            <button className={`owner-pill ${ownerMeta?.className ?? ""}`} onClick={() => phase === "prepare" && item.owner === currentMember && release(item.id)}>
-              <span>{ownerMeta?.short}</span>{packed ? "已装包" : `${item.owner}负责`}
+          item.owners.length ? (
+            currentWillBring ? <button className="owner-pill multi-owner-pill member-me" onClick={() => phase === "prepare" && release(item.id)}>
+              <span>{currentMember === "我" ? "我" : members.find((member) => member.name === currentMember)?.short}</span>{packed ? "已装包" : item.owners.length > 1 ? `${item.owners.length}人会带` : "我会带"}
+            </button> : <button className="join-owner-button" onClick={() => phase === "prepare" && claim(item.id)}>
+              <span>{ownerMembers.slice(0, 2).map((owner) => <i className={owner?.className} key={owner?.name}>{owner?.short}</i>)}<em>{item.owners.length > 1 ? `${item.owners.length}人会带` : `${item.owners[0]}会带`}</em></span><b>＋ 我也带</b>
             </button>
-          ) : <button className="claim-button" onClick={() => claim(item.id)}>＋ 我来带</button>
+          ) : <button className="claim-button" onClick={() => phase === "prepare" && claim(item.id)}>＋ 我来带</button>
         ) : (
           <span className="private-pill">仅我可见</span>
         )}
@@ -241,7 +244,7 @@ export default function Home() {
           <section className="list-section">
             <header className="section-head">
               <div><span className="scope-icon shared-icon">↔</span><div><h2>共用物品</h2><p>一人带一份，大家一起用</p></div></div>
-              <span>{sharedItems.filter((item) => item.owner).length}/{sharedItems.length} 已认领</span>
+              <span>{sharedItems.filter((item) => item.owners.length).length}/{sharedItems.length} 已认领</span>
             </header>
             <div className="item-list">{sharedItems.map(renderItem)}</div>
           </section>
@@ -277,7 +280,7 @@ export default function Home() {
                   return <div className={`message-row ${message.author === currentMember ? "mine" : ""} ${message.system ? "system" : ""}`} key={message.id}><span className={`message-avatar ${meta?.className ?? "assistant-avatar"}`}>{meta?.short ?? "✦"}</span><div><small>{message.author}</small><p>{message.text}</p></div></div>;
                 })}
               </div>
-              {unassigned > 0 && <div className="chat-suggestions">{sharedItems.filter((item) => !item.owner).map((item) => <button key={item.id} onClick={() => setDraft(`谁可以带${item.name}？`)}>问问：{item.name}</button>)}</div>}
+              {unassigned > 0 && <div className="chat-suggestions">{sharedItems.filter((item) => item.owners.length === 0).map((item) => <button key={item.id} onClick={() => setDraft(`谁可以带${item.name}？`)}>问问：{item.name}</button>)}</div>}
               <div className="chat-composer"><input autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendMessage()} placeholder={`以${currentMember}身份发消息…`} /><button onClick={sendMessage}>↑</button></div>
             </section>
           </div>
