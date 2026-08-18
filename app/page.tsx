@@ -81,12 +81,13 @@ export default function Home() {
   const sharedItems = items.filter((item) => item.scope === "shared");
   const privateItems = items.filter((item) => item.scope === "private");
   const unassigned = sharedItems.filter((item) => item.owners.length === 0).length;
+  const verifyItems = [...privateItems, ...sharedItems.filter((item) => item.owners.includes(currentMember))];
 
   const status = useMemo(() => {
     const mine = privateItems.filter((item) => !item.checked[currentMember]).length;
     const sharedMine = sharedItems.filter((item) => item.owners.includes(currentMember) && !item.checked[currentMember]).length;
-    return { mine, sharedMine, total: mine + sharedMine + unassigned };
-  }, [currentMember, privateItems, sharedItems, unassigned]);
+    return { mine, sharedMine, total: mine + sharedMine };
+  }, [currentMember, privateItems, sharedItems]);
 
   function notify(message: string) {
     setToast(message);
@@ -171,7 +172,7 @@ export default function Home() {
     const ownerMembers = item.owners.map((owner) => members.find((member) => member.name === owner)).filter(Boolean);
     const currentWillBring = item.owners.includes(currentMember);
     const packed = Boolean(item.checked[currentMember]);
-    const canCheck = item.scope === "private" || currentWillBring;
+    const canCheck = currentMember === "我" && (item.scope === "private" || currentWillBring);
 
     return (
       <article className={`list-item ${packed ? "packed" : ""}`} key={item.id}>
@@ -182,7 +183,7 @@ export default function Home() {
           <b>{item.name}</b>
           <div className="item-meta"><small>{item.group}{item.aiReason && <><i>✦</i>{item.aiReason}</>}</small>{phase === "prepare" && <button className="move-item-button" onClick={() => moveItem(item.id)}>↔ {item.scope === "shared" ? "移到我的" : "移到共用"}</button>}</div>
         </div>
-        {item.scope === "shared" ? (
+        {phase === "prepare" && (item.scope === "shared" ? (
           item.owners.length ? (
             <div className="shared-owner-action">
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
@@ -202,7 +203,7 @@ export default function Home() {
           ) : <button className="claim-button" onClick={() => phase === "prepare" && claim(item.id)}>＋ 我来带</button>
         ) : (
           <span className="private-pill">仅我可见</span>
-        )}
+        ))}
       </article>
     );
   }
@@ -237,11 +238,11 @@ export default function Home() {
 
           {phase === "verify" && (
             <section className="verify-banner">
-              <span>{status.total}</span><div><b>{currentMember}还有 {status.mine + status.sharedMine} 件没确认</b><small>{unassigned ? `另有 ${unassigned} 件共用品仍待认领` : "所有共用品都有人负责"}</small></div>
+              <span>{status.total}</span><div><b>{currentMember}还有 {status.total} 件没确认</b><small>{currentMember === "我" ? `已确认 ${verifyItems.length - status.total}/${verifyItems.length} 件，只核对自己要带的` : "朋友的核对状态仅供查看"}</small></div>
             </section>
           )}
 
-          <section className="ai-section">
+          {phase === "prepare" && <section className="ai-section">
             <header>
               <div className="ai-title"><span>✦</span><div><p className="eyebrow">AI 已自动分类</p><h2>北海道建议，已分进对应清单</h2></div></div>
               <small>{suggestions.filter((item) => !item.added).length} 条建议</small>
@@ -258,33 +259,39 @@ export default function Home() {
                 </article>
               ))}
             </div>
-          </section>
+          </section>}
 
-          <button className="chat-entry" onClick={() => setShowChat(true)}>
+          {phase === "prepare" && <button className="chat-entry" onClick={() => setShowChat(true)}>
             <span className="chat-avatars"><i className="member-me">我</i><i className="member-zhe">哲</i><i className="member-yu">雨</i></span>
             <span><b>{unassigned ? `${unassigned} 件共用品没人带，聊一下` : "物品有变化？在这里聊"}</b><small>说“药包我来带”，结果自动同步</small></span>
             <span className="chat-count">{messages.length}</span>
-          </button>
+          </button>}
 
-          <section className="list-section">
+          {phase === "prepare" && <section className="list-section">
             <header className="section-head">
               <div><span className="scope-icon shared-icon">↔</span><div><h2>共用物品</h2><p>一人带一份，大家一起用</p></div></div>
               <span>{sharedItems.filter((item) => item.owners.length).length}/{sharedItems.length} 已认领</span>
             </header>
             <div className="item-list">{sharedItems.map(renderItem)}</div>
-          </section>
+          </section>}
 
-          <section className="list-section private-section">
+          {phase === "prepare" ? <section className="list-section private-section">
             <header className="section-head">
               <div><span className="scope-icon private-icon">●</span><div><h2>{currentMember === "我" ? "我的物品" : `${currentMember}的物品`}</h2><p>每个人都有自己的独立清单</p></div></div>
               <span>{privateItems.length} 件</span>
             </header>
             <div className="item-list">{privateItems.map(renderItem)}</div>
-          </section>
+          </section> : <section className="list-section verify-list-section">
+            <header className="section-head">
+              <div><span className="scope-icon private-icon">✓</span><div><h2>{currentMember === "我" ? "我的待带清单" : `${currentMember}的待带清单`}</h2><p>这里只显示这个人自己负责的物品</p></div></div>
+              <span>{verifyItems.length} 件</span>
+            </header>
+            <div className="item-list">{verifyItems.map(renderItem)}</div>
+          </section>}
         </div>
 
         <footer className="action-bar">
-          <button className="add-item" onClick={() => setShowAdd(true)} aria-label="添加物品">＋</button>
+          {phase === "prepare" && <button className="add-item" onClick={() => setShowAdd(true)} aria-label="添加物品">＋</button>}
           {phase === "prepare" ? (
             <button className="primary-action" onClick={() => setPhase("verify")}>进入出发核对 <span>→</span></button>
           ) : (
