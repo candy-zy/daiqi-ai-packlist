@@ -83,6 +83,12 @@ const notesByItem: Record<string, [Author, string][]> = {
 const sharedItems = new Set(["马桶垫", "消毒湿巾", "小包纸巾？", "喷雾", "洗面奶", "卫生纸", "洗脸巾", "卸妆", "防晒", "牙膏牙刷", "药", "伞", "洗发水", "护发素", "护发精油", "拍立得", "拍立得相纸", "冰凉贴", "清凉喷雾", "香水小样", "充电宝", "应援棒电池", "大王扇"]);
 
 const bringersByItem: Partial<Record<string, Member[]>> = {
+  内裤: ["我", "小雨"],
+  袜子: ["我", "小雨"],
+  马桶垫: ["小雨"],
+  浴巾: ["小雨"],
+  水: ["小雨"],
+  乳: ["小雨"],
   喷雾: ["我", "小雨"],
   洗面奶: ["我"],
   卫生纸: ["小雨"],
@@ -90,8 +96,16 @@ const bringersByItem: Partial<Record<string, Member[]>> = {
   卸妆: ["我"],
   防晒: ["我"],
   牙膏牙刷: ["我", "小雨"],
+  拖鞋: ["我", "小雨"],
   药: ["小雨"],
+  梳子: ["我"],
   护发精油: ["小雨"],
+  粉底液: ["我", "小雨"],
+  修容: ["我", "小雨"],
+  化妆刷: ["我", "小雨"],
+  眼线膏: ["我"],
+  染眉膏: ["我"],
+  口红: ["我", "小雨"],
   香水小样: ["我"],
 };
 
@@ -147,19 +161,25 @@ export default function Home() {
       const optsIn = /(我来带|我也带|我会带|我带\s*\d*|交给我)/.test(text);
       const optsOut = /(我不带|不带了)/.test(text);
       let bringers = item.bringers;
-      if (item.scope === "共享" && optsOut) bringers = bringers.filter((member) => member !== currentMember);
-      else if (item.scope === "共享" && optsIn && !bringers.includes(currentMember)) bringers = [...bringers, currentMember];
+      if (optsOut) bringers = bringers.filter((member) => member !== currentMember);
+      else if (optsIn && !bringers.includes(currentMember)) bringers = [...bringers, currentMember];
       return { ...item, bringers, notes: [...item.notes, { id: Date.now(), author: currentMember, text }] };
     }));
     setDrafts((current) => ({ ...current, [itemId]: "" }));
     notify("已写在这件物品下面");
   }
 
-  function toggleChecked(itemId: number) {
-    setItems((current) => current.map((item) => item.id === itemId ? {
-      ...item,
-      checkedBy: { ...item.checkedBy, [currentMember]: !item.checkedBy[currentMember] },
-    } : item));
+  function toggleMemberCell(itemId: number, memberName: Member) {
+    setCurrentMember(memberName);
+    setItems((current) => current.map((item) => {
+      if (item.id !== itemId) return item;
+      if (phase === "verify") {
+        return { ...item, checkedBy: { ...item.checkedBy, [memberName]: !item.checkedBy[memberName] } };
+      }
+      const selected = item.bringers.includes(memberName);
+      return { ...item, bringers: selected ? item.bringers.filter((member) => member !== memberName) : [...item.bringers, memberName] };
+    }));
+    notify(phase === "verify" ? `${memberName}的核对状态已更新` : `${memberName === "我" ? "我" : memberName}的携带状态已更新`);
   }
 
   function addAiItems() {
@@ -185,40 +205,38 @@ export default function Home() {
 
   function renderItem(item: PackItem) {
     const expanded = openId === item.id;
-    const preview = item.notes.at(-1);
     const checked = Boolean(item.checkedBy[currentMember]);
-    const isBringing = item.bringers.includes(currentMember);
 
     return (
       <article className={`item-row ${expanded ? "expanded" : ""} ${checked ? "checked" : ""}`} key={item.id}>
-        <button className="row-main" onClick={() => setOpenId(expanded ? null : item.id)} aria-expanded={expanded}>
-          {phase === "verify" && (
-            <span className={`row-check ${checked ? "done" : ""}`} onClick={(event) => { event.stopPropagation(); toggleChecked(item.id); }}>{checked ? "✓" : ""}</span>
-          )}
-          <span className="item-name">
-            <b>{item.name}</b>
-            <span className={`scope-tag ${item.scope === "共享" ? "shared" : "private"}`}>{item.scope}</span>
-            {item.aiReason && <span className="ai-tag">✦ {item.aiReason}</span>}
-          </span>
-          <span className="note-preview">
-            {preview ? <><i className={preview.author === "AI" ? "ai-avatar" : members.find((member) => member.name === preview.author)?.color}>{preview.author === "AI" ? "AI" : members.find((member) => member.name === preview.author)?.short}</i><em>{preview.text}</em></> : <em className="empty-note">还没人写，点开说一句</em>}
-          </span>
-          {item.scope === "共享" && item.bringers.length > 0
-            ? <span className="bringer-count">{item.bringers.length}人带</span>
-            : item.notes.length > 0 && <span className="note-count">{item.notes.length}</span>}
-          <span className="row-arrow">{expanded ? "⌃" : "⌄"}</span>
-        </button>
+        <div className="row-main">
+          <button className="item-cell" onClick={() => setOpenId(expanded ? null : item.id)} aria-expanded={expanded}>
+            <span className="item-name">
+              <b>{item.name}</b>
+              <span className={`scope-tag ${item.scope === "共享" ? "shared" : "private"}`}>{item.scope}</span>
+              {item.aiReason && <span className="ai-tag">✦ {item.aiReason}</span>}
+            </span>
+            {item.notes.length > 0 && <span className="discussion-dot">☵ {item.notes.length}</span>}
+            <span className="row-arrow">{expanded ? "⌃" : "⌄"}</span>
+          </button>
+          <div className="member-cells">
+            {members.map((member) => {
+              const selected = phase === "verify" ? Boolean(item.checkedBy[member.name]) : item.bringers.includes(member.name);
+              return <button key={member.name} className={`${member.color} ${selected ? "selected" : ""} ${currentMember === member.name ? "current" : ""}`} onClick={() => toggleMemberCell(item.id, member.name)} aria-label={`${member.name}${selected ? "取消" : "选择"}${phase === "verify" ? "已带上" : "会带"}`} title={`${member.name}${selected ? "已选择" : "未选择"}`}>{selected ? "✓" : "＋"}</button>;
+            })}
+          </div>
+        </div>
 
         {expanded && (
           <div className="inline-thread">
             <div className="thread-label"><span>这一行的讨论</span><small>{item.scope === "共享" ? "谁带、带多少、用谁的，都写这里" : "每个人写自己的数量或备注"}</small></div>
-            {item.scope === "共享" && <div className="bringer-board">
-              <small>选择会带</small>
+            <div className="bringer-board">
+              <small>会带的人</small>
               {item.bringers.length ? <div>{item.bringers.map((name) => {
                 const member = members.find((entry) => entry.name === name);
                 return <span className={member?.color} key={name}><i>{member?.short}</i>{name}会带</span>;
               })}</div> : <p>暂时没人选择，但可以继续讨论</p>}
-            </div>}
+            </div>
             {item.notes.length ? <div className="note-stack">
               {item.notes.map((note) => {
                 const member = members.find((entry) => entry.name === note.author);
@@ -231,16 +249,16 @@ export default function Home() {
 
             {phase === "discuss" ? <>
               <div className="quick-replies">
-                {item.scope === "共享" && <button className={isBringing ? "selected" : ""} onClick={() => !isBringing && sendNote(item.id, item.bringers.length ? "我也带" : "我来带")} disabled={isBringing}>{isBringing ? "✓ 我会带" : item.bringers.length ? "＋ 我也带" : "＋ 我来带"}</button>}
-                {item.scope === "共享" && <button onClick={() => sendNote(item.id, "我不带，用你们的")}>我不带</button>}
                 <button onClick={() => setDrafts((current) => ({ ...current, [item.id]: "我带 1 个" }))}>写数量</button>
+                <button onClick={() => setDrafts((current) => ({ ...current, [item.id]: "我用你们的" }))}>我用你们的</button>
+                <small>携带状态直接点上方格子</small>
               </div>
               <div className="row-composer">
                 <span className={members.find((member) => member.name === currentMember)?.color}>{members.find((member) => member.name === currentMember)?.short}</span>
                 <input value={drafts[item.id] ?? ""} onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: event.target.value }))} onKeyDown={(event) => event.key === "Enter" && sendNote(item.id)} placeholder={`在「${item.name}」这一行写…`} />
                 <button onClick={() => sendNote(item.id)}>↑</button>
               </div>
-            </> : <button className={`verify-item-button ${checked ? "done" : ""}`} onClick={() => toggleChecked(item.id)}>{checked ? "✓ 已放进行李" : `确认${currentMember}已经带上`}</button>}
+            </> : <p className="verify-hint">核对阶段也直接点上方对应成员的格子</p>}
           </div>
         )}
       </article>
@@ -273,7 +291,7 @@ export default function Home() {
           <section className="sheet-summary">
             <div><span>{items.length}</span><small>物品</small></div>
             <div><span>{noteCount}</span><small>行内留言</small></div>
-            <p>{phase === "discuss" ? <>不必先分完。<b>想到什么，就写在对应物品那一行。</b></> : <><b>{currentMember}已确认 {checkedCount} 件。</b> 点圆框继续核对。</>}</p>
+            <p>{phase === "discuss" ? <><b>点自己的格子选择“我带”</b>，点物品名称再展开讨论。</> : <><b>{currentMember}已确认 {checkedCount} 件。</b> 点成员格子继续核对。</>}</p>
           </section>
 
           <section className="ai-strip">
@@ -286,6 +304,11 @@ export default function Home() {
             <button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>全部</button>
             {categories.map((category) => <button key={category.id} className={`${category.tone} ${filter === category.id ? "active" : ""}`} onClick={() => setFilter(category.id)}>{category.name}</button>)}
           </nav>
+
+          <div className="table-head" aria-label="成员列">
+            <span><b>物品名称</b><small>点名称看讨论</small></span>
+            {members.map((member) => <button key={member.name} className={`${member.color} ${currentMember === member.name ? "current" : ""}`} onClick={() => setCurrentMember(member.name)}><i>{member.short}</i><small>{member.name}</small></button>)}
+          </div>
 
           <div className="category-list">
             {visibleCategories.map((category) => {
@@ -332,13 +355,13 @@ export default function Home() {
       </section>
 
       <aside className="prototype-note">
-        <p className="version">PROTOTYPE 05 · ROW THREAD</p>
+        <p className="version">PROTOTYPE 06 · GRID + THREAD</p>
         <h2>像共享表格，<br />但更适合手机。</h2>
-        <p>保留共享表格最有用的部分：物品是一行，所有人的话都落在这一行。分类负责定位，讨论负责把事情说清楚。</p>
-        <div className="principle"><span>01</span><p><b>一件物品，一条讨论线</b><br />不用在群聊里翻找上下文</p></div>
-        <div className="principle"><span>02</span><p><b>可以先聊，不必全部认领</b><br />数量、替代品、用谁的都能写</p></div>
+        <p>保留共享表格最直观的操作：一件物品一行，每个人一格。格子负责快速选择，物品名称负责展开上下文。</p>
+        <div className="principle"><span>01</span><p><b>点格子，直接选择“我带”</b><br />多人可以同时选，不互相覆盖</p></div>
+        <div className="principle"><span>02</span><p><b>点名称，才展开讨论</b><br />默认列表更干净，也更像表格</p></div>
         <div className="principle"><span>03</span><p><b>AI 建议也回到清单里</b><br />不另起一个攻略信息流</p></div>
-        <div className="try-card">试试看：点开「防晒」，切换右上角头像，直接在这一行留言。</div>
+        <div className="try-card">试试看：直接点「防晒」右侧任意成员格子，再点物品名称展开讨论。</div>
       </aside>
     </main>
   );
