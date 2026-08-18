@@ -266,6 +266,7 @@ export default function Home() {
   function renderItem(item: PackItem) {
     const expanded = openId === item.id;
     const checked = Boolean(item.checkedBy[currentMember]);
+    const recentNotes = item.notes.slice(-2);
 
     return (
       <article className={`item-row ${expanded ? "expanded" : ""} ${checked ? "checked" : ""}`} key={item.id}>
@@ -286,6 +287,16 @@ export default function Home() {
             })}
           </div>
         </div>
+
+        {!expanded && recentNotes.length > 0 && <div className="recent-notes" aria-label={`${item.name}最近两条讨论`}>
+          <div>
+            {recentNotes.map((note) => {
+              const member = members.find((entry) => entry.name === note.author);
+              return <p key={note.id}><span className={note.author === "AI" ? "ai-avatar" : member?.color}>{note.author === "AI" ? "AI" : member?.short}</span><b>{note.author}</b><em>{note.text}</em></p>;
+            })}
+          </div>
+          <small>{item.notes.length > 2 ? `另有 ${item.notes.length - 2} 条 · ` : ""}点物品名称查看完整聊天</small>
+        </div>}
 
         {expanded && (
           <div className="inline-thread">
@@ -472,11 +483,11 @@ export default function Home() {
       </section>
 
       <aside className="prototype-note">
-        <p className="version">PROTOTYPE 07 · PERSONAL CHECK</p>
+        <p className="version">PROTOTYPE 08 · RECENT CONTEXT</p>
         <h2>像共享表格，<br />但更适合手机。</h2>
         <p>保留共享表格最直观的操作：一件物品一行，每个人一格。格子负责快速选择，物品名称负责展开上下文。</p>
         <div className="principle"><span>01</span><p><b>点格子，直接选择“我带”</b><br />多人可以同时选，不互相覆盖</p></div>
-        <div className="principle"><span>02</span><p><b>点名称，才展开讨论</b><br />默认列表更干净，也更像表格</p></div>
+        <div className="principle"><span>02</span><p><b>默认露出最新两条讨论</b><br />点名称再查看这件物品的完整聊天</p></div>
         <div className="principle"><span>03</span><p><b>核对时回到个人任务</b><br />自己打勾、朋友只读、带不了就转交</p></div>
         <div className="try-card">试试看：进入「出发核对」，切到阿哲的清单催他收拾，或把自己的物品转交给朋友。</div>
       </aside>
