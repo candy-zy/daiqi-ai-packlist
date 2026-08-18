@@ -3,7 +3,30 @@
 import { useMemo, useState } from "react";
 
 type Member = "我" | "阿哲" | "小雨";
-type Phase = "assign" | "verify";
+type Phase = "prepare" | "verify";
+type Scope = "shared" | "private";
+
+type PackItem = {
+  id: number;
+  name: string;
+  icon: string;
+  scope: Scope;
+  group: string;
+  owner?: Member | null;
+  checked: Partial<Record<Member, boolean>>;
+  aiReason?: string;
+};
+
+type Suggestion = {
+  id: number;
+  name: string;
+  icon: string;
+  scope: Scope;
+  group: string;
+  reason: string;
+  signal: string;
+  added: boolean;
+};
 
 type ChatMessage = {
   id: number;
@@ -12,80 +35,68 @@ type ChatMessage = {
   system?: boolean;
 };
 
-type PackItem = {
-  id: number;
-  name: string;
-  category: "共用物品" | "每人必带";
-  owner: Member | null;
-  suggestedOwner?: Member;
-  aiReason?: string;
-  checked: Partial<Record<Member, boolean>>;
-};
-
 const members: { name: Member; short: string; profile: string; className: string }[] = [
   { name: "我", short: "我", profile: "有充电宝", className: "member-me" },
   { name: "阿哲", short: "哲", profile: "有相机", className: "member-zhe" },
-  { name: "小雨", short: "雨", profile: "有音箱 · 爱桌游", className: "member-yu" },
+  { name: "小雨", short: "雨", profile: "有保温杯", className: "member-yu" },
 ];
 
 const seedItems: PackItem[] = [
-  { id: 1, name: "相机", category: "共用物品", owner: null, suggestedOwner: "阿哲", aiReason: "阿哲登记了有相机", checked: {} },
-  { id: 2, name: "充电宝", category: "共用物品", owner: null, suggestedOwner: "我", aiReason: "你有 20,000mAh 充电宝", checked: {} },
-  { id: 3, name: "蓝牙音箱", category: "共用物品", owner: null, suggestedOwner: "小雨", aiReason: "小雨登记了有音箱", checked: {} },
-  { id: 4, name: "桌游卡牌", category: "共用物品", owner: null, suggestedOwner: "小雨", aiReason: "小雨的旅行偏好有桌游", checked: {} },
-  { id: 5, name: "防晒霜", category: "共用物品", owner: null, checked: {} },
-  { id: 6, name: "折叠雨伞", category: "共用物品", owner: null, checked: {} },
-  { id: 7, name: "纸巾 / 湿巾", category: "共用物品", owner: null, checked: {} },
-  { id: 8, name: "常用药包", category: "共用物品", owner: null, checked: {} },
-  { id: 9, name: "身份证", category: "每人必带", owner: null, checked: {} },
-  { id: 10, name: "换洗衣物", category: "每人必带", owner: null, checked: {} },
-  { id: 11, name: "洗漱包", category: "每人必带", owner: null, checked: {} },
+  { id: 1, name: "相机", icon: "📷", scope: "shared", group: "拍摄", owner: "阿哲", checked: {}, aiReason: "根据装备档案分给阿哲" },
+  { id: 2, name: "大容量充电宝", icon: "🔋", scope: "shared", group: "电子", owner: "我", checked: {}, aiReason: "你登记了 20,000mAh" },
+  { id: 3, name: "三脚架", icon: "⌁", scope: "shared", group: "拍摄", owner: null, checked: {} },
+  { id: 4, name: "公共药包", icon: "✚", scope: "shared", group: "应急", owner: null, checked: {} },
+  { id: 5, name: "纸巾 / 湿巾", icon: "▤", scope: "shared", group: "日用", owner: "小雨", checked: {} },
+  { id: 6, name: "护照", icon: "▣", scope: "private", group: "证件", checked: {} },
+  { id: 7, name: "长款羽绒服", icon: "♨", scope: "private", group: "衣物", checked: {} },
+  { id: 8, name: "换洗衣物", icon: "◫", scope: "private", group: "衣物", checked: {} },
+  { id: 9, name: "洗漱包", icon: "◉", scope: "private", group: "日用", checked: {} },
+  { id: 10, name: "日标转换插头", icon: "⌁", scope: "private", group: "电子", checked: {} },
+];
+
+const seedSuggestions: Suggestion[] = [
+  { id: 101, name: "蓝色围巾", icon: "▰", scope: "private", group: "穿搭", reason: "北海道雪地留白多，蓝色更显眼；近期旅行笔记常见这种出片搭配。", signal: "热门出片", added: false },
+  { id: 102, name: "防滑鞋套", icon: "⌇", scope: "private", group: "雪地装备", reason: "冬季路面可能结冰，放进个人背包更方便随时使用。", signal: "目的地特点", added: false },
+  { id: 103, name: "暖宝宝整包", icon: "☀", scope: "shared", group: "保暖", reason: "一人带一整包，同行人按需分用，避免三个人重复购买。", signal: "智能共用", added: false },
 ];
 
 const seedMessages: ChatMessage[] = [
-  { id: 1, author: "我", text: "大家看下空着的，家里有就直接认领吧～" },
-  { id: 2, author: "阿哲", text: "防晒霜谁有新的？不用为了这个单独买。" },
-  { id: 3, author: "小雨", text: "雨伞我还没找到，晚点回家确认一下。" },
+  { id: 1, author: "我", text: "三脚架谁能带？拍雪景可能会用。" },
+  { id: 2, author: "阿哲", text: "我带相机，箱子空间可能不太够。" },
+  { id: 3, author: "小雨", text: "保温杯我可以带一个大的。" },
 ];
 
 export default function Home() {
   const [items, setItems] = useState(seedItems);
-  const [phase, setPhase] = useState<Phase>("assign");
+  const [suggestions, setSuggestions] = useState(seedSuggestions);
+  const [phase, setPhase] = useState<Phase>("prepare");
   const [currentMember, setCurrentMember] = useState<Member>("我");
-  const [showAdd, setShowAdd] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addScope, setAddScope] = useState<Scope>("shared");
   const [newItem, setNewItem] = useState("");
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
   const [toast, setToast] = useState("");
 
-  const sharedItems = items.filter((item) => item.category === "共用物品");
-  const assignedCount = sharedItems.filter((item) => item.owner).length;
-  const unassignedCount = sharedItems.length - assignedCount;
+  const sharedItems = items.filter((item) => item.scope === "shared");
+  const privateItems = items.filter((item) => item.scope === "private");
+  const unassigned = sharedItems.filter((item) => !item.owner).length;
 
-  const checks = useMemo(() => {
-    const required = items.reduce((count, item) => count + (item.category === "每人必带" ? members.length : item.owner ? 1 : 0), 0);
-    const done = items.reduce((count, item) => {
-      if (item.category === "每人必带") return count + members.filter((member) => item.checked[member.name]).length;
-      return count + (item.owner && item.checked[item.owner] ? 1 : 0);
-    }, 0);
-    return { required, done, remaining: required - done };
-  }, [items]);
-  const totalPending = checks.remaining + unassignedCount;
+  const status = useMemo(() => {
+    const mine = privateItems.filter((item) => !item.checked[currentMember]).length;
+    const sharedMine = sharedItems.filter((item) => item.owner === currentMember && !item.checked[currentMember]).length;
+    return { mine, sharedMine, total: mine + sharedMine + unassigned };
+  }, [currentMember, privateItems, sharedItems, unassigned]);
 
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(""), 1800);
   }
 
-  function applyAiAssignments() {
-    setItems((current) => current.map((item) => item.owner || !item.suggestedOwner ? item : { ...item, owner: item.suggestedOwner }));
-    notify("AI 按大家已有装备分配了 4 件");
-  }
-
   function claim(id: number) {
     setItems((current) => current.map((item) => item.id === id ? { ...item, owner: currentMember } : item));
-    notify(`${currentMember}认领了这件物品`);
+    notify(`${currentMember}认领了这件共用品`);
   }
 
   function release(id: number) {
@@ -93,229 +104,195 @@ export default function Home() {
     notify("已放回待认领");
   }
 
-  function toggleCheck(id: number, member: Member) {
-    setItems((current) => current.map((item) => item.id === id ? {
-      ...item,
-      checked: { ...item.checked, [member]: !item.checked[member] },
-    } : item));
+  function togglePacked(item: PackItem) {
+    if (item.scope === "shared" && item.owner !== currentMember) return;
+    setItems((current) => current.map((entry) => entry.id === item.id ? {
+      ...entry,
+      checked: { ...entry.checked, [currentMember]: !entry.checked[currentMember] },
+    } : entry));
   }
 
-  function enterVerify() {
-    setPhase("verify");
-    if (unassignedCount > 0) notify(`${unassignedCount} 件未认领，已带到核对阶段继续处理`);
-    document.querySelector(".matrix-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
+  function addSuggestion(suggestion: Suggestion) {
+    if (suggestion.added) return;
+    setItems((current) => [...current, {
+      id: suggestion.id,
+      name: suggestion.name,
+      icon: suggestion.icon,
+      scope: suggestion.scope,
+      group: suggestion.group,
+      owner: suggestion.scope === "shared" ? null : undefined,
+      checked: {},
+      aiReason: suggestion.reason,
+    }]);
+    setSuggestions((current) => current.map((entry) => entry.id === suggestion.id ? { ...entry, added: true } : entry));
+    notify(`已加入${suggestion.scope === "shared" ? "共用" : "我的"}清单`);
   }
 
   function sendMessage() {
     const text = draft.trim();
     if (!text) return;
-
     const additions: ChatMessage[] = [{ id: Date.now(), author: currentMember, text }];
     const wantsToClaim = /(我来带|我带|我有|交给我|算我的)/.test(text);
-    const matchedItem = sharedItems.find((item) => {
-      const shortName = item.name.split(/[ /]/)[0];
-      return !item.owner && (text.includes(item.name) || text.includes(shortName));
-    });
-
-    if (wantsToClaim && matchedItem) {
-      setItems((current) => current.map((item) => item.id === matchedItem.id ? { ...item, owner: currentMember } : item));
-      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步到表格：${matchedItem.name} → ${currentMember}`, system: true });
+    const matched = sharedItems.find((item) => !item.owner && (text.includes(item.name) || text.includes(item.name.slice(0, 2))));
+    if (wantsToClaim && matched) {
+      setItems((current) => current.map((item) => item.id === matched.id ? { ...item, owner: currentMember } : item));
+      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：${matched.name}由${currentMember}负责`, system: true });
     }
-
     setMessages((current) => [...current, ...additions]);
     setDraft("");
   }
 
-  function addItem() {
+  function addCustomItem() {
     const name = newItem.trim();
     if (!name) return;
-    setItems((current) => [...current, { id: Date.now(), name, category: "共用物品", owner: null, checked: {} }]);
+    setItems((current) => [...current, {
+      id: Date.now(), name, icon: addScope === "shared" ? "◇" : "○", scope: addScope, group: "自定义", owner: addScope === "shared" ? null : undefined, checked: {},
+    }]);
     setNewItem("");
     setShowAdd(false);
-    setPhase("assign");
-    notify("已加入待认领清单");
+    notify(`已加入${addScope === "shared" ? "共用" : "我的"}清单`);
   }
 
-  const categories: PackItem["category"][] = ["共用物品", "每人必带"];
+  function renderItem(item: PackItem) {
+    const ownerMeta = members.find((member) => member.name === item.owner);
+    const packed = Boolean(item.checked[item.scope === "private" ? currentMember : item.owner ?? currentMember]);
+    const canCheck = item.scope === "private" || item.owner === currentMember;
+
+    return (
+      <article className={`list-item ${packed ? "packed" : ""}`} key={item.id}>
+        {phase === "verify" ? (
+          <button className={`pack-check ${packed ? "checked" : ""}`} onClick={() => togglePacked(item)} disabled={!canCheck} aria-label={`${packed ? "取消" : "确认"}${item.name}已装包`}>{packed ? "✓" : ""}</button>
+        ) : <span className="item-icon" aria-hidden="true">{item.icon}</span>}
+        <div className="item-copy">
+          <b>{item.name}</b>
+          <small>{item.group}{item.aiReason && <><i>✦</i>{item.aiReason}</>}</small>
+        </div>
+        {item.scope === "shared" ? (
+          item.owner ? (
+            <button className={`owner-pill ${ownerMeta?.className ?? ""}`} onClick={() => phase === "prepare" && item.owner === currentMember && release(item.id)}>
+              <span>{ownerMeta?.short}</span>{packed ? "已装包" : `${item.owner}负责`}
+            </button>
+          ) : <button className="claim-button" onClick={() => claim(item.id)}>＋ 我来带</button>
+        ) : (
+          <span className="private-pill">仅我可见</span>
+        )}
+      </article>
+    );
+  }
 
   return (
     <main className="app-shell">
-      <section className="phone-frame" aria-label="带齐旅行物品分工表原型">
+      <section className="phone-frame" aria-label="带齐旅行物品清单原型">
         <header className="topbar">
           <div className="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
           <div className="brand-name">带齐</div>
-          <span className="trip-name">海边周末</span>
+          <button className="trip-chip">北海道 · 5天⌄</button>
           <button className="icon-button" aria-label="更多选项">•••</button>
         </header>
 
         <div className="scroll-area">
-          <section className="trip-head">
-            <p className="eyebrow">3 人同行 · 周五 19:30 出发</p>
-            <h1>{phase === "assign" ? "先说好，谁带什么" : "出发前，最后核对"}</h1>
-            <p className="subcopy">{phase === "assign" ? "每件共用品只要一份，空格等大家来认领。" : "谁负责，谁亲手确认已经装进行李。"}</p>
+          <section className="trip-hero">
+            <div>
+              <p className="eyebrow">日本 · 北海道 · 3 人同行</p>
+              <h1>{phase === "prepare" ? "这次，带什么？" : "出发前，逐件确认"}</h1>
+            </div>
+            <div className="member-switch" aria-label="切换成员">
+              {members.map((member) => <button key={member.name} className={`${member.className} ${currentMember === member.name ? "selected" : ""}`} onClick={() => setCurrentMember(member.name)}>{member.short}</button>)}
+            </div>
           </section>
 
-          <div className="phase-switch" role="tablist" aria-label="准备阶段">
-            <button role="tab" aria-selected={phase === "assign"} className={phase === "assign" ? "active" : ""} onClick={() => setPhase("assign")}>
-              <span>1</span><b>分配谁带</b><small>{assignedCount}/{sharedItems.length} 已分配</small>
-            </button>
-            <button role="tab" aria-selected={phase === "verify"} className={phase === "verify" ? "active" : ""} onClick={enterVerify}>
-              <span>2</span><b>出发核对</b><small>{phase === "verify" ? `${checks.done}/${checks.required} 已确认` : "可随时进入"}</small>
-            </button>
+          <div className="context-tags"><span>❄ 雪地</span><span>−8°C</span><span>◉ 想拍照</span></div>
+
+          <div className="phase-tabs" role="tablist" aria-label="准备阶段">
+            <button className={phase === "prepare" ? "active" : ""} onClick={() => setPhase("prepare")}><span>1</span>准备清单</button>
+            <button className={phase === "verify" ? "active" : ""} onClick={() => setPhase("verify")}><span>2</span>出发核对</button>
           </div>
 
-          {phase === "assign" ? (
-            <button className="ai-assign" onClick={applyAiAssignments}>
-              <span className="spark">✦</span>
-              <span><b>让 AI 先按装备分一分</b><small>相机给有相机的人，减少不合理认领</small></span>
-              <span className="arrow">›</span>
-            </button>
-          ) : (
-            <div className={`verify-status ${totalPending === 0 ? "all-done" : ""}`}>
-              <span>{totalPending === 0 ? "✓" : totalPending}</span>
-              <p><b>{totalPending === 0 ? "全部带齐，可以出发！" : "项还需要处理"}</b><small>{unassignedCount ? `${unassignedCount} 件未认领 · ${checks.remaining} 格待确认` : "点负责人名下的方框逐项确认"}</small></p>
-            </div>
+          {phase === "verify" && (
+            <section className="verify-banner">
+              <span>{status.total}</span><div><b>{currentMember}还有 {status.mine + status.sharedMine} 件没确认</b><small>{unassigned ? `另有 ${unassigned} 件共用品仍待认领` : "所有共用品都有人负责"}</small></div>
+            </section>
           )}
+
+          <section className="ai-section">
+            <header>
+              <div className="ai-title"><span>✦</span><div><p className="eyebrow">AI 目的地补充</p><h2>北海道可能还需要这些</h2></div></div>
+              <small>{suggestions.filter((item) => !item.added).length} 条建议</small>
+            </header>
+            <div className="suggestion-scroll">
+              {suggestions.map((suggestion) => (
+                <article className={`suggestion-card ${suggestion.added ? "added" : ""}`} key={suggestion.id}>
+                  <div className={`suggestion-icon suggestion-${suggestion.id}`}>{suggestion.icon}</div>
+                  <span className="signal">{suggestion.signal}</span>
+                  <h3>{suggestion.name}</h3>
+                  <p>{suggestion.reason}</p>
+                  <button onClick={() => addSuggestion(suggestion)} disabled={suggestion.added}>{suggestion.added ? "✓ 已加入" : `＋ 加到${suggestion.scope === "shared" ? "共用" : "我的"}清单`}</button>
+                </article>
+              ))}
+            </div>
+          </section>
 
           <button className="chat-entry" onClick={() => setShowChat(true)}>
             <span className="chat-avatars"><i className="member-me">我</i><i className="member-zhe">哲</i><i className="member-yu">雨</i></span>
-            <span><b>{unassignedCount ? `${unassignedCount} 件没人带，群里问问` : "分工有变化？在这里聊"}</b><small>不用切换聊天软件 · 对话可同步认领结果</small></span>
+            <span><b>{unassigned ? `${unassigned} 件共用品没人带，聊一下` : "物品有变化？在这里聊"}</b><small>说“药包我来带”，结果自动同步</small></span>
             <span className="chat-count">{messages.length}</span>
           </button>
 
-          <section className="identity-bar">
-            <div>
-              <p className="eyebrow">正在以谁的身份查看</p>
-              <b>{currentMember}</b><small> · 点击头像切换，模拟朋友一起认领</small>
-            </div>
-            <div className="member-switch" aria-label="切换成员身份">
-              {members.map((member) => (
-                <button key={member.name} className={`${member.className} ${currentMember === member.name ? "selected" : ""}`} onClick={() => setCurrentMember(member.name)} aria-label={`切换为${member.name}`} title={member.profile}>
-                  {member.short}
-                </button>
-              ))}
-            </div>
+          <section className="list-section">
+            <header className="section-head">
+              <div><span className="scope-icon shared-icon">↔</span><div><h2>共用物品</h2><p>一人带一份，大家一起用</p></div></div>
+              <span>{sharedItems.filter((item) => item.owner).length}/{sharedItems.length} 已认领</span>
+            </header>
+            <div className="item-list">{sharedItems.map(renderItem)}</div>
           </section>
 
-          <section className="matrix-card">
-            <div className="matrix-scroll">
-              <div className="matrix-grid matrix-head">
-                <div className="item-col">物品</div>
-                {members.map((member) => (
-                  <div key={member.name} className={`person-col ${currentMember === member.name ? "current" : ""}`}>
-                    <span className={member.className}>{member.short}</span>
-                    <b>{member.name}</b>
-                    <small>{member.profile}</small>
-                  </div>
-                ))}
-              </div>
-
-              {categories.map((category) => (
-                <div key={category} className="matrix-section">
-                  <div className="section-label"><b>{category}</b><small>{category === "共用物品" ? "每件只需 1 人负责" : "每个人都要确认"}</small></div>
-                  {items.filter((item) => item.category === category).map((item) => (
-                    <div className={`matrix-grid matrix-row ${phase === "verify" && category === "共用物品" && !item.owner ? "unresolved-row" : ""}`} key={item.id}>
-                      <div className="item-col item-info">
-                        <b>{item.name}</b>
-                        {phase === "assign" && item.aiReason && <small><i>✦</i>{item.aiReason}</small>}
-                      </div>
-                      {members.map((member) => {
-                        const isCurrent = currentMember === member.name;
-                        const isOwner = item.owner === member.name;
-                        const checked = Boolean(item.checked[member.name]);
-
-                        if (phase === "assign") {
-                          if (category === "每人必带") return <div className={`claim-cell personal ${isCurrent ? "current" : ""}`} key={member.name}><span>各自带</span></div>;
-                          if (isOwner) return <div className={`claim-cell ${isCurrent ? "current" : ""}`} key={member.name}><button className={`claimed ${member.className}`} onClick={() => isCurrent && release(item.id)} aria-label={`${member.name}已认领${item.name}`}>✓<small>{isCurrent ? "已认领" : "负责"}</small></button></div>;
-                          if (!item.owner && isCurrent) return <div className="claim-cell current" key={member.name}><button className="claim-me" onClick={() => claim(item.id)}>＋<small>我来带</small></button></div>;
-                          return <div className="claim-cell" key={member.name}><span className="empty-dot">·</span></div>;
-                        }
-
-                        const needsCheck = category === "每人必带" || isOwner;
-                        return (
-                          <div className={`claim-cell verify-cell ${isCurrent ? "current" : ""}`} key={member.name}>
-                            {needsCheck ? (
-                              <button className={`verify-check ${checked ? `checked ${member.className}` : ""}`} onClick={() => toggleCheck(item.id, member.name)} aria-label={`${member.name}${checked ? "取消确认" : "确认带了"}${item.name}`}>
-                                {checked ? "✓" : ""}<small>{checked ? "带了" : "确认"}</small>
-                              </button>
-                            ) : !item.owner && isCurrent ? (
-                              <button className="claim-me urgent" onClick={() => claim(item.id)}>＋<small>我来带</small></button>
-                            ) : <span className={item.owner ? "empty-dot" : "unclaimed-mark"}>{item.owner ? "—" : "?"}</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
+          <section className="list-section private-section">
+            <header className="section-head">
+              <div><span className="scope-icon private-icon">●</span><div><h2>{currentMember === "我" ? "我的物品" : `${currentMember}的物品`}</h2><p>每个人都有自己的独立清单</p></div></div>
+              <span>{privateItems.length} 件</span>
+            </header>
+            <div className="item-list">{privateItems.map(renderItem)}</div>
           </section>
-
-          {phase === "assign" && (
-            <div className="assignment-summary">
-              <div className="mini-progress"><span style={{ width: `${assignedCount / sharedItems.length * 100}%` }} /></div>
-              <p><b>{unassignedCount ? `还剩 ${unassignedCount} 件没人带` : "分工完成"}</b><small>{unassignedCount ? "可以先去核对，也可以在群里继续商量" : "现在可以进入出发前核对"}</small></p>
-            </div>
-          )}
         </div>
 
         <footer className="action-bar">
           <button className="add-item" onClick={() => setShowAdd(true)} aria-label="添加物品">＋</button>
-          {phase === "assign" ? (
-            <button className="primary-action" onClick={enterVerify}>
-              {unassignedCount ? `进入核对 · ${unassignedCount} 件稍后再定` : "进入出发前核对"}<span>→</span>
-            </button>
+          {phase === "prepare" ? (
+            <button className="primary-action" onClick={() => setPhase("verify")}>进入出发核对 <span>→</span></button>
           ) : (
-            <button className={`primary-action ${totalPending ? "not-ready" : "ready"}`} onClick={() => totalPending ? notify(`还有 ${totalPending} 项待处理`) : notify("东西都带齐了，出发！")}>
-              {totalPending ? `继续核对 · 还有 ${totalPending} 项` : "全部带齐 · 出发"}<span>{totalPending ? "↑" : "✓"}</span>
-            </button>
+            <button className={`primary-action ${status.total === 0 ? "ready" : ""}`} onClick={() => notify(status.total ? `还有 ${status.total} 项需要处理` : "东西都带齐了，出发！")}>{status.total ? `继续核对 · 还有 ${status.total} 项` : "全部带齐 · 出发"}<span>{status.total ? "↑" : "✓"}</span></button>
           )}
         </footer>
 
         {showChat && (
-          <div className="add-sheet chat-sheet" role="dialog" aria-modal="true" aria-label="同行群聊">
-            <button className="sheet-backdrop" aria-label="关闭群聊" onClick={() => setShowChat(false)} />
+          <div className="bottom-sheet" role="dialog" aria-modal="true" aria-label="物品讨论">
+            <button className="sheet-backdrop" aria-label="关闭" onClick={() => setShowChat(false)} />
             <section className="sheet-card chat-card">
               <span className="sheet-handle" />
-              <header className="chat-header">
-                <div><p className="eyebrow">海边周末 · 3 人</p><h2>物品讨论</h2></div>
-                <button onClick={() => setShowChat(false)} aria-label="关闭">×</button>
-              </header>
-              <div className="chat-context"><span>✦</span><p><b>带齐助手会听懂认领</b><small>试试发送“药包我来带”，结果会自动回到表格。</small></p></div>
-              <div className="chat-messages" aria-live="polite">
+              <header className="chat-header"><div><p className="eyebrow">北海道 · 3 人</p><h2>物品讨论</h2></div><button onClick={() => setShowChat(false)}>×</button></header>
+              <div className="chat-context"><span>✦</span><p><b>对话会同步认领</b><small>试试发送“药包我来带”。</small></p></div>
+              <div className="chat-messages">
                 {messages.map((message) => {
                   const meta = members.find((member) => member.name === message.author);
-                  return (
-                    <div className={`message-row ${message.author === currentMember ? "mine" : ""} ${message.system ? "system" : ""}`} key={message.id}>
-                      <span className={`message-avatar ${meta?.className ?? "assistant-avatar"}`}>{meta?.short ?? "✦"}</span>
-                      <div><small>{message.author}</small><p>{message.text}</p></div>
-                    </div>
-                  );
+                  return <div className={`message-row ${message.author === currentMember ? "mine" : ""} ${message.system ? "system" : ""}`} key={message.id}><span className={`message-avatar ${meta?.className ?? "assistant-avatar"}`}>{meta?.short ?? "✦"}</span><div><small>{message.author}</small><p>{message.text}</p></div></div>;
                 })}
               </div>
-              {unassignedCount > 0 && (
-                <div className="chat-suggestions">
-                  {sharedItems.filter((item) => !item.owner).slice(0, 3).map((item) => <button key={item.id} onClick={() => setDraft(`谁可以带${item.name}？`)}>问问：{item.name}</button>)}
-                </div>
-              )}
-              <div className="chat-composer">
-                <input autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendMessage()} placeholder={`以${currentMember}身份发消息…`} aria-label="输入群聊消息" />
-                <button onClick={sendMessage} aria-label="发送消息">↑</button>
-              </div>
+              {unassigned > 0 && <div className="chat-suggestions">{sharedItems.filter((item) => !item.owner).map((item) => <button key={item.id} onClick={() => setDraft(`谁可以带${item.name}？`)}>问问：{item.name}</button>)}</div>}
+              <div className="chat-composer"><input autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendMessage()} placeholder={`以${currentMember}身份发消息…`} /><button onClick={sendMessage}>↑</button></div>
             </section>
           </div>
         )}
 
         {showAdd && (
-          <div className="add-sheet" role="dialog" aria-modal="true" aria-label="添加物品">
+          <div className="bottom-sheet" role="dialog" aria-modal="true" aria-label="添加物品">
             <button className="sheet-backdrop" aria-label="关闭" onClick={() => setShowAdd(false)} />
-            <div className="sheet-card">
+            <section className="sheet-card add-card">
               <span className="sheet-handle" />
-              <h2>加一件共用物品</h2>
-              <p>加入后先留空，等大家来认领。</p>
-              <input autoFocus value={newItem} onChange={(event) => setNewItem(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addItem()} placeholder="例如：自拍杆" aria-label="物品名称" />
-              <button className="primary-action" onClick={addItem}>加入待认领表格</button>
-            </div>
+              <h2>添加物品</h2><p>先选择这是大家共用，还是只放进自己的背包。</p>
+              <div className="scope-picker"><button className={addScope === "shared" ? "active" : ""} onClick={() => setAddScope("shared")}><b>↔ 共用物品</b><small>需要一人认领</small></button><button className={addScope === "private" ? "active" : ""} onClick={() => setAddScope("private")}><b>● 私人物品</b><small>只进入我的清单</small></button></div>
+              <input autoFocus value={newItem} onChange={(event) => setNewItem(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addCustomItem()} placeholder="例如：自拍杆" />
+              <button className="primary-action" onClick={addCustomItem}>加入清单</button>
+            </section>
           </div>
         )}
 
@@ -323,15 +300,13 @@ export default function Home() {
       </section>
 
       <aside className="prototype-note">
-        <p className="eyebrow">PRODUCT PROTOTYPE · V3</p>
-        <h2>边聊边认，<br />随时核对。</h2>
-        <p>表格记录谁负责，对话解决“没人认领怎么办”。说一句“药包我来带”，带齐助手就会把结果同步回表格。</p>
-        <div className="flow-step active"><span>1</span><p><b>认领阶段</b><br />空表开始，朋友各自说“我来带”</p></div>
-        <div className="flow-line" />
-        <div className="flow-step"><span>⋯</span><p><b>分不下来就聊</b><br />讨论留在物品旁，不再切换群聊软件</p></div>
-        <div className="flow-line" />
-        <div className="flow-step"><span>2</span><p><b>核对阶段</b><br />无需等全部认领，随时进入继续处理</p></div>
-        <div className="demo-note">试试：打开“物品讨论”，发送“药包我来带”。</div>
+        <p className="eyebrow">PRODUCT PROTOTYPE · V4</p>
+        <h2>目的地懂你，<br />清单依然简单。</h2>
+        <p>手机端不再复制表格，而是回到最自然的纵向 List。AI 负责理解北海道的气候与出片偏好，用户只需要决定是否加入清单。</p>
+        <div className="principle"><span>01</span><p><b>共用与私人分开</b><br />共用品要认领，私人物品归个人</p></div>
+        <div className="principle"><span>02</span><p><b>AI 补充有理由</b><br />说明来自目的地特点还是热门玩法</p></div>
+        <div className="principle"><span>03</span><p><b>不做旅游攻略</b><br />只回答“这次出发需要带什么”</p></div>
+        <div className="demo-note">试试：把“蓝色围巾”加入我的清单，再进入出发核对。</div>
       </aside>
     </main>
   );
