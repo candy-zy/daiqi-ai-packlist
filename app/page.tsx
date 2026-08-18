@@ -41,23 +41,44 @@ const members: { name: Member; short: string; profile: string; className: string
   { name: "小雨", short: "雨", profile: "有保温杯", className: "member-yu" },
 ];
 
+const itemCategories = [
+  { name: "证件", icon: "▣", note: "身份与出行凭证" },
+  { name: "衣物穿搭", icon: "♨", note: "衣服、鞋帽与配饰" },
+  { name: "洗护美妆", icon: "✦", note: "洗漱、护肤与化妆" },
+  { name: "电子摄影", icon: "⌁", note: "数码、充电与拍摄" },
+  { name: "健康应急", icon: "✚", note: "药品、保暖与防护" },
+  { name: "食物饮品", icon: "◉", note: "路上吃喝与补给" },
+  { name: "生活用品", icon: "◇", note: "其他日常用品" },
+] as const;
+
 const seedItems: PackItem[] = [
-  { id: 1, name: "相机", icon: "📷", scope: "shared", group: "拍摄", owners: ["阿哲"], checked: {}, aiReason: "根据装备档案分给阿哲" },
-  { id: 2, name: "大容量充电宝", icon: "🔋", scope: "shared", group: "电子", owners: ["我"], checked: {}, aiReason: "你登记了 20,000mAh" },
-  { id: 3, name: "三脚架", icon: "⌁", scope: "shared", group: "拍摄", owners: [], checked: {} },
-  { id: 4, name: "公共药包", icon: "✚", scope: "shared", group: "应急", owners: [], checked: {} },
-  { id: 5, name: "纸巾 / 湿巾", icon: "▤", scope: "shared", group: "日用", owners: ["小雨"], checked: {} },
+  { id: 1, name: "相机", icon: "📷", scope: "shared", group: "电子摄影", owners: ["阿哲"], checked: {}, aiReason: "根据装备档案分给阿哲" },
+  { id: 2, name: "大容量充电宝", icon: "🔋", scope: "shared", group: "电子摄影", owners: ["我"], checked: {}, aiReason: "你登记了 20,000mAh" },
+  { id: 3, name: "三脚架", icon: "⌁", scope: "shared", group: "电子摄影", owners: [], checked: {} },
+  { id: 4, name: "公共药包", icon: "✚", scope: "shared", group: "健康应急", owners: [], checked: {} },
+  { id: 5, name: "纸巾 / 湿巾", icon: "▤", scope: "shared", group: "生活用品", owners: ["小雨"], checked: {} },
   { id: 6, name: "护照", icon: "▣", scope: "private", group: "证件", owners: [], checked: {} },
-  { id: 7, name: "长款羽绒服", icon: "♨", scope: "private", group: "衣物", owners: [], checked: {} },
-  { id: 8, name: "换洗衣物", icon: "◫", scope: "private", group: "衣物", owners: [], checked: {} },
-  { id: 9, name: "洗漱包", icon: "◉", scope: "private", group: "日用", owners: [], checked: {} },
-  { id: 10, name: "日标转换插头", icon: "⌁", scope: "private", group: "电子", owners: [], checked: {} },
+  { id: 7, name: "长款羽绒服", icon: "♨", scope: "private", group: "衣物穿搭", owners: [], checked: {} },
+  { id: 8, name: "换洗衣物", icon: "◫", scope: "private", group: "衣物穿搭", owners: [], checked: {} },
+  { id: 9, name: "洗漱包", icon: "◉", scope: "private", group: "洗护美妆", owners: [], checked: {} },
+  { id: 10, name: "日标转换插头", icon: "⌁", scope: "private", group: "电子摄影", owners: [], checked: {} },
+  { id: 11, name: "路上零食", icon: "●", scope: "shared", group: "食物饮品", owners: [], checked: {} },
 ];
 
 const seedSuggestions: Suggestion[] = [
-  { id: 101, name: "蓝色围巾", icon: "▰", scope: "private", group: "穿搭", reason: "AI 判断为个人物品：属于个人穿搭，每个人可按自己的造型决定是否携带。", signal: "热门出片", added: false },
-  { id: 103, name: "暖宝宝整包", icon: "☀", scope: "shared", group: "保暖", reason: "AI 判断为共用物品：一人带一整包，同行人按需分用；其他人也可以选择再带。", signal: "智能共用", added: false },
+  { id: 101, name: "蓝色围巾", icon: "▰", scope: "private", group: "衣物穿搭", reason: "AI 判断为个人物品：属于个人穿搭，每个人可按自己的造型决定是否携带。", signal: "热门出片", added: false },
+  { id: 103, name: "暖宝宝整包", icon: "☀", scope: "shared", group: "健康应急", reason: "AI 判断为共用物品：一人带一整包，同行人按需分用；其他人也可以选择再带。", signal: "智能共用", added: false },
 ];
+
+function inferGroup(name: string) {
+  if (/(护照|身份证|签证|交通卡|车票|机票|证件)/.test(name)) return "证件";
+  if (/(衣|裤|裙|袜|鞋|帽|围巾|手套|外套|睡衣|饰品)/.test(name)) return "衣物穿搭";
+  if (/(洗|护肤|化妆|防晒|牙刷|牙膏|面膜|香水|卸妆|口红)/.test(name)) return "洗护美妆";
+  if (/(手机|相机|充电|插头|电池|耳机|自拍|三脚架|数据线)/.test(name)) return "电子摄影";
+  if (/(药|创可贴|暖宝宝|口罩|消毒|卫生巾|冰凉贴)/.test(name)) return "健康应急";
+  if (/(水|零食|食物|饮料|咖啡|茶|保温杯)/.test(name)) return "食物饮品";
+  return "生活用品";
+}
 
 const seedMessages: ChatMessage[] = [
   { id: 1, author: "我", text: "三脚架谁能带？拍雪景可能会用。" },
@@ -161,7 +182,7 @@ export default function Home() {
     const name = newItem.trim();
     if (!name) return;
     setItems((current) => [...current, {
-      id: Date.now(), name, icon: addScope === "shared" ? "◇" : "○", scope: addScope, group: "自定义", owners: [], checked: {},
+      id: Date.now(), name, icon: addScope === "shared" ? "◇" : "○", scope: addScope, group: inferGroup(name), owners: [], checked: {},
     }]);
     setNewItem("");
     setShowAdd(false);
@@ -267,21 +288,19 @@ export default function Home() {
             <span className="chat-count">{messages.length}</span>
           </button>}
 
-          {phase === "prepare" && <section className="list-section">
-            <header className="section-head">
-              <div><span className="scope-icon shared-icon">↔</span><div><h2>共用物品</h2><p>一人带一份，大家一起用</p></div></div>
-              <span>{sharedItems.filter((item) => item.owners.length).length}/{sharedItems.length} 已认领</span>
-            </header>
-            <div className="item-list">{sharedItems.map(renderItem)}</div>
-          </section>}
-
-          {phase === "prepare" ? <section className="list-section private-section">
-            <header className="section-head">
-              <div><span className="scope-icon private-icon">●</span><div><h2>{currentMember === "我" ? "我的物品" : `${currentMember}的物品`}</h2><p>每个人都有自己的独立清单</p></div></div>
-              <span>{privateItems.length} 件</span>
-            </header>
-            <div className="item-list">{privateItems.map(renderItem)}</div>
-          </section> : <section className="list-section verify-list-section">
+          {phase === "prepare" ? <div className="category-sections">
+            {itemCategories.map((category, index) => {
+              const categoryItems = items.filter((item) => item.group === category.name);
+              if (!categoryItems.length) return null;
+              return <section className="list-section category-section" key={category.name}>
+                <header className="section-head">
+                  <div><span className={`scope-icon category-icon category-${index}`}>{category.icon}</span><div><h2>{category.name}</h2><p>{category.note}</p></div></div>
+                  <span>{categoryItems.length} 件</span>
+                </header>
+                <div className="item-list">{categoryItems.map(renderItem)}</div>
+              </section>;
+            })}
+          </div> : <section className="list-section verify-list-section">
             <header className="section-head">
               <div><span className="scope-icon private-icon">✓</span><div><h2>{currentMember === "我" ? "我的待带清单" : `${currentMember}的待带清单`}</h2><p>这里只显示这个人自己负责的物品</p></div></div>
               <span>{verifyItems.length} 件</span>

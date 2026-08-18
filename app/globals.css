@@ -66,6 +66,10 @@ h1 { margin:0; font-size:27px; line-height:1.12; letter-spacing:-.045em; font-we
 .chat-count { width:22px; height:22px; display:grid; place-items:center; border-radius:50%; color:#526a17; background:var(--lime); font-size:7px; font-weight:900; }
 
 .list-section { margin-bottom:20px; }
+.category-sections { display:grid; gap:2px; }
+.category-section { margin-bottom:16px; }
+.category-icon { color:#3e433e; background:#ece9ff; }
+.category-0 { background:#ffe9b9; }.category-1 { background:#e8ddff; }.category-2 { background:#ffddea; }.category-3 { background:#dcecff; }.category-4 { background:#e6f7c0; }.category-5 { background:#fff0bf; }.category-6 { background:#e7e5df; }
 .section-head { display:flex; align-items:center; justify-content:space-between; padding:0 2px 8px; }
 .section-head > div { display:flex; align-items:center; gap:8px; }
 .scope-icon { width:30px; height:30px; display:grid; place-items:center; border-radius:10px; font-size:13px; font-weight:900; }
