@@ -57,7 +57,6 @@ const seedItems: PackItem[] = [
 const seedSuggestions: Suggestion[] = [
   { id: 101, name: "蓝色围巾", icon: "▰", scope: "private", group: "穿搭", reason: "北海道雪地留白多，蓝色更显眼；近期旅行笔记常见这种出片搭配。", signal: "热门出片", added: false },
   { id: 102, name: "防滑鞋套", icon: "⌇", scope: "private", group: "雪地装备", reason: "冬季路面可能结冰，放进个人背包更方便随时使用。", signal: "目的地特点", added: false },
-  { id: 103, name: "暖宝宝整包", icon: "☀", scope: "shared", group: "保暖", reason: "可以有人负责一整包，其他人需要时也能继续选择自己带。", signal: "智能共用", added: false },
 ];
 
 const seedMessages: ChatMessage[] = [
@@ -110,6 +109,21 @@ export default function Home() {
       ...entry,
       checked: { ...entry.checked, [currentMember]: !entry.checked[currentMember] },
     } : entry));
+  }
+
+  function moveItem(id: number) {
+    setItems((current) => current.map((item) => {
+      if (item.id !== id) return item;
+      const movingToShared = item.scope === "private";
+      return {
+        ...item,
+        scope: movingToShared ? "shared" : "private",
+        owners: movingToShared ? [currentMember] : [],
+        checked: {},
+      };
+    }));
+    const item = items.find((entry) => entry.id === id);
+    notify(item?.scope === "private" ? "已移到共用物品" : "已移到我的物品");
   }
 
   function addSuggestion(suggestion: Suggestion) {
@@ -166,15 +180,16 @@ export default function Home() {
         ) : <span className="item-icon" aria-hidden="true">{item.icon}</span>}
         <div className="item-copy">
           <b>{item.name}</b>
-          <small>{item.group}{item.aiReason && <><i>✦</i>{item.aiReason}</>}</small>
+          <div className="item-meta"><small>{item.group}{item.aiReason && <><i>✦</i>{item.aiReason}</>}</small>{phase === "prepare" && <button className="move-item-button" onClick={() => moveItem(item.id)}>↔ {item.scope === "shared" ? "移到我的" : "移到共用"}</button>}</div>
         </div>
         {item.scope === "shared" ? (
           item.owners.length ? (
-            currentWillBring ? <button className="owner-pill multi-owner-pill member-me" onClick={() => phase === "prepare" && release(item.id)}>
-              <span>{currentMember === "我" ? "我" : members.find((member) => member.name === currentMember)?.short}</span>{packed ? "已装包" : item.owners.length > 1 ? `${item.owners.length}人会带` : "我会带"}
-            </button> : <button className="join-owner-button" onClick={() => phase === "prepare" && claim(item.id)}>
-              <span>{ownerMembers.slice(0, 2).map((owner) => <i className={owner?.className} key={owner?.name}>{owner?.short}</i>)}<em>{item.owners.length > 1 ? `${item.owners.length}人会带` : `${item.owners[0]}会带`}</em></span><b>＋ 我也带</b>
-            </button>
+            <div className="shared-owner-action">
+              <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
+                {ownerMembers.slice(0, 3).map((owner) => <button className={`owner-avatar ${owner?.className}`} key={owner?.name} onClick={() => phase === "prepare" && owner?.name === currentMember && release(item.id)} disabled={owner?.name !== currentMember} title={owner?.name === currentMember ? "取消我会带" : `${owner?.name}会带`}>{owner?.short}</button>)}
+              </div>
+              <button className={`also-bring-button ${currentWillBring ? "joined" : ""}`} onClick={() => phase === "prepare" && !currentWillBring && claim(item.id)} disabled={phase !== "prepare" || currentWillBring}><span>{currentWillBring ? "✓" : "＋"}</span><small>{currentWillBring ? "我已带" : "我也带"}</small></button>
+            </div>
           ) : <button className="claim-button" onClick={() => phase === "prepare" && claim(item.id)}>＋ 我来带</button>
         ) : (
           <span className="private-pill">仅我可见</span>
