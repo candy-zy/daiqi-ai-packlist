@@ -188,7 +188,16 @@ export default function Home() {
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
                 {ownerMembers.slice(0, 3).map((owner) => <button className={`owner-avatar ${owner?.className}`} key={owner?.name} onClick={() => phase === "prepare" && owner?.name === currentMember && release(item.id)} disabled={owner?.name !== currentMember} title={owner?.name === currentMember ? "取消我会带" : `${owner?.name}会带`}>{owner?.short}</button>)}
               </div>
-              <button className={`also-bring-button ${currentWillBring ? "joined" : ""}`} onClick={() => phase === "prepare" && !currentWillBring && claim(item.id)} disabled={phase !== "prepare" || currentWillBring}><span>{currentWillBring ? "✓" : "＋"}</span><small>{currentWillBring ? "我已带" : "我也带"}</small></button>
+              <button
+                className={`also-bring-button ${currentWillBring ? "joined" : ""}`}
+                onClick={() => phase === "prepare" && (currentWillBring ? release(item.id) : claim(item.id))}
+                disabled={phase !== "prepare"}
+                aria-pressed={currentWillBring}
+                aria-label={currentWillBring ? `取消携带${item.name}` : `我也带${item.name}`}
+                title={currentWillBring ? "再点一次取消" : "我也带"}
+              >
+                <span>{currentWillBring ? "✓" : "＋"}</span><small>{currentWillBring ? "已选择" : "我也带"}</small>
+              </button>
             </div>
           ) : <button className="claim-button" onClick={() => phase === "prepare" && claim(item.id)}>＋ 我来带</button>
         ) : (
