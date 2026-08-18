@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify";
 type Scope = "shared" | "private";
+type ListFilter = "all" | "mine" | "unassigned";
 
 type PackItem = {
   id: number;
@@ -40,16 +41,6 @@ const members: { name: Member; short: string; profile: string; className: string
   { name: "阿哲", short: "哲", profile: "有相机", className: "member-zhe" },
   { name: "小雨", short: "雨", profile: "有保温杯", className: "member-yu" },
 ];
-
-const itemCategories = [
-  { name: "证件", icon: "▣", note: "身份与出行凭证" },
-  { name: "衣物穿搭", icon: "♨", note: "衣服、鞋帽与配饰" },
-  { name: "洗护美妆", icon: "✦", note: "洗漱、护肤与化妆" },
-  { name: "电子摄影", icon: "⌁", note: "数码、充电与拍摄" },
-  { name: "健康应急", icon: "✚", note: "药品、保暖与防护" },
-  { name: "食物饮品", icon: "◉", note: "路上吃喝与补给" },
-  { name: "生活用品", icon: "◇", note: "其他日常用品" },
-] as const;
 
 const seedItems: PackItem[] = [
   { id: 1, name: "相机", icon: "📷", scope: "shared", group: "电子摄影", owners: ["阿哲"], checked: {}, aiReason: "根据装备档案分给阿哲" },
@@ -90,6 +81,7 @@ export default function Home() {
   const [items, setItems] = useState(seedItems);
   const [suggestions, setSuggestions] = useState(seedSuggestions);
   const [phase, setPhase] = useState<Phase>("prepare");
+  const [listFilter, setListFilter] = useState<ListFilter>("all");
   const [currentMember, setCurrentMember] = useState<Member>("我");
   const [showChat, setShowChat] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -103,6 +95,16 @@ export default function Home() {
   const privateItems = items.filter((item) => item.scope === "private");
   const unassigned = sharedItems.filter((item) => item.owners.length === 0).length;
   const verifyItems = [...privateItems, ...sharedItems.filter((item) => item.owners.includes(currentMember))];
+  const prepareItems = listFilter === "mine"
+    ? verifyItems
+    : listFilter === "unassigned"
+      ? sharedItems.filter((item) => item.owners.length === 0)
+      : items;
+  const filterCopy = listFilter === "mine"
+    ? { title: currentMember === "我" ? "我的物品" : `${currentMember}的物品`, note: "个人物品和已认领的共用品" }
+    : listFilter === "unassigned"
+      ? { title: "待分配物品", note: "还没有任何人负责携带" }
+      : { title: "全部物品", note: "个人与共用物品都在这里" };
 
   const status = useMemo(() => {
     const mine = privateItems.filter((item) => !item.checked[currentMember]).length;
@@ -202,7 +204,7 @@ export default function Home() {
         ) : <span className="item-icon" aria-hidden="true">{item.icon}</span>}
         <div className="item-copy">
           <b>{item.name}</b>
-          <div className="item-meta"><small>{item.group}{item.aiReason && <><i>✦</i>{item.aiReason}</>}</small>{phase === "prepare" && <button className="move-item-button" onClick={() => moveItem(item.id)}>↔ {item.scope === "shared" ? "移到我的" : "移到共用"}</button>}</div>
+          <div className="item-meta"><small>{item.aiReason ? <><i>✦</i>{item.aiReason}</> : item.scope === "shared" ? "共用物品" : "个人物品"}</small>{phase === "prepare" && <button className="move-item-button" onClick={() => moveItem(item.id)}>↔ {item.scope === "shared" ? "移到我的" : "移到共用"}</button>}</div>
         </div>
         {phase === "prepare" && (item.scope === "shared" ? (
           item.owners.length ? (
@@ -288,19 +290,19 @@ export default function Home() {
             <span className="chat-count">{messages.length}</span>
           </button>}
 
-          {phase === "prepare" ? <div className="category-sections">
-            {itemCategories.map((category, index) => {
-              const categoryItems = items.filter((item) => item.group === category.name);
-              if (!categoryItems.length) return null;
-              return <section className="list-section category-section" key={category.name}>
-                <header className="section-head">
-                  <div><span className={`scope-icon category-icon category-${index}`}>{category.icon}</span><div><h2>{category.name}</h2><p>{category.note}</p></div></div>
-                  <span>{categoryItems.length} 件</span>
-                </header>
-                <div className="item-list">{categoryItems.map(renderItem)}</div>
-              </section>;
-            })}
-          </div> : <section className="list-section verify-list-section">
+          {phase === "prepare" && <nav className="list-filters" aria-label="筛选准备清单">
+            <button className={listFilter === "all" ? "active" : ""} onClick={() => setListFilter("all")}>全部 <span>{items.length}</span></button>
+            <button className={listFilter === "mine" ? "active" : ""} onClick={() => setListFilter("mine")}>我的 <span>{verifyItems.length}</span></button>
+            <button className={listFilter === "unassigned" ? "active" : ""} onClick={() => setListFilter("unassigned")}>待分配 <span>{unassigned}</span></button>
+          </nav>}
+
+          {phase === "prepare" ? <section className="list-section filtered-list-section">
+            <header className="section-head">
+              <div><span className="scope-icon all-icon">≡</span><div><h2>{filterCopy.title}</h2><p>{filterCopy.note}</p></div></div>
+              <span>{prepareItems.length} 件</span>
+            </header>
+            {prepareItems.length ? <div className="item-list">{prepareItems.map(renderItem)}</div> : <div className="empty-list"><span>✓</span><b>这里已经清空了</b><small>暂时没有等待分配的物品</small></div>}
+          </section> : <section className="list-section verify-list-section">
             <header className="section-head">
               <div><span className="scope-icon private-icon">✓</span><div><h2>{currentMember === "我" ? "我的待带清单" : `${currentMember}的待带清单`}</h2><p>这里只显示这个人自己负责的物品</p></div></div>
               <span>{verifyItems.length} 件</span>

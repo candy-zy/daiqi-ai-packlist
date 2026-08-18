@@ -66,10 +66,12 @@ h1 { margin:0; font-size:27px; line-height:1.12; letter-spacing:-.045em; font-we
 .chat-count { width:22px; height:22px; display:grid; place-items:center; border-radius:50%; color:#526a17; background:var(--lime); font-size:7px; font-weight:900; }
 
 .list-section { margin-bottom:20px; }
-.category-sections { display:grid; gap:2px; }
-.category-section { margin-bottom:16px; }
-.category-icon { color:#3e433e; background:#ece9ff; }
-.category-0 { background:#ffe9b9; }.category-1 { background:#e8ddff; }.category-2 { background:#ffddea; }.category-3 { background:#dcecff; }.category-4 { background:#e6f7c0; }.category-5 { background:#fff0bf; }.category-6 { background:#e7e5df; }
+.list-filters { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin:0 0 14px; padding:4px; border-radius:13px; background:#eceae4; }
+.list-filters button { display:flex; align-items:center; justify-content:center; gap:5px; min-height:34px; border:0; border-radius:10px; color:#797b77; background:transparent; cursor:pointer; font-size:8px; font-weight:900; }
+.list-filters button span { min-width:17px; padding:2px 4px; border-radius:99px; color:#777a74; background:rgba(255,255,255,.72); font-size:6px; }
+.list-filters button.active { color:white; background:var(--ink); box-shadow:0 3px 8px rgba(40,43,40,.14); }.list-filters button.active span { color:#425712; background:var(--lime); }
+.all-icon { color:#574d82; background:#e6e0ff; }
+.empty-list { display:grid; place-items:center; gap:4px; padding:28px 12px; border:1px dashed #d7d4cc; border-radius:17px; color:#7e807b; background:white; }.empty-list span { width:32px; height:32px; display:grid; place-items:center; border-radius:50%; color:#3f5410; background:var(--lime); font-weight:900; }.empty-list b { font-size:9px; }.empty-list small { font-size:7px; }
 .section-head { display:flex; align-items:center; justify-content:space-between; padding:0 2px 8px; }
 .section-head > div { display:flex; align-items:center; gap:8px; }
 .scope-icon { width:30px; height:30px; display:grid; place-items:center; border-radius:10px; font-size:13px; font-weight:900; }
