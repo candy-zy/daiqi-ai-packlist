@@ -55,8 +55,8 @@ const seedItems: PackItem[] = [
 ];
 
 const seedSuggestions: Suggestion[] = [
-  { id: 101, name: "蓝色围巾", icon: "▰", scope: "private", group: "穿搭", reason: "北海道雪地留白多，蓝色更显眼；近期旅行笔记常见这种出片搭配。", signal: "热门出片", added: false },
-  { id: 102, name: "防滑鞋套", icon: "⌇", scope: "private", group: "雪地装备", reason: "冬季路面可能结冰，放进个人背包更方便随时使用。", signal: "目的地特点", added: false },
+  { id: 101, name: "蓝色围巾", icon: "▰", scope: "private", group: "穿搭", reason: "AI 判断为个人物品：属于个人穿搭，每个人可按自己的造型决定是否携带。", signal: "热门出片", added: false },
+  { id: 103, name: "暖宝宝整包", icon: "☀", scope: "shared", group: "保暖", reason: "AI 判断为共用物品：一人带一整包，同行人按需分用；其他人也可以选择再带。", signal: "智能共用", added: false },
 ];
 
 const seedMessages: ChatMessage[] = [
@@ -234,7 +234,7 @@ export default function Home() {
 
           <section className="ai-section">
             <header>
-              <div className="ai-title"><span>✦</span><div><p className="eyebrow">AI 目的地补充</p><h2>北海道可能还需要这些</h2></div></div>
+              <div className="ai-title"><span>✦</span><div><p className="eyebrow">AI 已自动分类</p><h2>北海道建议，已分进对应清单</h2></div></div>
               <small>{suggestions.filter((item) => !item.added).length} 条建议</small>
             </header>
             <div className="suggestion-scroll">
@@ -242,9 +242,10 @@ export default function Home() {
                 <article className={`suggestion-card ${suggestion.added ? "added" : ""}`} key={suggestion.id}>
                   <div className={`suggestion-icon suggestion-${suggestion.id}`}>{suggestion.icon}</div>
                   <span className="signal">{suggestion.signal}</span>
+                  <span className={`scope-decision ${suggestion.scope}`}>✦ AI 判断 · {suggestion.scope === "shared" ? "共用物品" : "我的物品"}</span>
                   <h3>{suggestion.name}</h3>
                   <p>{suggestion.reason}</p>
-                  <button onClick={() => addSuggestion(suggestion)} disabled={suggestion.added}>{suggestion.added ? "✓ 已加入" : `＋ 加到${suggestion.scope === "shared" ? "共用" : "我的"}清单`}</button>
+                  <button onClick={() => addSuggestion(suggestion)} disabled={suggestion.added}>{suggestion.added ? "✓ 已加入对应清单" : `＋ 加入${suggestion.scope === "shared" ? "共用物品" : "我的物品"}`}</button>
                 </article>
               ))}
             </div>
