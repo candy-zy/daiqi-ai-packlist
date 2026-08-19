@@ -108,20 +108,20 @@ const seedItems: PackItem[] = [
 ];
 
 const seedSuggestions: Suggestion[] = [
-  { id: 101, name: "蓝色围巾", icon: "▰", group: "衣物鞋帽类", reason: "北海道雪景中蓝色更显眼，AI 已将它归入衣物鞋帽类。", signal: "热门出片", added: false },
-  { id: 103, name: "暖宝宝整包", icon: "☀", group: "医药健康类", reason: "低温行程可能需要持续保暖，AI 已将它归入医药健康类。", signal: "低温提醒", added: false },
+  { id: 101, name: "韩系拍照发夹", icon: "✦", group: "衣物鞋帽类", reason: "首尔街拍常用简洁发饰点亮造型，AI 已将它归入衣物鞋帽类。", signal: "热门出片", added: false },
+  { id: 103, name: "折叠购物袋", icon: "▱", group: "出行日用杂物类", reason: "首尔逛街和便利店购物时随身带一个更方便，AI 已将它归入出行日用杂物类。", signal: "逛街提醒", added: false },
 ];
 
 const seedMessages: ChatMessage[] = [
-  { id: 1, author: "我", text: "三脚架谁能带？拍雪景可能会用。" },
+  { id: 1, author: "我", text: "自拍杆谁能带？首尔街拍和合照可能会用。" },
   { id: 2, author: "阿哲", text: "我带相机，箱子空间可能不太够。" },
-  { id: 3, author: "小雨", text: "保温杯我可以带一个大的。" },
+  { id: 3, author: "小雨", text: "折叠购物袋我可以带一个。" },
 ];
 
 export default function Home() {
   const [teamReady, setTeamReady] = useState(false);
-  const [teamName, setTeamName] = useState("北海道出片小队");
-  const [destination, setDestination] = useState("日本 · 北海道");
+  const [teamName, setTeamName] = useState("首尔逛拍小队");
+  const [destination, setDestination] = useState("韩国 · 首尔");
   const [items, setItems] = useState(seedItems);
   const [suggestions, setSuggestions] = useState(seedSuggestions);
   const [phase, setPhase] = useState<Phase>("prepare");
@@ -169,8 +169,8 @@ export default function Home() {
             <p className="eyebrow">先把朋友聚到一起</p>
             <h1>一起准备，<br />这次别漏带。</h1>
             <p className="setup-intro">创建旅行队伍并填写目的地，AI 会生成一份大家可以同时认领的准备清单。</p>
-            <label className="setup-field"><span>队伍名称</span><input value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder="例如：北海道出片小队" /></label>
-            <label className="setup-field"><span>目的地</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：日本 · 北海道" /></label>
+            <label className="setup-field"><span>队伍名称</span><input value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder="例如：首尔逛拍小队" /></label>
+            <label className="setup-field"><span>目的地</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：韩国 · 首尔" /></label>
             <div className="setup-members"><div><b>队伍成员</b><small>进入后可继续邀请朋友</small></div><div className="setup-member-dots"><i className="member-me">我</i><i className="member-zhe">哲</i><i className="member-yu">雨</i></div></div>
             <button className="setup-submit" onClick={() => teamName.trim() && destination.trim() && setTeamReady(true)}>创建队伍并生成清单 <span>→</span></button>
           </div>
@@ -301,7 +301,7 @@ export default function Home() {
             </div>
           </section>
 
-          <div className="context-tags"><span>❄ 雪地</span><span>−8°C</span><span>◉ 想拍照</span></div>
+          <div className="context-tags"><span>▦ 城市漫游</span><span>◇ 逛街</span><span>◉ 想拍照</span></div>
 
           <div className="phase-tabs" role="tablist" aria-label="准备阶段">
             <button className={phase === "prepare" ? "active" : ""} onClick={() => setPhase("prepare")}><span>1</span>准备清单</button>
@@ -414,7 +414,7 @@ export default function Home() {
       <aside className="prototype-note">
         <p className="eyebrow">PRODUCT PROTOTYPE · V4</p>
         <h2>目的地懂你，<br />清单依然简单。</h2>
-        <p>手机端不再复制表格，而是回到最自然的纵向 List。AI 负责理解北海道的气候与出片偏好，用户只需要决定是否加入清单。</p>
+        <p>手机端不再复制表格，而是回到最自然的纵向 List。AI 负责理解首尔逛街、街拍等旅行特点，用户只需要决定是否加入清单。</p>
         <div className="principle"><span>01</span><p><b>七个固定分类</b><br />不再区分公用或个人，只看谁负责带</p></div>
         <div className="principle"><span>02</span><p><b>AI 补充有理由</b><br />说明来自目的地特点还是热门玩法</p></div>
         <div className="principle"><span>03</span><p><b>不做旅游攻略</b><br />只回答“这次出发需要带什么”</p></div>
