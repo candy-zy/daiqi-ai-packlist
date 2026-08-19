@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { LucideIcon } from "lucide-react";
+import Image from "next/image";
 import {
   BadgeCheck, Banknote, Bath, BatteryCharging, BookOpenCheck, Bug, Cable,
   Camera, Car, CircleDotDashed, Cookie, Cpu, CreditCard, CupSoda, Droplets,
@@ -284,29 +285,11 @@ export default function Home() {
     return (
       <main className="app-shell departure-shell">
         <section className="phone-frame departure-frame" aria-label="旅行准备完成">
-          <header className="topbar">
-            <div className="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-            <div className="brand-name">带齐</div>
-            <span className="trip-chip">{destinationLabel} · 5天</span>
-            <button className="departure-back" onClick={() => setPhase("verify")}>← 返回清单</button>
-          </header>
+          <button className="departure-back" onClick={() => setPhase("verify")} aria-label="返回核对清单">←</button>
           <section className="departure-page">
-            <div className="departure-copy">
-              <span className="departure-badge">✓ {myItems.length} 件全部确认</span>
-              <p className="eyebrow">READY TO GO · {teamName}</p>
-              <h1>东西带齐了，<br />出发！</h1>
-              <p>{destinationLabel}在等你们。放心关上行李箱，带着朋友和好心情出门吧。</p>
-            </div>
-            <div className="departure-illustration">
-              <div className="departure-character" role="img" aria-label="背着相机、拉着行李箱准备出发的女孩" />
-            </div>
-            <div className="departure-team-card">
-              <div className="departure-avatars"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div>
-              <div><b>首尔逛拍小队已就绪</b><small>3 个人，行李都带齐</small></div>
-              <span>GO!</span>
-            </div>
+            <Image className="departure-illustration" src="/departure-team-v2.png" alt="三位朋友带着行李一起出发" width={1254} height={1254} priority />
+            <h1>带上好心情，出发！</h1>
           </section>
-          <footer className="departure-footer"><button onClick={() => setPhase("verify")}>返回核对清单</button></footer>
         </section>
       </main>
     );

@@ -143,12 +143,12 @@ test("completed checklist opens a dedicated illustrated departure page", async (
   ]);
   assert.match(page, /"prepare" \| "verify" \| "departed"/);
   assert.match(page, /setPhase\("departed"\)/);
-  assert.match(page, /东西带齐了/);
-  assert.match(css, /departure-girl\.png/);
+  assert.match(page, /带上好心情，出发！/);
+  assert.match(page, /departure-team-v2\.png/);
   assert.match(css, /departure-page/);
-  assert.match(css, /departure-illustration[^}]*overflow:hidden/);
+  assert.doesNotMatch(page, /件全部确认|READY TO GO|首尔逛拍小队已就绪|GO!/);
   assert.doesNotMatch(page, /departure-route/);
-  await access(new URL("../public/departure-girl.png", import.meta.url));
+  await access(new URL("../public/departure-team-v2.png", import.meta.url));
 });
 
 test("preset items are managed through a dedicated preparation edit mode", async () => {
