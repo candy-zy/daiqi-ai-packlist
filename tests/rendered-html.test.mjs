@@ -100,21 +100,20 @@ test("onboarding avatars stay consistent and verification supports select all", 
   assert.match(css, /select-all-button/);
 });
 
-test("preparation prioritizes real assignment progress without impersonating teammates", async () => {
+test("preparation keeps the primary screen focused and avoids repeated status blocks", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /const assignmentProgress/);
-  assert.match(page, /团队分工/);
-  assert.match(page, /只看待分配/);
-  assert.match(page, /function focusUnassigned/);
-  assert.match(page, /scrollIntoView/);
+  assert.match(page, /className="team-chat-entry"/);
+  assert.match(page, /AI 帮你同步分工/);
+  assert.match(page, /className="list-toolbar"/);
+  assert.doesNotMatch(page, /const assignmentProgress|assignment-overview|只看待分配|团队物品在前，个人物品在底部|点击讨论/);
   assert.match(page, /phase === "verify" \? <button/);
   assert.match(page, /author: "我"/);
   assert.doesNotMatch(page, /setCurrentMember|prototype-note|context-tags/);
-  assert.match(css, /assignment-overview/);
-  assert.match(css, /topbar-presence/);
+  assert.match(css, /team-chat-entry/);
+  assert.match(css, /list-toolbar/);
 });
 
 test("completed checklist opens a dedicated illustrated departure page", async () => {
@@ -144,7 +143,7 @@ test("preset items are managed through a dedicated preparation edit mode", async
   assert.match(page, /function startDragging/);
   assert.match(page, /function dragItem/);
   assert.match(page, /function changeItemCategory/);
-  assert.match(page, /编辑清单/);
+  assert.match(page, /✎ 编辑/);
   assert.match(page, /className="drag-handle"/);
   assert.match(page, /<Menu aria-hidden="true"/);
   assert.match(page, /className="item-edit-panel"/);
@@ -166,11 +165,25 @@ test("every item opens a focused discussion and unread replies show a red dot", 
   assert.match(page, /function sendItemMessage/);
   assert.match(page, /className="item-copy item-chat-trigger"/);
   assert.match(page, /className="unread-dot"/);
-  assert.match(page, /有新消息，点开聊聊/);
-  assert.match(page, /围绕这件物品聊/);
-  assert.match(page, /认领状态会自动同步/);
+  assert.match(page, /有新消息/);
   assert.match(css, /unread-dot/);
   assert.match(css, /item-chat-card/);
+});
+
+test("chat assignments require the named traveler to confirm before changing the list", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /type AssignmentProposal/);
+  assert.match(page, /AI 识别到一项分工/);
+  assert.match(page, /你刚刚回复了“好”/);
+  assert.match(page, /我不带/);
+  assert.match(page, /我来带/);
+  assert.match(page, /function resolveAssignmentProposal/);
+  assert.match(page, /AI 只建议，确认后才会修改清单/);
+  assert.match(css, /assignment-proposal/);
+  assert.match(css, /proposal-actions/);
 });
 
 test("claim actions stay quiet and AI suggestions use two compact fixed cards", async () => {
