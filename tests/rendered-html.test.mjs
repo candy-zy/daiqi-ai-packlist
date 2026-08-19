@@ -111,3 +111,18 @@ test("preset items can be removed only from the preparation list", async () => {
   assert.match(page, /已从清单移除/);
   assert.match(css, /remove-item-button/);
 });
+
+test("claim actions stay quiet and AI suggestions use two compact fixed cards", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.doesNotMatch(page, /会带这件物品|已取消自己的携带状态/);
+  assert.match(page, /suggestions\.slice\(0, 2\)/);
+  assert.match(page, /AI 帮你补充了 2 件容易漏带的物品/);
+  assert.match(page, /className="suggestion-main"/);
+  assert.doesNotMatch(page, /className="signal"|className="category-decision"/);
+  assert.match(page, /＋ 加入清单/);
+  assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /scroll-snap-type:none/);
+});

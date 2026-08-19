@@ -305,12 +305,10 @@ export default function Home() {
 
   function claim(id: number) {
     setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) && !item.owners.includes(currentMember) ? { ...item, owners: [...item.owners, currentMember] } : item));
-    notify(`${currentMember}会带这件物品`);
   }
 
   function release(id: number) {
     setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) ? { ...item, owners: item.owners.filter((member) => member !== currentMember), checked: { ...item.checked, [currentMember]: false } } : item));
-    notify("已取消自己的携带状态");
   }
 
   function togglePacked(item: PackItem) {
@@ -452,18 +450,14 @@ export default function Home() {
 
           {phase === "prepare" && <section className="ai-section">
             <header>
-              <div className="ai-title"><span>{suggestionStatus === "loading" ? <Wifi aria-hidden="true" /> : "✦"}</span><div><p className="eyebrow">{suggestionStatus === "model" ? "大模型实时生成" : suggestionStatus === "loading" ? "正在结合当前清单思考" : "AI 建议示例"}</p><h2>{destinationLabel}容易漏带</h2></div></div>
-              <small>{suggestionStatus === "loading" ? "生成中…" : "左右滑动 · 2 条"}</small>
+              <div className="ai-title"><span>{suggestionStatus === "loading" ? <Wifi aria-hidden="true" /> : "✦"}</span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : "AI 帮你补充了 2 件容易漏带的物品"}</h2></div>
             </header>
             <div className={`suggestion-scroll ${suggestionStatus === "loading" ? "loading" : ""}`}>
-              {suggestions.map((suggestion) => (
+              {suggestions.slice(0, 2).map((suggestion) => (
                 <article className={`suggestion-card ${suggestion.added ? "added" : ""}`} key={suggestion.id}>
-                  <div className={`suggestion-icon suggestion-${suggestion.id}`}><ItemGraphic item={suggestion} /></div>
-                  <span className="signal">{suggestion.signal}</span>
-                  <span className="category-decision">✦ AI 归类 · {suggestion.group}</span>
-                  <h3>{suggestion.name}</h3>
-                  <p>{suggestion.reason}</p>
-                  <button onClick={() => addSuggestion(suggestion)} disabled={suggestion.added}>{suggestion.added ? "✓ 已加入对应分类" : `＋ 加入${suggestion.group}`}</button>
+                  <div className="suggestion-main"><div className={`suggestion-icon suggestion-${suggestion.id}`}><ItemGraphic item={suggestion} /></div><h3>{suggestion.name}</h3></div>
+                  <p title={suggestion.reason}>{suggestion.reason}</p>
+                  <button onClick={() => addSuggestion(suggestion)} disabled={suggestion.added}>{suggestion.added ? "✓ 已加入" : "＋ 加入清单"}</button>
                 </article>
               ))}
             </div>
