@@ -228,7 +228,9 @@ export default function Home() {
   const proposalItem = assignmentProposal ? items.find((item) => item.id === assignmentProposal.itemId) ?? null : null;
 
   async function createTeam() {
-    if (!teamName.trim() || !destination.trim()) return;
+    if (!destination.trim()) return;
+    const place = destination.trim().split(/[·,，]/).pop()?.trim() || "旅行";
+    setTeamName(`${place}逛拍小队`);
     setTeamReady(true);
     setSuggestionStatus("loading");
 
@@ -262,17 +264,13 @@ export default function Home() {
           <header className="topbar setup-topbar">
             <div className="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
             <div className="brand-name">带齐</div>
-            <span className="setup-step">创建队伍</span>
           </header>
           <div className="setup-content">
             <div className="setup-illustration"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /><i>＋</i></div>
-            <p className="eyebrow">先把朋友聚到一起</p>
-            <h1>一起准备，<br />这次别漏带。</h1>
-            <p className="setup-intro">创建旅行队伍并填写目的地，AI 会生成一份团队分工和个人准备都清楚的清单。</p>
-            <label className="setup-field"><span>队伍名称</span><input value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder="例如：首尔逛拍小队" /></label>
-            <label className="setup-field"><span>目的地</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：韩国 · 首尔" /></label>
-            <div className="setup-members"><div><b>队伍成员</b><small>进入后可继续邀请朋友</small></div><div className="setup-member-dots"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div></div>
-            <button className="setup-submit" onClick={createTeam}>创建队伍并生成清单 <span>→</span></button>
+            <h1>和朋友一起，<br />把行李带齐。</h1>
+            <p className="setup-intro">输入目的地，马上生成一份可以共同认领的清单。</p>
+            <label className="setup-field"><span>这次去哪儿？</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：韩国 · 首尔" /></label>
+            <button className="setup-submit" onClick={createTeam}>生成清单 <span>→</span></button>
           </div>
         </section>
       </main>

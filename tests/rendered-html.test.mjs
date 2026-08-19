@@ -18,17 +18,25 @@ async function render() {
   return requestSite();
 }
 
-test("server-renders the 带齐 onboarding experience", async () => {
+test("server-renders a focused destination-first onboarding experience", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   assert.match(html, /<title>带齐｜朋友一起收拾行李<\/title>/);
-  assert.match(html, /一起准备/);
-  assert.match(html, /创建队伍并生成清单/);
+  assert.match(html, /和朋友一起/);
+  assert.match(html, /这次去哪儿/);
+  assert.match(html, /生成清单/);
   assert.match(html, /character-avatar avatar-me/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/);
+});
+
+test("onboarding removes repeated team fields and derives the team name", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /setTeamName\(`\$\{place\}逛拍小队`\)/);
+  assert.doesNotMatch(page, /队伍名称|队伍成员|先把朋友聚到一起|创建队伍并生成清单/);
+  assert.match(page, /这次去哪儿/);
 });
 
 test("ships hand-drawn characters and colorful sticker item icons", async () => {
