@@ -370,8 +370,8 @@ export default function Home() {
             })}
               {personalPrepareItems.length > 0 && <section className="personal-zone">
                 <header className="personal-zone-head">
-                  <div><span>◉</span><div><h2>个人物品</h2><p>证件、衣物、牙刷和毛巾，每个人自己准备</p></div></div>
-                  <small>全员可见</small>
+                  <div><span>◉</span><div><h2>个人自备物品</h2><p>每个人各自带一份，所有成员都能看到</p></div></div>
+                  <small>队友可见</small>
                 </header>
                 <div className="item-list">{personalPrepareItems.map(renderItem)}</div>
               </section>}
