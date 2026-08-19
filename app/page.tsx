@@ -1,6 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Backpack, BadgeCheck, Banknote, Bath, BatteryCharging, BookOpenCheck, Bug,
+  Cable, Camera, Car, CircleDotDashed, Cookie, Cpu, CreditCard, CupSoda,
+  Droplets, Ear, FileText, Footprints, Gem, Glasses, GlassWater, Headphones,
+  HeartPulse, Layers3, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
+  ShieldCheck, Shirt, ShoppingBag, Sparkles, Sun, Toilet, TowelRack,
+  Umbrella, Unplug, Utensils, Wallet, Waves,
+} from "lucide-react";
 
 type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify";
@@ -52,6 +61,45 @@ const categories: { name: Category; icon: string; note: string }[] = [
 
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
 const personalItemNames = new Set(["牙刷", "毛巾"]);
+
+const itemIcons: Record<string, LucideIcon> = {
+  "身份证": BadgeCheck, "护照 / 签证": BookOpenCheck, "银行卡": CreditCard, "现金": Banknote, "驾驶证": Car,
+  "充电器": Plug, "充电宝": BatteryCharging, "数据线": Cable, "耳机": Headphones, "转换插头": Unplug,
+  "相机": Camera, "自拍杆": ScanLine, "SD 卡": Cpu,
+  "上衣": Shirt, "裤子": Layers3, "外套": Shirt, "内衣": ShieldCheck, "袜子": Footprints, "睡衣": MoonStar,
+  "拖鞋": Footprints, "鞋子": Footprints, "墨镜": Glasses, "帽子": CircleDotDashed,
+  "牙刷": Paintbrush, "牙膏": Droplets, "毛巾": TowelRack, "洗面奶": Droplets, "卸妆油": Droplets,
+  "防晒霜": Sun, "洗发水": Waves, "沐浴露": Bath, "水乳": Droplets, "面霜": Sparkles, "面膜": ShieldCheck,
+  "皮筋": CircleDotDashed, "个人慢性病药物": HeartPulse, "驱蚊液": Bug, "晕车药": Pill, "过敏药": Pill,
+  "雨伞": Umbrella, "纸巾": FileText, "湿巾": FileText, "水杯": GlassWater, "口罩": ShieldCheck, "耳塞": Ear,
+  "一次性马桶垫": Toilet, "零食": Cookie, "饮料": CupSoda, "韩系拍照发夹": Gem, "折叠购物袋": ShoppingBag,
+};
+
+const categoryIcons: Record<Category, LucideIcon> = {
+  "证件与钱财类": Wallet,
+  "电子数码类": Cpu,
+  "衣物鞋帽类": Shirt,
+  "洗护化妆类": Sparkles,
+  "医药健康类": HeartPulse,
+  "日用杂物类": Backpack,
+  "零食饮料类": Utensils,
+};
+
+const avatarVariant: Record<Member, string> = { "我": "avatar-me", "阿哲": "avatar-zhe", "小雨": "avatar-yu" };
+
+function CharacterAvatar({ member, className = "" }: { member: Member; className?: string }) {
+  return <span className={`character-avatar ${avatarVariant[member]} ${className}`} aria-hidden="true" />;
+}
+
+function ItemGraphic({ item }: { item: Pick<PackItem, "name" | "group"> }) {
+  const Icon = itemIcons[item.name] ?? categoryIcons[item.group] ?? Package;
+  return <Icon aria-hidden="true" strokeWidth={2.4} />;
+}
+
+function CategoryGraphic({ category }: { category: Category }) {
+  const Icon = categoryIcons[category];
+  return <Icon aria-hidden="true" strokeWidth={2.5} />;
+}
 
 function isPersonalItem(item: PackItem) {
   return personalCategories.includes(item.group) || personalItemNames.has(item.name);
@@ -174,13 +222,13 @@ export default function Home() {
             <span className="setup-step">创建队伍</span>
           </header>
           <div className="setup-content">
-            <div className="setup-illustration"><span>我</span><span>哲</span><span>雨</span><i>＋</i></div>
+            <div className="setup-illustration"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /><i>＋</i></div>
             <p className="eyebrow">先把朋友聚到一起</p>
             <h1>一起准备，<br />这次别漏带。</h1>
             <p className="setup-intro">创建旅行队伍并填写目的地，AI 会生成一份团队分工和个人准备都清楚的清单。</p>
             <label className="setup-field"><span>队伍名称</span><input value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder="例如：首尔逛拍小队" /></label>
             <label className="setup-field"><span>目的地</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：韩国 · 首尔" /></label>
-            <div className="setup-members"><div><b>队伍成员</b><small>进入后可继续邀请朋友</small></div><div className="setup-member-dots"><i className="member-me">我</i><i className="member-zhe">哲</i><i className="member-yu">雨</i></div></div>
+            <div className="setup-members"><div><b>队伍成员</b><small>进入后可继续邀请朋友</small></div><div className="setup-member-dots"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div></div>
             <button className="setup-submit" onClick={() => teamName.trim() && destination.trim() && setTeamReady(true)}>创建队伍并生成清单 <span>→</span></button>
           </div>
         </section>
@@ -262,14 +310,14 @@ export default function Home() {
       <article className={`list-item ${packed ? "packed" : ""}`} key={item.id}>
         {phase === "verify" ? (
           <button className={`pack-check ${packed ? "checked" : ""}`} onClick={() => togglePacked(item)} disabled={!canCheck} aria-label={`${packed ? "取消" : "确认"}${item.name}已装包`}>{packed ? "✓" : ""}</button>
-        ) : <span className="item-icon" aria-hidden="true">{item.icon}</span>}
+        ) : <span className={`item-icon item-group-${categories.findIndex((category) => category.name === item.group)}`}><ItemGraphic item={item} /></span>}
         <div className="item-copy">
           <b>{item.name}</b>
         </div>
         {phase === "prepare" && (personal ? <span className="personal-pill">每人自备</span> : item.owners.length ? (
             <div className="shared-owner-action">
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
-                {ownerMembers.slice(0, 3).map((owner) => <button className={`owner-avatar ${owner?.className}`} key={owner?.name} onClick={() => phase === "prepare" && owner?.name === currentMember && release(item.id)} disabled={owner?.name !== currentMember} title={owner?.name === currentMember ? "取消我会带" : `${owner?.name}会带`}>{owner?.short}</button>)}
+                {ownerMembers.slice(0, 3).map((owner) => <button className="owner-avatar" key={owner?.name} onClick={() => phase === "prepare" && owner?.name === currentMember && release(item.id)} disabled={owner?.name !== currentMember} title={owner?.name === currentMember ? "取消我会带" : `${owner?.name}会带`}>{owner && <CharacterAvatar member={owner.name} />}</button>)}
               </div>
               <button
                 className={`also-bring-button ${currentWillBring ? "joined" : ""}`}
@@ -305,7 +353,7 @@ export default function Home() {
             </div>
             <div className="presence-panel">
               <div className="member-switch" aria-label="成员在线状态与清单切换">
-                {members.map((member) => <button key={member.name} className={`${member.className} ${currentMember === member.name ? "selected" : ""}`} onClick={() => setCurrentMember(member.name)} title={`${member.name}${member.online ? "在线" : "离线"}`}>{member.short}<i className={member.online ? "online" : "offline"} /></button>)}
+                {members.map((member) => <button key={member.name} className={currentMember === member.name ? "selected" : ""} onClick={() => setCurrentMember(member.name)} title={`${member.name}${member.online ? "在线" : "离线"}`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></button>)}
               </div>
               <small>{members.filter((member) => member.online).length} 人在线</small>
             </div>
@@ -332,7 +380,7 @@ export default function Home() {
             <div className="suggestion-scroll">
               {suggestions.map((suggestion) => (
                 <article className={`suggestion-card ${suggestion.added ? "added" : ""}`} key={suggestion.id}>
-                  <div className={`suggestion-icon suggestion-${suggestion.id}`}>{suggestion.icon}</div>
+                  <div className={`suggestion-icon suggestion-${suggestion.id}`}><ItemGraphic item={suggestion} /></div>
                   <span className="signal">{suggestion.signal}</span>
                   <span className="category-decision">✦ AI 归类 · {suggestion.group}</span>
                   <h3>{suggestion.name}</h3>
@@ -344,7 +392,7 @@ export default function Home() {
           </section>}
 
           {phase === "prepare" && <button className="chat-entry" onClick={() => setShowChat(true)}>
-            <span className="chat-avatars"><i className="member-me">我</i><i className="member-zhe">哲</i><i className="member-yu">雨</i></span>
+            <span className="chat-avatars"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></span>
             <span><b>{unassigned ? `${unassigned} 件物品没人带，聊一下` : "物品有变化？在这里聊"}</b><small>说“充电线我来带”，结果自动同步</small></span>
             <span className="chat-count">{messages.length}</span>
           </button>}
@@ -362,7 +410,7 @@ export default function Home() {
               if (!categoryItems.length) return null;
               return <section className="list-section category-section" key={category.name}>
                 <header className="section-head">
-                  <div><span className={`scope-icon category-icon category-${index}`}>{category.icon}</span><div><h2>{category.name}</h2><p>{category.note}</p></div></div>
+                  <div><span className={`scope-icon category-icon category-${index}`}><CategoryGraphic category={category.name} /></span><div><h2>{category.name}</h2><p>{category.note}</p></div></div>
                   <span>{categoryItems.length} 件</span>
                 </header>
                 <div className="item-list">{categoryItems.map(renderItem)}</div>
@@ -370,7 +418,7 @@ export default function Home() {
             })}
               {personalPrepareItems.length > 0 && <section className="personal-zone">
                 <header className="personal-zone-head">
-                  <div><span>◉</span><div><h2>个人自备物品</h2><p>每个人各自带一份，所有成员都能看到</p></div></div>
+                  <div><span><Backpack strokeWidth={2.5} /></span><div><h2>个人自备物品</h2><p>每个人各自带一份，所有成员都能看到</p></div></div>
                   <small>队友可见</small>
                 </header>
                 <div className="item-list">{personalPrepareItems.map(renderItem)}</div>
@@ -404,7 +452,7 @@ export default function Home() {
               <div className="chat-messages">
                 {messages.map((message) => {
                   const meta = members.find((member) => member.name === message.author);
-                  return <div className={`message-row ${message.author === currentMember ? "mine" : ""} ${message.system ? "system" : ""}`} key={message.id}><span className={`message-avatar ${meta?.className ?? "assistant-avatar"}`}>{meta?.short ?? "✦"}</span><div><small>{message.author}</small><p>{message.text}</p></div></div>;
+                  return <div className={`message-row ${message.author === currentMember ? "mine" : ""} ${message.system ? "system" : ""}`} key={message.id}>{meta ? <CharacterAvatar member={meta.name} className="message-avatar" /> : <span className="message-avatar assistant-avatar">✦</span>}<div><small>{message.author}</small><p>{message.text}</p></div></div>;
                 })}
               </div>
               {unassigned > 0 && <div className="chat-suggestions">{unassignedItems.map((item) => <button key={item.id} onClick={() => setDraft(`谁可以带${item.name}？`)}>问问：{item.name}</button>)}</div>}
@@ -432,6 +480,7 @@ export default function Home() {
       <aside className="prototype-note">
         <p className="eyebrow">PRODUCT PROTOTYPE · V4</p>
         <h2>目的地懂你，<br />清单依然简单。</h2>
+        <div className="prototype-crew" aria-hidden="true" />
         <p>手机端不再复制表格，而是回到最自然的纵向 List。AI 负责理解首尔逛街、街拍等旅行特点，用户只需要决定是否加入清单。</p>
         <div className="principle"><span>01</span><p><b>团队与个人各归其位</b><br />个人物品全员可见并默认自备，其他物品一起认领</p></div>
         <div className="principle"><span>02</span><p><b>AI 补充有理由</b><br />说明来自目的地特点还是热门玩法</p></div>
