@@ -99,3 +99,15 @@ test("completed checklist opens a dedicated illustrated departure page", async (
   assert.match(css, /departure-page/);
   await access(new URL("../public/departure-girl.png", import.meta.url));
 });
+
+test("preset items can be removed only from the preparation list", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /function removeItem/);
+  assert.match(page, /current\.filter\(\(entry\) => entry\.id !== item\.id\)/);
+  assert.match(page, /phase === "prepare".*不需要，移除/);
+  assert.match(page, /已从清单移除/);
+  assert.match(css, /remove-item-button/);
+});

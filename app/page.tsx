@@ -7,7 +7,7 @@ import {
   Cable, Camera, Car, CircleDotDashed, Cookie, Cpu, CreditCard, CupSoda,
   Droplets, Ear, FileText, Footprints, Glasses, GlassWater, Headphones,
   HeartPulse, Layers3, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
-  ShieldCheck, Shirt, Sparkles, Sun, Toilet, TowelRack,
+  ShieldCheck, Shirt, Sparkles, Sun, Toilet, TowelRack, Trash2,
   Umbrella, Unplug, Utensils, Wallet, Waves, Wifi,
 } from "lucide-react";
 
@@ -345,6 +345,12 @@ export default function Home() {
     notify(`已加入「${suggestion.group}」`);
   }
 
+  function removeItem(item: PackItem) {
+    setItems((current) => current.filter((entry) => entry.id !== item.id));
+    setSuggestions((current) => current.map((suggestion) => suggestion.name === item.name ? { ...suggestion, added: false } : suggestion));
+    notify(`已从清单移除「${item.name}」`);
+  }
+
   function sendMessage() {
     const text = draft.trim();
     if (!text) return;
@@ -384,6 +390,7 @@ export default function Home() {
         ) : <span className={`item-icon item-group-${categories.findIndex((category) => category.name === item.group)}`}><ItemGraphic item={item} /></span>}
         <div className="item-copy">
           <b>{item.name}</b>
+          {phase === "prepare" && <button className="remove-item-button" onClick={() => removeItem(item)} aria-label={`从清单移除${item.name}`}><Trash2 aria-hidden="true" />不需要，移除</button>}
         </div>
         {phase === "prepare" && (personal ? <span className="personal-pill">每人自备</span> : item.owners.length ? (
             <div className="shared-owner-action">
