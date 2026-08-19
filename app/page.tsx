@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify";
 type ListFilter = "all" | "mine" | "unassigned";
-type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "出行日用杂物类" | "零食饮料类";
+type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
 
 type PackItem = {
   id: number;
@@ -42,18 +42,19 @@ const members: { name: Member; short: string; profile: string; className: string
 
 const categories: { name: Category; icon: string; note: string }[] = [
   { name: "证件与钱财类", icon: "▣", note: "证件、票务、订单与支付" },
-  { name: "电子数码类", icon: "⌁", note: "手机、充电与拍摄设备" },
+  { name: "电子数码类", icon: "⌁", note: "充电、存储与拍摄设备" },
   { name: "衣物鞋帽类", icon: "♨", note: "换洗衣物、鞋帽与配饰" },
   { name: "洗护化妆类", icon: "✦", note: "洗漱、护肤与化妆" },
   { name: "医药健康类", icon: "✚", note: "常用药物与健康防护" },
-  { name: "出行日用杂物类", icon: "◇", note: "雨具、纸巾与舒适用品" },
+  { name: "日用杂物类", icon: "◇", note: "雨具、纸巾与舒适用品" },
   { name: "零食饮料类", icon: "◉", note: "路途补给与饮品" },
 ];
 
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
+const personalItemNames = new Set(["牙刷", "毛巾"]);
 
 function isPersonalItem(item: PackItem) {
-  return personalCategories.includes(item.group);
+  return personalCategories.includes(item.group) || personalItemNames.has(item.name);
 }
 
 const seedItems: PackItem[] = [
@@ -63,7 +64,6 @@ const seedItems: PackItem[] = [
   { id: 4, name: "现金", icon: "¥", group: "证件与钱财类", owners: [], checked: {} },
   { id: 5, name: "驾驶证", icon: "□", group: "证件与钱财类", owners: [], checked: {} },
 
-  { id: 6, name: "手机", icon: "▮", group: "电子数码类", owners: ["我", "阿哲", "小雨"], checked: {} },
   { id: 7, name: "充电器", icon: "▰", group: "电子数码类", owners: [], checked: {} },
   { id: 8, name: "充电宝", icon: "▮", group: "电子数码类", owners: ["我"], checked: {}, aiReason: "你登记了大容量充电宝" },
   { id: 9, name: "数据线", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
@@ -71,7 +71,7 @@ const seedItems: PackItem[] = [
   { id: 11, name: "转换插头", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
   { id: 12, name: "相机", icon: "📷", group: "电子数码类", owners: ["阿哲"], checked: {}, aiReason: "阿哲登记了相机" },
   { id: 13, name: "自拍杆", icon: "│", group: "电子数码类", owners: [], checked: {} },
-  { id: 14, name: "U 盘", icon: "▮", group: "电子数码类", owners: [], checked: {} },
+  { id: 14, name: "SD 卡", icon: "▮", group: "电子数码类", owners: [], checked: {} },
 
   { id: 15, name: "上衣", icon: "◫", group: "衣物鞋帽类", owners: [], checked: {} },
   { id: 16, name: "裤子", icon: "▥", group: "衣物鞋帽类", owners: [], checked: {} },
@@ -102,12 +102,13 @@ const seedItems: PackItem[] = [
   { id: 39, name: "晕车药", icon: "✚", group: "医药健康类", owners: ["阿哲"], checked: {} },
   { id: 40, name: "过敏药", icon: "✚", group: "医药健康类", owners: [], checked: {} },
 
-  { id: 41, name: "雨伞", icon: "☂", group: "出行日用杂物类", owners: [], checked: {} },
-  { id: 42, name: "纸巾", icon: "▤", group: "出行日用杂物类", owners: ["小雨"], checked: {} },
-  { id: 43, name: "湿巾", icon: "▥", group: "出行日用杂物类", owners: [], checked: {} },
-  { id: 44, name: "水杯", icon: "◉", group: "出行日用杂物类", owners: [], checked: {} },
-  { id: 45, name: "口罩", icon: "▥", group: "出行日用杂物类", owners: [], checked: {} },
-  { id: 46, name: "耳塞", icon: "○", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 41, name: "雨伞", icon: "☂", group: "日用杂物类", owners: [], checked: {} },
+  { id: 42, name: "纸巾", icon: "▤", group: "日用杂物类", owners: ["小雨"], checked: {} },
+  { id: 43, name: "湿巾", icon: "▥", group: "日用杂物类", owners: [], checked: {} },
+  { id: 44, name: "水杯", icon: "◉", group: "日用杂物类", owners: [], checked: {} },
+  { id: 45, name: "口罩", icon: "▥", group: "日用杂物类", owners: [], checked: {} },
+  { id: 46, name: "耳塞", icon: "○", group: "日用杂物类", owners: [], checked: {} },
+  { id: 49, name: "一次性马桶垫", icon: "▤", group: "日用杂物类", owners: [], checked: {} },
 
   { id: 47, name: "零食", icon: "●", group: "零食饮料类", owners: [], checked: {} },
   { id: 48, name: "饮料", icon: "◉", group: "零食饮料类", owners: [], checked: {} },
@@ -115,7 +116,7 @@ const seedItems: PackItem[] = [
 
 const seedSuggestions: Suggestion[] = [
   { id: 101, name: "韩系拍照发夹", icon: "✦", group: "衣物鞋帽类", reason: "首尔街拍常用简洁发饰点亮造型，AI 已将它归入衣物鞋帽类。", signal: "热门出片", added: false },
-  { id: 103, name: "折叠购物袋", icon: "▱", group: "出行日用杂物类", reason: "首尔逛街和便利店购物时随身带一个更方便，AI 已将它归入出行日用杂物类。", signal: "逛街提醒", added: false },
+  { id: 103, name: "折叠购物袋", icon: "▱", group: "日用杂物类", reason: "首尔逛街和便利店购物时随身带一个更方便，AI 已将它归入日用杂物类。", signal: "逛街提醒", added: false },
 ];
 
 const seedMessages: ChatMessage[] = [
@@ -135,7 +136,7 @@ export default function Home() {
   const [currentMember, setCurrentMember] = useState<Member>("我");
   const [showChat, setShowChat] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
-  const [addCategory, setAddCategory] = useState<Category>("出行日用杂物类");
+  const [addCategory, setAddCategory] = useState<Category>("日用杂物类");
   const [newItem, setNewItem] = useState("");
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
@@ -152,7 +153,7 @@ export default function Home() {
   const teamPrepareItems = prepareItems.filter((item) => !isPersonalItem(item));
   const personalPrepareItems = prepareItems.filter(isPersonalItem);
   const filterCopy = listFilter === "mine"
-    ? { title: currentMember === "我" ? "我的物品" : `${currentMember}的物品`, note: "个人必带＋已认领的团队物品" }
+    ? { title: currentMember === "我" ? "我的物品" : `${currentMember}的物品`, note: "个人自备＋已认领的团队物品" }
     : listFilter === "unassigned"
       ? { title: "待分配物品", note: "还没有任何人负责携带" }
       : { title: "全部物品", note: "团队物品在前，个人物品在底部" };
@@ -265,7 +266,7 @@ export default function Home() {
         <div className="item-copy">
           <b>{item.name}</b>
         </div>
-        {phase === "prepare" && (personal ? <span className="personal-pill">个人可见</span> : item.owners.length ? (
+        {phase === "prepare" && (personal ? <span className="personal-pill">每人自备</span> : item.owners.length ? (
             <div className="shared-owner-action">
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
                 {ownerMembers.slice(0, 3).map((owner) => <button className={`owner-avatar ${owner?.className}`} key={owner?.name} onClick={() => phase === "prepare" && owner?.name === currentMember && release(item.id)} disabled={owner?.name !== currentMember} title={owner?.name === currentMember ? "取消我会带" : `${owner?.name}会带`}>{owner?.short}</button>)}
@@ -369,15 +370,15 @@ export default function Home() {
             })}
               {personalPrepareItems.length > 0 && <section className="personal-zone">
                 <header className="personal-zone-head">
-                  <div><span>◉</span><div><h2>{currentMember === "我" ? "我的个人物品" : `${currentMember}的个人物品`}</h2><p>证件钱财、衣物鞋帽，每个人自己准备</p></div></div>
-                  <small>仅本人可见</small>
+                  <div><span>◉</span><div><h2>个人物品</h2><p>证件、衣物、牙刷和毛巾，每个人自己准备</p></div></div>
+                  <small>全员可见</small>
                 </header>
                 <div className="item-list">{personalPrepareItems.map(renderItem)}</div>
               </section>}
             </div> : <div className="empty-list"><span>✓</span><b>这里已经清空了</b><small>暂时没有等待分配的物品</small></div>}
           </section> : <section className="list-section verify-list-section">
             <header className="section-head">
-              <div><span className="scope-icon private-icon">✓</span><div><h2>{currentMember === "我" ? "我的待带清单" : `${currentMember}的待带清单`}</h2><p>个人必带物品＋自己认领的团队物品</p></div></div>
+              <div><span className="scope-icon private-icon">✓</span><div><h2>{currentMember === "我" ? "我的待带清单" : `${currentMember}的待带清单`}</h2><p>个人自备物品＋自己认领的团队物品</p></div></div>
               <span>{verifyItems.length} 件</span>
             </header>
             <div className="item-list">{verifyItems.map(renderItem)}</div>
@@ -432,7 +433,7 @@ export default function Home() {
         <p className="eyebrow">PRODUCT PROTOTYPE · V4</p>
         <h2>目的地懂你，<br />清单依然简单。</h2>
         <p>手机端不再复制表格，而是回到最自然的纵向 List。AI 负责理解首尔逛街、街拍等旅行特点，用户只需要决定是否加入清单。</p>
-        <div className="principle"><span>01</span><p><b>团队与个人各归其位</b><br />证件衣物默认自己准备，其他物品一起认领</p></div>
+        <div className="principle"><span>01</span><p><b>团队与个人各归其位</b><br />个人物品全员可见并默认自备，其他物品一起认领</p></div>
         <div className="principle"><span>02</span><p><b>AI 补充有理由</b><br />说明来自目的地特点还是热门玩法</p></div>
         <div className="principle"><span>03</span><p><b>不做旅游攻略</b><br />只回答“这次出发需要带什么”</p></div>
         <div className="demo-note">试试：认领“充电线”，再进入出发核对。</div>
