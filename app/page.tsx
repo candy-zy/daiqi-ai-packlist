@@ -50,6 +50,12 @@ const categories: { name: Category; icon: string; note: string }[] = [
   { name: "零食饮料类", icon: "◉", note: "路途补给与饮品" },
 ];
 
+const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
+
+function isPersonalItem(item: PackItem) {
+  return personalCategories.includes(item.group);
+}
+
 const seedItems: PackItem[] = [
   { id: 1, name: "身份证", icon: "▣", group: "证件与钱财类", owners: ["我", "阿哲", "小雨"], checked: {} },
   { id: 2, name: "护照 / 签证", icon: "▦", group: "证件与钱财类", owners: ["我", "阿哲", "小雨"], checked: {} },
@@ -135,22 +141,24 @@ export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
   const [toast, setToast] = useState("");
 
-  const unassignedItems = items.filter((item) => item.owners.length === 0);
+  const unassignedItems = items.filter((item) => !isPersonalItem(item) && item.owners.length === 0);
   const unassigned = unassignedItems.length;
-  const verifyItems = items.filter((item) => item.owners.includes(currentMember));
+  const verifyItems = items.filter((item) => isPersonalItem(item) || item.owners.includes(currentMember));
   const prepareItems = listFilter === "mine"
     ? verifyItems
     : listFilter === "unassigned"
       ? unassignedItems
       : items;
+  const teamPrepareItems = prepareItems.filter((item) => !isPersonalItem(item));
+  const personalPrepareItems = prepareItems.filter(isPersonalItem);
   const filterCopy = listFilter === "mine"
-    ? { title: currentMember === "我" ? "我的物品" : `${currentMember}的物品`, note: "这个人已认领、准备携带" }
+    ? { title: currentMember === "我" ? "我的物品" : `${currentMember}的物品`, note: "个人必带＋已认领的团队物品" }
     : listFilter === "unassigned"
       ? { title: "待分配物品", note: "还没有任何人负责携带" }
-      : { title: "全部物品", note: "按类别查看完整清单" };
+      : { title: "全部物品", note: "团队物品在前，个人物品在底部" };
 
   const status = useMemo(() => {
-    const total = items.filter((item) => item.owners.includes(currentMember) && !item.checked[currentMember]).length;
+    const total = items.filter((item) => (isPersonalItem(item) || item.owners.includes(currentMember)) && !item.checked[currentMember]).length;
     return { total };
   }, [currentMember, items]);
   const destinationLabel = destination.trim().split(/[·,，]/).pop()?.trim() || "目的地";
@@ -168,7 +176,7 @@ export default function Home() {
             <div className="setup-illustration"><span>我</span><span>哲</span><span>雨</span><i>＋</i></div>
             <p className="eyebrow">先把朋友聚到一起</p>
             <h1>一起准备，<br />这次别漏带。</h1>
-            <p className="setup-intro">创建旅行队伍并填写目的地，AI 会生成一份大家可以同时认领的准备清单。</p>
+            <p className="setup-intro">创建旅行队伍并填写目的地，AI 会生成一份团队分工和个人准备都清楚的清单。</p>
             <label className="setup-field"><span>队伍名称</span><input value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder="例如：首尔逛拍小队" /></label>
             <label className="setup-field"><span>目的地</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：韩国 · 首尔" /></label>
             <div className="setup-members"><div><b>队伍成员</b><small>进入后可继续邀请朋友</small></div><div className="setup-member-dots"><i className="member-me">我</i><i className="member-zhe">哲</i><i className="member-yu">雨</i></div></div>
@@ -185,17 +193,17 @@ export default function Home() {
   }
 
   function claim(id: number) {
-    setItems((current) => current.map((item) => item.id === id && !item.owners.includes(currentMember) ? { ...item, owners: [...item.owners, currentMember] } : item));
+    setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) && !item.owners.includes(currentMember) ? { ...item, owners: [...item.owners, currentMember] } : item));
     notify(`${currentMember}会带这件物品`);
   }
 
   function release(id: number) {
-    setItems((current) => current.map((item) => item.id === id ? { ...item, owners: item.owners.filter((member) => member !== currentMember), checked: { ...item.checked, [currentMember]: false } } : item));
+    setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) ? { ...item, owners: item.owners.filter((member) => member !== currentMember), checked: { ...item.checked, [currentMember]: false } } : item));
     notify("已取消自己的携带状态");
   }
 
   function togglePacked(item: PackItem) {
-    if (!item.owners.includes(currentMember)) return;
+    if (!isPersonalItem(item) && !item.owners.includes(currentMember)) return;
     setItems((current) => current.map((entry) => entry.id === item.id ? {
       ...entry,
       checked: { ...entry.checked, [currentMember]: !entry.checked[currentMember] },
@@ -222,7 +230,7 @@ export default function Home() {
     if (!text) return;
     const additions: ChatMessage[] = [{ id: Date.now(), author: currentMember, text }];
     const wantsToClaim = /(我来带|我带|我有|交给我|算我的)/.test(text);
-    const matched = items.find((item) => !item.owners.includes(currentMember) && (text.includes(item.name) || text.includes(item.name.slice(0, 2))));
+    const matched = items.find((item) => !isPersonalItem(item) && !item.owners.includes(currentMember) && (text.includes(item.name) || text.includes(item.name.slice(0, 2))));
     if (wantsToClaim && matched) {
       setItems((current) => current.map((item) => item.id === matched.id ? { ...item, owners: [...item.owners, currentMember] } : item));
       additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：${currentMember}也会带${matched.name}`, system: true });
@@ -243,10 +251,11 @@ export default function Home() {
   }
 
   function renderItem(item: PackItem) {
+    const personal = isPersonalItem(item);
     const ownerMembers = item.owners.map((owner) => members.find((member) => member.name === owner)).filter(Boolean);
     const currentWillBring = item.owners.includes(currentMember);
     const packed = Boolean(item.checked[currentMember]);
-    const canCheck = currentMember === "我" && currentWillBring;
+    const canCheck = currentMember === "我" && (personal || currentWillBring);
 
     return (
       <article className={`list-item ${packed ? "packed" : ""}`} key={item.id}>
@@ -256,7 +265,7 @@ export default function Home() {
         <div className="item-copy">
           <b>{item.name}</b>
         </div>
-        {phase === "prepare" && (item.owners.length ? (
+        {phase === "prepare" && (personal ? <span className="personal-pill">个人可见</span> : item.owners.length ? (
             <div className="shared-owner-action">
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
                 {ownerMembers.slice(0, 3).map((owner) => <button className={`owner-avatar ${owner?.className}`} key={owner?.name} onClick={() => phase === "prepare" && owner?.name === currentMember && release(item.id)} disabled={owner?.name !== currentMember} title={owner?.name === currentMember ? "取消我会带" : `${owner?.name}会带`}>{owner?.short}</button>)}
@@ -347,8 +356,8 @@ export default function Home() {
 
           {phase === "prepare" ? <section className="filtered-list-section">
             <header className="filtered-list-head"><div><h2>{filterCopy.title}</h2><p>{filterCopy.note}</p></div><span>{prepareItems.length} 件</span></header>
-            {prepareItems.length ? <div className="category-sections">{categories.map((category, index) => {
-              const categoryItems = prepareItems.filter((item) => item.group === category.name);
+            {prepareItems.length ? <div className="category-sections">{categories.filter((category) => !personalCategories.includes(category.name)).map((category, index) => {
+              const categoryItems = teamPrepareItems.filter((item) => item.group === category.name);
               if (!categoryItems.length) return null;
               return <section className="list-section category-section" key={category.name}>
                 <header className="section-head">
@@ -357,10 +366,18 @@ export default function Home() {
                 </header>
                 <div className="item-list">{categoryItems.map(renderItem)}</div>
               </section>;
-            })}</div> : <div className="empty-list"><span>✓</span><b>这里已经清空了</b><small>暂时没有等待分配的物品</small></div>}
+            })}
+              {personalPrepareItems.length > 0 && <section className="personal-zone">
+                <header className="personal-zone-head">
+                  <div><span>◉</span><div><h2>{currentMember === "我" ? "我的个人物品" : `${currentMember}的个人物品`}</h2><p>证件钱财、衣物鞋帽，每个人自己准备</p></div></div>
+                  <small>仅本人可见</small>
+                </header>
+                <div className="item-list">{personalPrepareItems.map(renderItem)}</div>
+              </section>}
+            </div> : <div className="empty-list"><span>✓</span><b>这里已经清空了</b><small>暂时没有等待分配的物品</small></div>}
           </section> : <section className="list-section verify-list-section">
             <header className="section-head">
-              <div><span className="scope-icon private-icon">✓</span><div><h2>{currentMember === "我" ? "我的待带清单" : `${currentMember}的待带清单`}</h2><p>这里只显示这个人自己负责的物品</p></div></div>
+              <div><span className="scope-icon private-icon">✓</span><div><h2>{currentMember === "我" ? "我的待带清单" : `${currentMember}的待带清单`}</h2><p>个人必带物品＋自己认领的团队物品</p></div></div>
               <span>{verifyItems.length} 件</span>
             </header>
             <div className="item-list">{verifyItems.map(renderItem)}</div>
@@ -415,7 +432,7 @@ export default function Home() {
         <p className="eyebrow">PRODUCT PROTOTYPE · V4</p>
         <h2>目的地懂你，<br />清单依然简单。</h2>
         <p>手机端不再复制表格，而是回到最自然的纵向 List。AI 负责理解首尔逛街、街拍等旅行特点，用户只需要决定是否加入清单。</p>
-        <div className="principle"><span>01</span><p><b>七个固定分类</b><br />不再区分公用或个人，只看谁负责带</p></div>
+        <div className="principle"><span>01</span><p><b>团队与个人各归其位</b><br />证件衣物默认自己准备，其他物品一起认领</p></div>
         <div className="principle"><span>02</span><p><b>AI 补充有理由</b><br />说明来自目的地特点还是热门玩法</p></div>
         <div className="principle"><span>03</span><p><b>不做旅游攻略</b><br />只回答“这次出发需要带什么”</p></div>
         <div className="demo-note">试试：认领“充电线”，再进入出发核对。</div>
