@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Backpack, BadgeCheck, Banknote, Bath, BatteryCharging, BookOpenCheck, Bug,
   Cable, Camera, Car, CircleDotDashed, Cookie, Cpu, CreditCard, CupSoda,
   Droplets, Ear, FileText, Footprints, Glasses, GlassWater, Headphones,
-  HeartPulse, Layers3, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
+  HeartPulse, Layers3, Menu, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
   ShieldCheck, Shirt, Sparkles, Sun, Toilet, TowelRack, Trash2,
   Umbrella, Unplug, Utensils, Wallet, Waves, Wifi,
 } from "lucide-react";
@@ -173,6 +174,15 @@ const seedMessages: ChatMessage[] = [
   { id: 3, author: "小雨", text: "流量卡要不要提前一起买？" },
 ];
 
+const seedItemMessages: Record<number, ChatMessage[]> = {
+  11: [{ id: 1101, author: "阿哲", text: "韩国插座和国内一样吗？这个还要不要带？" }],
+  13: [
+    { id: 1301, author: "我", text: "自拍杆谁能带？首尔街拍和合照可能会用。" },
+    { id: 1302, author: "小雨", text: "我那个太短了，看看阿哲有没有长一点的。" },
+  ],
+  41: [{ id: 4101, author: "小雨", text: "天气预报有雨，要不要带两把伞？" }],
+};
+
 export default function Home() {
   const [teamReady, setTeamReady] = useState(false);
   const [teamName, setTeamName] = useState("首尔逛拍小队");
@@ -190,8 +200,14 @@ export default function Home() {
   const [newItem, setNewItem] = useState("");
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
+  const [itemMessages, setItemMessages] = useState<Record<number, ChatMessage[]>>(seedItemMessages);
+  const [activeItemId, setActiveItemId] = useState<number | null>(null);
+  const [itemDraft, setItemDraft] = useState("");
+  const [unreadItemIds, setUnreadItemIds] = useState<Set<number>>(() => new Set([11, 13, 41]));
+  const [draggingItemId, setDraggingItemId] = useState<number | null>(null);
   const [toast, setToast] = useState("");
   const listStartRef = useRef<HTMLElement>(null);
+  const draggingItemRef = useRef<number | null>(null);
 
   const unassignedItems = items.filter((item) => !isPersonalItem(item) && item.owners.length === 0);
   const unassigned = unassignedItems.length;
@@ -219,6 +235,7 @@ export default function Home() {
   }, [viewedMember, items]);
   const myRemaining = items.filter((item) => (isPersonalItem(item) || item.owners.includes("我")) && !item.checked["我"]).length;
   const destinationLabel = destination.trim().split(/[·,，]/).pop()?.trim() || "目的地";
+  const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
 
   async function createTeam() {
     if (!teamName.trim() || !destination.trim()) return;
@@ -353,19 +370,51 @@ export default function Home() {
     if (!editMode) return;
     setItems((current) => current.filter((entry) => entry.id !== item.id));
     setSuggestions((current) => current.map((suggestion) => suggestion.name === item.name ? { ...suggestion, added: false } : suggestion));
+    setItemMessages((current) => {
+      const next = { ...current };
+      delete next[item.id];
+      return next;
+    });
+    setUnreadItemIds((current) => {
+      const next = new Set(current);
+      next.delete(item.id);
+      return next;
+    });
   }
 
-  function moveItem(id: number, direction: -1 | 1, visiblePeerIds: number[]) {
-    const position = visiblePeerIds.indexOf(id);
-    const targetId = visiblePeerIds[position + direction];
-    if (position < 0 || targetId === undefined) return;
+  function swapItems(id: number, targetId: number) {
+    if (id === targetId) return;
     setItems((current) => {
       const next = [...current];
       const itemIndex = next.findIndex((item) => item.id === id);
       const targetIndex = next.findIndex((item) => item.id === targetId);
+      if (itemIndex < 0 || targetIndex < 0) return current;
       [next[itemIndex], next[targetIndex]] = [next[targetIndex], next[itemIndex]];
       return next;
     });
+  }
+
+  function startDragging(event: ReactPointerEvent<HTMLButtonElement>, itemId: number) {
+    if (!editMode || event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    draggingItemRef.current = itemId;
+    setDraggingItemId(itemId);
+  }
+
+  function dragItem(event: ReactPointerEvent<HTMLButtonElement>, itemId: number, visiblePeerIds: number[]) {
+    if (draggingItemRef.current !== itemId) return;
+    event.preventDefault();
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-sort-item-id]");
+    const targetId = Number(target?.dataset.sortItemId);
+    if (!Number.isFinite(targetId) || targetId === itemId || !visiblePeerIds.includes(targetId)) return;
+    swapItems(itemId, targetId);
+  }
+
+  function finishDragging(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    draggingItemRef.current = null;
+    setDraggingItemId(null);
   }
 
   function changeItemCategory(id: number, group: Category) {
@@ -384,6 +433,28 @@ export default function Home() {
     }
     setMessages((current) => [...current, ...additions]);
     setDraft("");
+  }
+
+  function openItemChat(itemId: number) {
+    if (editMode) return;
+    setActiveItemId(itemId);
+    setUnreadItemIds((current) => {
+      const next = new Set(current);
+      next.delete(itemId);
+      return next;
+    });
+  }
+
+  function sendItemMessage() {
+    const text = itemDraft.trim();
+    if (!text || !activeItem) return;
+    const additions: ChatMessage[] = [{ id: Date.now(), author: "我", text }];
+    if (!isPersonalItem(activeItem) && !activeItem.owners.includes("我") && /(我来带|我带|我有|交给我|算我的)/.test(text)) {
+      claim(activeItem.id);
+      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我会带${activeItem.name}`, system: true });
+    }
+    setItemMessages((current) => ({ ...current, [activeItem.id]: [...(current[activeItem.id] ?? []), ...additions] }));
+    setItemDraft("");
   }
 
   function addCustomItem() {
@@ -410,15 +481,31 @@ export default function Home() {
     const canCheck = viewedMember === "我" && (personal || currentWillBring);
     const visiblePeerIds = (personal ? personalPrepareItems : prepareItems.filter((entry) => entry.group === item.group)).map((entry) => entry.id);
     const peerPosition = visiblePeerIds.indexOf(item.id);
+    const discussionCount = itemMessages[item.id]?.length ?? 0;
+    const hasUnreadDiscussion = unreadItemIds.has(item.id);
 
     return (
-      <article className={`list-item ${packed ? "packed" : ""} ${editMode && phase === "prepare" ? "editing" : ""}`} key={item.id}>
+      <article className={`list-item ${packed ? "packed" : ""} ${editMode && phase === "prepare" ? "editing" : ""} ${draggingItemId === item.id ? "dragging" : ""}`} data-sort-item-id={item.id} key={item.id}>
+        {phase === "prepare" && editMode && <button
+          className="drag-handle"
+          onPointerDown={(event) => startDragging(event, item.id)}
+          onPointerMove={(event) => dragItem(event, item.id, visiblePeerIds)}
+          onPointerUp={finishDragging}
+          onPointerCancel={finishDragging}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowUp" && peerPosition > 0) { event.preventDefault(); swapItems(item.id, visiblePeerIds[peerPosition - 1]); }
+            if (event.key === "ArrowDown" && peerPosition < visiblePeerIds.length - 1) { event.preventDefault(); swapItems(item.id, visiblePeerIds[peerPosition + 1]); }
+          }}
+          aria-label={`拖动调整${item.name}的顺序`}
+          title="按住拖动排序"
+        ><Menu aria-hidden="true" /></button>}
         {phase === "verify" ? (
           <button className={`pack-check ${packed ? "checked" : ""}`} onClick={() => togglePacked(item)} disabled={!canCheck} aria-label={`${packed ? "取消" : "确认"}${item.name}已装包`}>{packed ? "✓" : ""}</button>
         ) : <span className={`item-icon item-group-${categories.findIndex((category) => category.name === item.group)}`}><ItemGraphic item={item} /></span>}
-        <div className="item-copy">
-          <b>{item.name}</b>
-        </div>
+        <button className="item-copy item-chat-trigger" onClick={() => openItemChat(item.id)} disabled={editMode} aria-label={`打开${item.name}的讨论`}>
+          <span className="item-title-row"><b>{item.name}</b>{hasUnreadDiscussion && <i className="unread-dot" aria-label="有未读消息" />}</span>
+          <small>{hasUnreadDiscussion ? "有新消息，点开聊聊" : discussionCount ? `${discussionCount} 条讨论` : "点击讨论"}</small>
+        </button>
         {phase === "prepare" && !editMode && (personal ? <span className="personal-pill">每人自备</span> : item.owners.length ? (
             <div className="shared-owner-action">
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
@@ -438,8 +525,6 @@ export default function Home() {
           ) : <button className="claim-button" onClick={() => phase === "prepare" && claim(item.id)}>＋ 我来带</button>)}
         {phase === "prepare" && editMode && <div className="item-edit-panel">
           <label><span>分类</span><select value={item.group} onChange={(event) => changeItemCategory(item.id, event.target.value as Category)} aria-label={`修改${item.name}的分类`}>{categories.map((category) => <option key={category.name} value={category.name}>{category.name}</option>)}</select></label>
-          <button className="reorder-button" onClick={() => moveItem(item.id, -1, visiblePeerIds)} disabled={peerPosition <= 0} aria-label={`上移${item.name}`}>↑</button>
-          <button className="reorder-button" onClick={() => moveItem(item.id, 1, visiblePeerIds)} disabled={peerPosition === visiblePeerIds.length - 1} aria-label={`下移${item.name}`}>↓</button>
           <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`}><Trash2 aria-hidden="true" /></button>
         </div>}
       </article>
@@ -568,6 +653,24 @@ export default function Home() {
               </div>
               {unassigned > 0 && <div className="chat-suggestions">{unassignedItems.map((item) => <button key={item.id} onClick={() => setDraft(`谁可以带${item.name}？`)}>问问：{item.name}</button>)}</div>}
               <div className="chat-composer"><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendMessage()} placeholder="说点什么，或试试‘充电线我来带’…" /><button onClick={sendMessage}>↑</button></div>
+            </section>
+          </div>
+        )}
+
+        {activeItem && (
+          <div className="bottom-sheet" role="dialog" aria-modal="true" aria-label={`${activeItem.name}讨论`}>
+            <button className="sheet-backdrop" aria-label="关闭" onClick={() => setActiveItemId(null)} />
+            <section className="sheet-card chat-card item-chat-card">
+              <span className="sheet-handle" />
+              <header className="chat-header"><div><p className="eyebrow">{activeItem.group}</p><h2>{activeItem.name}</h2></div><button onClick={() => setActiveItemId(null)}>×</button></header>
+              <div className="chat-context"><span>↗</span><p><b>围绕这件物品聊</b><small>说“我来带”，认领状态会自动同步。</small></p></div>
+              <div className="chat-messages">
+                {(itemMessages[activeItem.id] ?? []).length ? (itemMessages[activeItem.id] ?? []).map((message) => {
+                  const meta = members.find((member) => member.name === message.author);
+                  return <div className={`message-row ${message.author === "我" ? "mine" : ""} ${message.system ? "system" : ""}`} key={message.id}>{meta ? <CharacterAvatar member={meta.name} className="message-avatar" /> : <span className="message-avatar assistant-avatar">✦</span>}<div><small>{message.author}</small><p>{message.text}</p></div></div>;
+                }) : <div className="item-discussion-empty"><span>•••</span><b>还没有人讨论</b><small>发第一条消息，问问谁带这件物品。</small></div>}
+              </div>
+              <div className="chat-composer"><input value={itemDraft} onChange={(event) => setItemDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendItemMessage()} placeholder={`聊聊${activeItem.name}…`} /><button onClick={sendItemMessage}>↑</button></div>
             </section>
           </div>
         )}

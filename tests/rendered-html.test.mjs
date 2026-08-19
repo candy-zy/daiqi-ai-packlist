@@ -129,13 +129,37 @@ test("preset items are managed through a dedicated preparation edit mode", async
   assert.match(page, /const \[editMode, setEditMode\]/);
   assert.match(page, /function removeItem/);
   assert.match(page, /current\.filter\(\(entry\) => entry\.id !== item\.id\)/);
-  assert.match(page, /function moveItem/);
+  assert.match(page, /function swapItems/);
+  assert.match(page, /function startDragging/);
+  assert.match(page, /function dragItem/);
   assert.match(page, /function changeItemCategory/);
   assert.match(page, /编辑清单/);
+  assert.match(page, /className="drag-handle"/);
+  assert.match(page, /<Menu aria-hidden="true"/);
   assert.match(page, /className="item-edit-panel"/);
-  assert.doesNotMatch(page, /不需要，移除|remove-item-button/);
+  assert.doesNotMatch(page, /不需要，移除|remove-item-button|className="reorder-button"|aria-label={`上移|aria-label={`下移/);
+  assert.match(css, /touch-action:none/);
+  assert.match(css, /drag-handle/);
   assert.match(css, /item-edit-panel/);
   assert.match(css, /edit-delete-button/);
+});
+
+test("every item opens a focused discussion and unread replies show a red dot", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /const seedItemMessages/);
+  assert.match(page, /unreadItemIds/);
+  assert.match(page, /function openItemChat/);
+  assert.match(page, /function sendItemMessage/);
+  assert.match(page, /className="item-copy item-chat-trigger"/);
+  assert.match(page, /className="unread-dot"/);
+  assert.match(page, /有新消息，点开聊聊/);
+  assert.match(page, /围绕这件物品聊/);
+  assert.match(page, /认领状态会自动同步/);
+  assert.match(css, /unread-dot/);
+  assert.match(css, /item-chat-card/);
 });
 
 test("claim actions stay quiet and AI suggestions use two compact fixed cards", async () => {
