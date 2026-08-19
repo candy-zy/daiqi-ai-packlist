@@ -102,16 +102,21 @@ test("completed checklist opens a dedicated illustrated departure page", async (
   await access(new URL("../public/departure-girl.png", import.meta.url));
 });
 
-test("preset items can be removed only from the preparation list", async () => {
+test("preset items are managed through a dedicated preparation edit mode", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
+  assert.match(page, /const \[editMode, setEditMode\]/);
   assert.match(page, /function removeItem/);
   assert.match(page, /current\.filter\(\(entry\) => entry\.id !== item\.id\)/);
-  assert.match(page, /phase === "prepare".*不需要，移除/);
-  assert.match(page, /已从清单移除/);
-  assert.match(css, /remove-item-button/);
+  assert.match(page, /function moveItem/);
+  assert.match(page, /function changeItemCategory/);
+  assert.match(page, /编辑清单/);
+  assert.match(page, /className="item-edit-panel"/);
+  assert.doesNotMatch(page, /不需要，移除|remove-item-button/);
+  assert.match(css, /item-edit-panel/);
+  assert.match(css, /edit-delete-button/);
 });
 
 test("claim actions stay quiet and AI suggestions use two compact fixed cards", async () => {

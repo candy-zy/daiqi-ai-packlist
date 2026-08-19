@@ -181,6 +181,7 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState(seedSuggestions);
   const [suggestionStatus, setSuggestionStatus] = useState<"idle" | "loading" | "model" | "fallback">("idle");
   const [phase, setPhase] = useState<Phase>("prepare");
+  const [editMode, setEditMode] = useState(false);
   const [listFilter, setListFilter] = useState<ListFilter>("all");
   const [currentMember, setCurrentMember] = useState<Member>("我");
   const [showChat, setShowChat] = useState(false);
@@ -343,9 +344,26 @@ export default function Home() {
   }
 
   function removeItem(item: PackItem) {
+    if (!editMode) return;
     setItems((current) => current.filter((entry) => entry.id !== item.id));
     setSuggestions((current) => current.map((suggestion) => suggestion.name === item.name ? { ...suggestion, added: false } : suggestion));
-    notify(`已从清单移除「${item.name}」`);
+  }
+
+  function moveItem(id: number, direction: -1 | 1, visiblePeerIds: number[]) {
+    const position = visiblePeerIds.indexOf(id);
+    const targetId = visiblePeerIds[position + direction];
+    if (position < 0 || targetId === undefined) return;
+    setItems((current) => {
+      const next = [...current];
+      const itemIndex = next.findIndex((item) => item.id === id);
+      const targetIndex = next.findIndex((item) => item.id === targetId);
+      [next[itemIndex], next[targetIndex]] = [next[targetIndex], next[itemIndex]];
+      return next;
+    });
+  }
+
+  function changeItemCategory(id: number, group: Category) {
+    setItems((current) => current.map((item) => item.id === id ? { ...item, group } : item));
   }
 
   function sendMessage() {
@@ -379,17 +397,18 @@ export default function Home() {
     const currentWillBring = item.owners.includes(currentMember);
     const packed = Boolean(item.checked[currentMember]);
     const canCheck = currentMember === "我" && (personal || currentWillBring);
+    const visiblePeerIds = (personal ? personalPrepareItems : prepareItems.filter((entry) => entry.group === item.group)).map((entry) => entry.id);
+    const peerPosition = visiblePeerIds.indexOf(item.id);
 
     return (
-      <article className={`list-item ${packed ? "packed" : ""}`} key={item.id}>
+      <article className={`list-item ${packed ? "packed" : ""} ${editMode && phase === "prepare" ? "editing" : ""}`} key={item.id}>
         {phase === "verify" ? (
           <button className={`pack-check ${packed ? "checked" : ""}`} onClick={() => togglePacked(item)} disabled={!canCheck} aria-label={`${packed ? "取消" : "确认"}${item.name}已装包`}>{packed ? "✓" : ""}</button>
         ) : <span className={`item-icon item-group-${categories.findIndex((category) => category.name === item.group)}`}><ItemGraphic item={item} /></span>}
         <div className="item-copy">
           <b>{item.name}</b>
-          {phase === "prepare" && <button className="remove-item-button" onClick={() => removeItem(item)} aria-label={`从清单移除${item.name}`}><Trash2 aria-hidden="true" />不需要，移除</button>}
         </div>
-        {phase === "prepare" && (personal ? <span className="personal-pill">每人自备</span> : item.owners.length ? (
+        {phase === "prepare" && !editMode && (personal ? <span className="personal-pill">每人自备</span> : item.owners.length ? (
             <div className="shared-owner-action">
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
                 {ownerMembers.slice(0, 3).map((owner) => <button className="owner-avatar" key={owner?.name} onClick={() => phase === "prepare" && owner?.name === currentMember && release(item.id)} disabled={owner?.name !== currentMember} title={owner?.name === currentMember ? "取消我会带" : `${owner?.name}会带`}>{owner && <CharacterAvatar member={owner.name} />}</button>)}
@@ -406,6 +425,12 @@ export default function Home() {
               </button>
             </div>
           ) : <button className="claim-button" onClick={() => phase === "prepare" && claim(item.id)}>＋ 我来带</button>)}
+        {phase === "prepare" && editMode && <div className="item-edit-panel">
+          <label><span>分类</span><select value={item.group} onChange={(event) => changeItemCategory(item.id, event.target.value as Category)} aria-label={`修改${item.name}的分类`}>{categories.map((category) => <option key={category.name} value={category.name}>{category.name}</option>)}</select></label>
+          <button className="reorder-button" onClick={() => moveItem(item.id, -1, visiblePeerIds)} disabled={peerPosition <= 0} aria-label={`上移${item.name}`}>↑</button>
+          <button className="reorder-button" onClick={() => moveItem(item.id, 1, visiblePeerIds)} disabled={peerPosition === visiblePeerIds.length - 1} aria-label={`下移${item.name}`}>↓</button>
+          <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`}><Trash2 aria-hidden="true" /></button>
+        </div>}
       </article>
     );
   }
@@ -438,7 +463,7 @@ export default function Home() {
 
           <div className="phase-tabs" role="tablist" aria-label="准备阶段">
             <button className={phase === "prepare" ? "active" : ""} onClick={() => setPhase("prepare")}><span>1</span>准备清单</button>
-            <button className={phase === "verify" ? "active" : ""} onClick={() => setPhase("verify")}><span>2</span>出发核对</button>
+            <button className={phase === "verify" ? "active" : ""} onClick={() => { setEditMode(false); setPhase("verify"); }}><span>2</span>出发核对</button>
           </div>
 
           {phase === "verify" && (
@@ -475,7 +500,7 @@ export default function Home() {
           </nav>}
 
           {phase === "prepare" ? <section className="filtered-list-section">
-            <header className="filtered-list-head"><div><h2>{filterCopy.title}</h2><p>{filterCopy.note}</p></div><span>{prepareItems.length} 件</span></header>
+            <header className="filtered-list-head"><div><h2>{filterCopy.title}</h2><p>{editMode ? "调整顺序、分类，或删除不需要的物品" : filterCopy.note}</p></div><div className="list-head-actions"><span>{prepareItems.length} 件</span><button className={editMode ? "active" : ""} onClick={() => setEditMode((current) => !current)}>{editMode ? "✓ 完成" : "✎ 编辑清单"}</button></div></header>
             {prepareItems.length ? <div className="category-sections">{categories.filter((category) => !personalCategories.includes(category.name)).map((category, index) => {
               const categoryItems = teamPrepareItems.filter((item) => item.group === category.name);
               if (!categoryItems.length) return null;
@@ -510,7 +535,7 @@ export default function Home() {
         <footer className="action-bar">
           {phase === "prepare" && <button className="add-item" onClick={() => setShowAdd(true)} aria-label="添加物品">＋</button>}
           {phase === "prepare" ? (
-            <button className="primary-action" onClick={() => setPhase("verify")}>进入出发核对 <span>→</span></button>
+            <button className="primary-action" onClick={() => { setEditMode(false); setPhase("verify"); }}>进入出发核对 <span>→</span></button>
           ) : (
             <button className={`primary-action ${status.total === 0 ? "ready" : ""}`} onClick={() => status.total ? notify(`还有 ${status.total} 项需要处理`) : setPhase("departed")}>{status.total ? `继续核对 · 还有 ${status.total} 项` : "全部带齐 · 出发"}<span>{status.total ? "↑" : "→"}</span></button>
           )}
