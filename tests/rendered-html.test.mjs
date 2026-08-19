@@ -31,7 +31,7 @@ test("server-renders the 带齐 onboarding experience", async () => {
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/);
 });
 
-test("ships hand-drawn characters and graphical item icons", async () => {
+test("ships hand-drawn characters and colorful sticker item icons", async () => {
   const [page, css, layout] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -40,11 +40,22 @@ test("ships hand-drawn characters and graphical item icons", async () => {
 
   assert.match(page, /from "lucide-react"/);
   assert.match(page, /function ItemGraphic/);
+  assert.match(page, /const itemIcons: Record<string, string>/);
+  assert.match(page, /className="item-sticker-emoji"/);
   assert.match(page, /function CharacterAvatar/);
   assert.match(css, /team-characters\.png/);
+  assert.match(css, /Apple Color Emoji/);
+  assert.match(css, /item-sticker-emoji/);
   assert.match(css, /Hand-drawn travel journal theme/);
   assert.match(layout, /title: "带齐｜朋友一起收拾行李"/);
   await access(new URL("../public/team-characters.png", import.meta.url));
+});
+
+test("category headers stay concise without explanatory subtitles", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(page, /category\.note/);
+  assert.doesNotMatch(page, /充电、存储与拍摄设备|证件、票务、订单与支付|常用药物与健康防护/);
+  assert.match(page, /<h2>{category\.name}<\/h2>/);
 });
 
 test("AI suggestions use two Seoul-specific fallbacks and a server-only model route", async () => {

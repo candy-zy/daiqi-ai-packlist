@@ -2,14 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
-  Backpack, BadgeCheck, Banknote, Bath, BatteryCharging, BookOpenCheck, Bug,
-  Cable, Camera, Car, CircleDotDashed, Cookie, Cpu, CreditCard, CupSoda,
-  Droplets, Ear, FileText, Footprints, Glasses, GlassWater, Headphones,
-  HeartPulse, Layers3, Menu, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
-  ShieldCheck, Shirt, Sparkles, Sun, Toilet, TowelRack, Trash2,
-  Umbrella, Unplug, Utensils, Wallet, Waves, Wifi,
+  Menu, Trash2, Wifi,
 } from "lucide-react";
 
 type Member = "我" | "阿哲" | "小雨";
@@ -50,40 +44,40 @@ const members: { name: Member; short: string; profile: string; className: string
   { name: "小雨", short: "雨", profile: "有水杯", className: "member-yu", online: false },
 ];
 
-const categories: { name: Category; icon: string; note: string }[] = [
-  { name: "证件与钱财类", icon: "▣", note: "证件、票务、订单与支付" },
-  { name: "电子数码类", icon: "⌁", note: "充电、存储与拍摄设备" },
-  { name: "衣物鞋帽类", icon: "♨", note: "换洗衣物、鞋帽与配饰" },
-  { name: "洗护化妆类", icon: "✦", note: "洗漱、护肤与化妆" },
-  { name: "医药健康类", icon: "✚", note: "常用药物与健康防护" },
-  { name: "日用杂物类", icon: "◇", note: "雨具、纸巾与舒适用品" },
-  { name: "零食饮料类", icon: "◉", note: "路途补给与饮品" },
+const categories: { name: Category; icon: string }[] = [
+  { name: "证件与钱财类", icon: "💳" },
+  { name: "电子数码类", icon: "🔌" },
+  { name: "衣物鞋帽类", icon: "👕" },
+  { name: "洗护化妆类", icon: "🧴" },
+  { name: "医药健康类", icon: "💊" },
+  { name: "日用杂物类", icon: "☂️" },
+  { name: "零食饮料类", icon: "🍪" },
 ];
 
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
 const personalItemNames = new Set(["牙刷", "毛巾", "流量卡"]);
 
-const itemIcons: Record<string, LucideIcon> = {
-  "身份证": BadgeCheck, "护照 / 签证": BookOpenCheck, "银行卡": CreditCard, "现金": Banknote, "驾驶证": Car,
-  "充电器": Plug, "充电宝": BatteryCharging, "数据线": Cable, "耳机": Headphones, "转换插头": Unplug,
-  "相机": Camera, "自拍杆": ScanLine, "SD 卡": Cpu,
-  "上衣": Shirt, "裤子": Layers3, "外套": Shirt, "内衣": ShieldCheck, "袜子": Footprints, "睡衣": MoonStar,
-  "拖鞋": Footprints, "鞋子": Footprints, "墨镜": Glasses, "帽子": CircleDotDashed,
-  "牙刷": Paintbrush, "牙膏": Droplets, "毛巾": TowelRack, "洗面奶": Droplets, "卸妆油": Droplets,
-  "防晒霜": Sun, "洗发水": Waves, "沐浴露": Bath, "水乳": Droplets, "面霜": Sparkles, "面膜": ShieldCheck,
-  "皮筋": CircleDotDashed, "个人慢性病药物": HeartPulse, "驱蚊液": Bug, "晕车药": Pill, "过敏药": Pill,
-  "雨伞": Umbrella, "纸巾": FileText, "湿巾": FileText, "水杯": GlassWater, "口罩": ShieldCheck, "耳塞": Ear,
-  "一次性马桶垫": Toilet, "零食": Cookie, "饮料": CupSoda, "T-money 交通卡": CreditCard, "流量卡": Cpu,
+const itemIcons: Record<string, string> = {
+  "身份证": "🪪", "护照 / 签证": "📘", "银行卡": "💳", "现金": "💵", "驾驶证": "🪪",
+  "充电器": "🔌", "充电宝": "🔋", "数据线": "🔗", "耳机": "🎧", "转换插头": "🔌",
+  "相机": "📷", "自拍杆": "🤳", "SD 卡": "💾",
+  "上衣": "👕", "裤子": "👖", "外套": "🧥", "内衣": "🩲", "袜子": "🧦", "睡衣": "🛌",
+  "拖鞋": "🩴", "鞋子": "👟", "墨镜": "🕶️", "帽子": "🧢",
+  "牙刷": "🪥", "牙膏": "🧴", "毛巾": "🧺", "洗面奶": "🫧", "卸妆油": "🧴",
+  "防晒霜": "🌞", "洗发水": "🧴", "沐浴露": "🧼", "水乳": "💧", "面霜": "🫙", "面膜": "🎭",
+  "皮筋": "🎀", "个人慢性病药物": "💊", "驱蚊液": "🦟", "晕车药": "💊", "过敏药": "💊",
+  "雨伞": "☂️", "纸巾": "🧻", "湿巾": "🧻", "水杯": "🥤", "口罩": "😷", "耳塞": "🎧",
+  "一次性马桶垫": "🚽", "零食": "🍪", "饮料": "🧃", "T-money 交通卡": "🚇", "流量卡": "📶",
 };
 
-const categoryIcons: Record<Category, LucideIcon> = {
-  "证件与钱财类": Wallet,
-  "电子数码类": Cpu,
-  "衣物鞋帽类": Shirt,
-  "洗护化妆类": Sparkles,
-  "医药健康类": HeartPulse,
-  "日用杂物类": Backpack,
-  "零食饮料类": Utensils,
+const categoryIcons: Record<Category, string> = {
+  "证件与钱财类": "💳",
+  "电子数码类": "🔌",
+  "衣物鞋帽类": "👕",
+  "洗护化妆类": "🧴",
+  "医药健康类": "💊",
+  "日用杂物类": "☂️",
+  "零食饮料类": "🍪",
 };
 
 const avatarVariant: Record<Member, string> = { "我": "avatar-me", "阿哲": "avatar-zhe", "小雨": "avatar-yu" };
@@ -93,13 +87,11 @@ function CharacterAvatar({ member, className = "" }: { member: Member; className
 }
 
 function ItemGraphic({ item }: { item: Pick<PackItem, "name" | "group"> }) {
-  const Icon = itemIcons[item.name] ?? categoryIcons[item.group] ?? Package;
-  return <Icon aria-hidden="true" strokeWidth={2.4} />;
+  return <span className="item-sticker-emoji" aria-hidden="true">{itemIcons[item.name] ?? categoryIcons[item.group] ?? "🎒"}</span>;
 }
 
 function CategoryGraphic({ category }: { category: Category }) {
-  const Icon = categoryIcons[category];
-  return <Icon aria-hidden="true" strokeWidth={2.5} />;
+  return <span className="category-sticker-emoji" aria-hidden="true">{categoryIcons[category]}</span>;
 }
 
 function isPersonalItem(item: PackItem) {
@@ -601,7 +593,7 @@ export default function Home() {
               if (!categoryItems.length) return null;
               return <section className="list-section category-section" key={category.name}>
                 <header className="section-head">
-                  <div><span className={`scope-icon category-icon category-${index}`}><CategoryGraphic category={category.name} /></span><div><h2>{category.name}</h2><p>{category.note}</p></div></div>
+                  <div><span className={`scope-icon category-icon category-${index}`}><CategoryGraphic category={category.name} /></span><div><h2>{category.name}</h2></div></div>
                   <span>{categoryItems.length} 件</span>
                 </header>
                 <div className="item-list">{categoryItems.map(renderItem)}</div>
@@ -609,7 +601,7 @@ export default function Home() {
             })}
               {personalPrepareItems.length > 0 && <section className="personal-zone">
                 <header className="personal-zone-head">
-                  <div><span><Backpack strokeWidth={2.5} /></span><div><h2>个人自备物品</h2><p>每个人各自带一份，所有成员都能看到</p></div></div>
+                  <div><span><span className="category-sticker-emoji" aria-hidden="true">🎒</span></span><div><h2>个人自备物品</h2></div></div>
                   <small>队友可见</small>
                 </header>
                 <div className="item-list">{personalPrepareItems.map(renderItem)}</div>
