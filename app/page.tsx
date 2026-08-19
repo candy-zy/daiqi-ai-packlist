@@ -5,10 +5,10 @@ import type { LucideIcon } from "lucide-react";
 import {
   Backpack, BadgeCheck, Banknote, Bath, BatteryCharging, BookOpenCheck, Bug,
   Cable, Camera, Car, CircleDotDashed, Cookie, Cpu, CreditCard, CupSoda,
-  Droplets, Ear, FileText, Footprints, Gem, Glasses, GlassWater, Headphones,
+  Droplets, Ear, FileText, Footprints, Glasses, GlassWater, Headphones,
   HeartPulse, Layers3, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
-  ShieldCheck, Shirt, ShoppingBag, Sparkles, Sun, Toilet, TowelRack,
-  Umbrella, Unplug, Utensils, Wallet, Waves,
+  ShieldCheck, Shirt, Sparkles, Sun, Toilet, TowelRack,
+  Umbrella, Unplug, Utensils, Wallet, Waves, Wifi,
 } from "lucide-react";
 
 type Member = "我" | "阿哲" | "小雨";
@@ -60,7 +60,7 @@ const categories: { name: Category; icon: string; note: string }[] = [
 ];
 
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
-const personalItemNames = new Set(["牙刷", "毛巾"]);
+const personalItemNames = new Set(["牙刷", "毛巾", "流量卡"]);
 
 const itemIcons: Record<string, LucideIcon> = {
   "身份证": BadgeCheck, "护照 / 签证": BookOpenCheck, "银行卡": CreditCard, "现金": Banknote, "驾驶证": Car,
@@ -72,7 +72,7 @@ const itemIcons: Record<string, LucideIcon> = {
   "防晒霜": Sun, "洗发水": Waves, "沐浴露": Bath, "水乳": Droplets, "面霜": Sparkles, "面膜": ShieldCheck,
   "皮筋": CircleDotDashed, "个人慢性病药物": HeartPulse, "驱蚊液": Bug, "晕车药": Pill, "过敏药": Pill,
   "雨伞": Umbrella, "纸巾": FileText, "湿巾": FileText, "水杯": GlassWater, "口罩": ShieldCheck, "耳塞": Ear,
-  "一次性马桶垫": Toilet, "零食": Cookie, "饮料": CupSoda, "韩系拍照发夹": Gem, "折叠购物袋": ShoppingBag,
+  "一次性马桶垫": Toilet, "零食": Cookie, "饮料": CupSoda, "T-money 交通卡": CreditCard, "流量卡": Cpu,
 };
 
 const categoryIcons: Record<Category, LucideIcon> = {
@@ -163,14 +163,14 @@ const seedItems: PackItem[] = [
 ];
 
 const seedSuggestions: Suggestion[] = [
-  { id: 101, name: "韩系拍照发夹", icon: "✦", group: "衣物鞋帽类", reason: "首尔街拍常用简洁发饰点亮造型，AI 已将它归入衣物鞋帽类。", signal: "热门出片", added: false },
-  { id: 103, name: "折叠购物袋", icon: "▱", group: "日用杂物类", reason: "首尔逛街和便利店购物时随身带一个更方便，AI 已将它归入日用杂物类。", signal: "逛街提醒", added: false },
+  { id: 101, name: "T-money 交通卡", icon: "▣", group: "证件与钱财类", reason: "首尔公交、地铁和便利店都能使用，落地后出行会顺手很多。", signal: "交通必备", added: false },
+  { id: 102, name: "流量卡", icon: "⌁", group: "电子数码类", reason: "提前准备韩国流量卡，落地即可查地图、联系朋友和叫车。", signal: "容易漏带", added: false },
 ];
 
 const seedMessages: ChatMessage[] = [
   { id: 1, author: "我", text: "自拍杆谁能带？首尔街拍和合照可能会用。" },
   { id: 2, author: "阿哲", text: "我带相机，箱子空间可能不太够。" },
-  { id: 3, author: "小雨", text: "折叠购物袋我可以带一个。" },
+  { id: 3, author: "小雨", text: "流量卡要不要提前一起买？" },
 ];
 
 export default function Home() {
@@ -179,6 +179,7 @@ export default function Home() {
   const [destination, setDestination] = useState("韩国 · 首尔");
   const [items, setItems] = useState(seedItems);
   const [suggestions, setSuggestions] = useState(seedSuggestions);
+  const [suggestionStatus, setSuggestionStatus] = useState<"idle" | "loading" | "model" | "fallback">("idle");
   const [phase, setPhase] = useState<Phase>("prepare");
   const [listFilter, setListFilter] = useState<ListFilter>("all");
   const [currentMember, setCurrentMember] = useState<Member>("我");
@@ -212,6 +213,34 @@ export default function Home() {
   }, [currentMember, items]);
   const destinationLabel = destination.trim().split(/[·,，]/).pop()?.trim() || "目的地";
 
+  async function createTeam() {
+    if (!teamName.trim() || !destination.trim()) return;
+    setTeamReady(true);
+    setSuggestionStatus("loading");
+
+    try {
+      const response = await fetch("/api/suggestions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ destination: destination.trim(), existingItems: items.map((item) => item.name) }),
+      });
+      if (!response.ok) throw new Error("AI suggestions request failed");
+
+      const result = await response.json() as { suggestions?: Omit<Suggestion, "id" | "icon" | "added">[]; source?: "model" | "fallback" };
+      const existingNames = new Set(items.map((item) => item.name.trim().toLowerCase()));
+      const uniqueSuggestions = (result.suggestions ?? [])
+        .filter((item, index, all) => !existingNames.has(item.name.trim().toLowerCase()) && all.findIndex((candidate) => candidate.name.trim().toLowerCase() === item.name.trim().toLowerCase()) === index)
+        .slice(0, 2)
+        .map((item, index) => ({ ...item, id: 101 + index, icon: index === 0 ? "▣" : "⌁", added: false }));
+
+      if (uniqueSuggestions.length === 2) setSuggestions(uniqueSuggestions);
+      setSuggestionStatus(result.source === "model" ? "model" : "fallback");
+    } catch {
+      setSuggestions(seedSuggestions);
+      setSuggestionStatus("fallback");
+    }
+  }
+
   if (!teamReady) {
     return (
       <main className="app-shell setup-shell">
@@ -229,7 +258,7 @@ export default function Home() {
             <label className="setup-field"><span>队伍名称</span><input value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder="例如：首尔逛拍小队" /></label>
             <label className="setup-field"><span>目的地</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：韩国 · 首尔" /></label>
             <div className="setup-members"><div><b>队伍成员</b><small>进入后可继续邀请朋友</small></div><div className="setup-member-dots"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div></div>
-            <button className="setup-submit" onClick={() => teamName.trim() && destination.trim() && setTeamReady(true)}>创建队伍并生成清单 <span>→</span></button>
+            <button className="setup-submit" onClick={createTeam}>创建队伍并生成清单 <span>→</span></button>
           </div>
         </section>
       </main>
@@ -374,10 +403,10 @@ export default function Home() {
 
           {phase === "prepare" && <section className="ai-section">
             <header>
-              <div className="ai-title"><span>✦</span><div><p className="eyebrow">AI 已自动归类</p><h2>{destinationLabel}建议</h2></div></div>
-              <small>{suggestions.filter((item) => !item.added).length} 条建议</small>
+              <div className="ai-title"><span>{suggestionStatus === "loading" ? <Wifi aria-hidden="true" /> : "✦"}</span><div><p className="eyebrow">{suggestionStatus === "model" ? "大模型实时生成" : suggestionStatus === "loading" ? "正在结合当前清单思考" : "AI 建议示例"}</p><h2>{destinationLabel}容易漏带</h2></div></div>
+              <small>{suggestionStatus === "loading" ? "生成中…" : "左右滑动 · 2 条"}</small>
             </header>
-            <div className="suggestion-scroll">
+            <div className={`suggestion-scroll ${suggestionStatus === "loading" ? "loading" : ""}`}>
               {suggestions.map((suggestion) => (
                 <article className={`suggestion-card ${suggestion.added ? "added" : ""}`} key={suggestion.id}>
                   <div className={`suggestion-icon suggestion-${suggestion.id}`}><ItemGraphic item={suggestion} /></div>
@@ -456,7 +485,7 @@ export default function Home() {
                 })}
               </div>
               {unassigned > 0 && <div className="chat-suggestions">{unassignedItems.map((item) => <button key={item.id} onClick={() => setDraft(`谁可以带${item.name}？`)}>问问：{item.name}</button>)}</div>}
-              <div className="chat-composer"><input autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendMessage()} placeholder={`以${currentMember}身份发消息…`} /><button onClick={sendMessage}>↑</button></div>
+              <div className="chat-composer"><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendMessage()} placeholder={`以${currentMember}身份发消息…`} /><button onClick={sendMessage}>↑</button></div>
             </section>
           </div>
         )}
@@ -468,7 +497,7 @@ export default function Home() {
               <span className="sheet-handle" />
               <h2>添加物品</h2><p>选择它属于下面哪个固定分类。</p>
               <div className="category-picker">{categories.map((category) => <button className={addCategory === category.name ? "active" : ""} key={category.name} onClick={() => setAddCategory(category.name)}>{category.name}</button>)}</div>
-              <input autoFocus value={newItem} onChange={(event) => setNewItem(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addCustomItem()} placeholder="例如：自拍杆" />
+              <input value={newItem} onChange={(event) => setNewItem(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addCustomItem()} placeholder="例如：自拍杆" />
               <button className="primary-action" onClick={addCustomItem}>加入清单</button>
             </section>
           </div>
