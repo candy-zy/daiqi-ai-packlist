@@ -34,10 +34,10 @@ type ChatMessage = {
   system?: boolean;
 };
 
-const members: { name: Member; short: string; profile: string; className: string }[] = [
-  { name: "我", short: "我", profile: "有充电宝", className: "member-me" },
-  { name: "阿哲", short: "哲", profile: "有相机", className: "member-zhe" },
-  { name: "小雨", short: "雨", profile: "有保温杯", className: "member-yu" },
+const members: { name: Member; short: string; profile: string; className: string; online: boolean }[] = [
+  { name: "我", short: "我", profile: "有充电宝", className: "member-me", online: true },
+  { name: "阿哲", short: "哲", profile: "有相机", className: "member-zhe", online: true },
+  { name: "小雨", short: "雨", profile: "有水杯", className: "member-yu", online: false },
 ];
 
 const categories: { name: Category; icon: string; note: string }[] = [
@@ -53,52 +53,58 @@ const categories: { name: Category; icon: string; note: string }[] = [
 const seedItems: PackItem[] = [
   { id: 1, name: "身份证", icon: "▣", group: "证件与钱财类", owners: ["我", "阿哲", "小雨"], checked: {} },
   { id: 2, name: "护照 / 签证", icon: "▦", group: "证件与钱财类", owners: ["我", "阿哲", "小雨"], checked: {} },
-  { id: 3, name: "机票 / 车票", icon: "▤", group: "证件与钱财类", owners: ["我"], checked: {} },
-  { id: 4, name: "酒店订单", icon: "▥", group: "证件与钱财类", owners: ["我"], checked: {} },
-  { id: 5, name: "银行卡 / 现金", icon: "▰", group: "证件与钱财类", owners: [], checked: {} },
-  { id: 6, name: "电子证件截图", icon: "▧", group: "证件与钱财类", owners: [], checked: {} },
-  { id: 7, name: "驾驶证（按需）", icon: "□", group: "证件与钱财类", owners: [], checked: {} },
+  { id: 3, name: "银行卡", icon: "▰", group: "证件与钱财类", owners: [], checked: {} },
+  { id: 4, name: "现金", icon: "¥", group: "证件与钱财类", owners: [], checked: {} },
+  { id: 5, name: "驾驶证", icon: "□", group: "证件与钱财类", owners: [], checked: {} },
 
-  { id: 8, name: "手机", icon: "▮", group: "电子数码类", owners: ["我", "阿哲", "小雨"], checked: {} },
-  { id: 9, name: "充电器 / 充电宝", icon: "▰", group: "电子数码类", owners: ["我"], checked: {}, aiReason: "你登记了大容量充电宝" },
-  { id: 10, name: "数据线", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
-  { id: 11, name: "耳机", icon: "◉", group: "电子数码类", owners: ["小雨"], checked: {} },
-  { id: 12, name: "转换插头", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
-  { id: 13, name: "相机", icon: "📷", group: "电子数码类", owners: ["阿哲"], checked: {}, aiReason: "阿哲登记了相机" },
-  { id: 14, name: "自拍杆", icon: "│", group: "电子数码类", owners: [], checked: {} },
-  { id: 15, name: "U 盘（按需）", icon: "▮", group: "电子数码类", owners: [], checked: {} },
+  { id: 6, name: "手机", icon: "▮", group: "电子数码类", owners: ["我", "阿哲", "小雨"], checked: {} },
+  { id: 7, name: "充电器", icon: "▰", group: "电子数码类", owners: [], checked: {} },
+  { id: 8, name: "充电宝", icon: "▮", group: "电子数码类", owners: ["我"], checked: {}, aiReason: "你登记了大容量充电宝" },
+  { id: 9, name: "数据线", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
+  { id: 10, name: "耳机", icon: "◉", group: "电子数码类", owners: ["小雨"], checked: {} },
+  { id: 11, name: "转换插头", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
+  { id: 12, name: "相机", icon: "📷", group: "电子数码类", owners: ["阿哲"], checked: {}, aiReason: "阿哲登记了相机" },
+  { id: 13, name: "自拍杆", icon: "│", group: "电子数码类", owners: [], checked: {} },
+  { id: 14, name: "U 盘", icon: "▮", group: "电子数码类", owners: [], checked: {} },
 
-  { id: 16, name: "换洗衣物", icon: "◫", group: "衣物鞋帽类", owners: [], checked: {} },
-  { id: 17, name: "内衣 / 袜子", icon: "▤", group: "衣物鞋帽类", owners: [], checked: {} },
-  { id: 18, name: "外套", icon: "♨", group: "衣物鞋帽类", owners: ["我"], checked: {} },
-  { id: 19, name: "睡衣", icon: "○", group: "衣物鞋帽类", owners: [], checked: {} },
-  { id: 20, name: "鞋子 / 拖鞋", icon: "◇", group: "衣物鞋帽类", owners: [], checked: {} },
-  { id: 21, name: "帽子 / 围巾", icon: "▰", group: "衣物鞋帽类", owners: ["小雨"], checked: {} },
-  { id: 22, name: "墨镜", icon: "●", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 15, name: "上衣", icon: "◫", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 16, name: "裤子", icon: "▥", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 17, name: "外套", icon: "♨", group: "衣物鞋帽类", owners: ["我"], checked: {} },
+  { id: 18, name: "内衣", icon: "▤", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 19, name: "袜子", icon: "▤", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 20, name: "睡衣", icon: "○", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 21, name: "拖鞋", icon: "◇", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 22, name: "鞋子", icon: "◇", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 23, name: "墨镜", icon: "●", group: "衣物鞋帽类", owners: [], checked: {} },
+  { id: 24, name: "帽子", icon: "▰", group: "衣物鞋帽类", owners: ["小雨"], checked: {} },
 
-  { id: 23, name: "牙刷 / 牙膏", icon: "⌁", group: "洗护化妆类", owners: [], checked: {} },
-  { id: 24, name: "毛巾", icon: "▤", group: "洗护化妆类", owners: [], checked: {} },
-  { id: 25, name: "洗面奶", icon: "◉", group: "洗护化妆类", owners: ["我"], checked: {} },
-  { id: 26, name: "洗发水 / 沐浴露（旅行装）", icon: "◉", group: "洗护化妆类", owners: [], checked: {} },
-  { id: 27, name: "水乳 / 面霜", icon: "○", group: "洗护化妆类", owners: ["小雨"], checked: {} },
-  { id: 28, name: "防晒霜", icon: "☀", group: "洗护化妆类", owners: [], checked: {} },
-  { id: 29, name: "化妆品 / 卸妆用品", icon: "✦", group: "洗护化妆类", owners: [], checked: {} },
-  { id: 30, name: "梳子 / 皮筋", icon: "⌇", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 25, name: "牙刷", icon: "⌁", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 26, name: "牙膏", icon: "▮", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 27, name: "毛巾", icon: "▤", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 28, name: "洗面奶", icon: "◉", group: "洗护化妆类", owners: ["我"], checked: {} },
+  { id: 29, name: "卸妆油", icon: "◉", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 30, name: "防晒霜", icon: "☀", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 31, name: "洗发水", icon: "◉", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 32, name: "沐浴露", icon: "◉", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 33, name: "水乳", icon: "○", group: "洗护化妆类", owners: ["小雨"], checked: {} },
+  { id: 34, name: "面霜", icon: "○", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 35, name: "面膜", icon: "□", group: "洗护化妆类", owners: [], checked: {} },
+  { id: 36, name: "皮筋", icon: "⌇", group: "洗护化妆类", owners: [], checked: {} },
 
-  { id: 31, name: "个人慢性病药物", icon: "✚", group: "医药健康类", owners: [], checked: {} },
-  { id: 32, name: "驱蚊液", icon: "◉", group: "医药健康类", owners: [], checked: {} },
-  { id: 33, name: "晕车药", icon: "✚", group: "医药健康类", owners: ["阿哲"], checked: {} },
-  { id: 34, name: "过敏药", icon: "✚", group: "医药健康类", owners: [], checked: {} },
+  { id: 37, name: "个人慢性病药物", icon: "✚", group: "医药健康类", owners: [], checked: {} },
+  { id: 38, name: "驱蚊液", icon: "◉", group: "医药健康类", owners: [], checked: {} },
+  { id: 39, name: "晕车药", icon: "✚", group: "医药健康类", owners: ["阿哲"], checked: {} },
+  { id: 40, name: "过敏药", icon: "✚", group: "医药健康类", owners: [], checked: {} },
 
-  { id: 35, name: "雨伞 / 雨衣", icon: "☂", group: "出行日用杂物类", owners: [], checked: {} },
-  { id: 36, name: "纸巾 / 湿巾", icon: "▤", group: "出行日用杂物类", owners: ["小雨"], checked: {} },
-  { id: 37, name: "水杯", icon: "◉", group: "出行日用杂物类", owners: [], checked: {} },
-  { id: 38, name: "口罩", icon: "▥", group: "出行日用杂物类", owners: [], checked: {} },
-  { id: 39, name: "眼罩", icon: "●", group: "出行日用杂物类", owners: [], checked: {} },
-  { id: 40, name: "耳塞", icon: "○", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 41, name: "雨伞", icon: "☂", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 42, name: "纸巾", icon: "▤", group: "出行日用杂物类", owners: ["小雨"], checked: {} },
+  { id: 43, name: "湿巾", icon: "▥", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 44, name: "水杯", icon: "◉", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 45, name: "口罩", icon: "▥", group: "出行日用杂物类", owners: [], checked: {} },
+  { id: 46, name: "耳塞", icon: "○", group: "出行日用杂物类", owners: [], checked: {} },
 
-  { id: 41, name: "路上零食", icon: "●", group: "零食饮料类", owners: [], checked: {} },
-  { id: 42, name: "饮料 / 矿泉水", icon: "◉", group: "零食饮料类", owners: [], checked: {} },
+  { id: 47, name: "零食", icon: "●", group: "零食饮料类", owners: [], checked: {} },
+  { id: 48, name: "饮料", icon: "◉", group: "零食饮料类", owners: [], checked: {} },
 ];
 
 const seedSuggestions: Suggestion[] = [
@@ -113,6 +119,9 @@ const seedMessages: ChatMessage[] = [
 ];
 
 export default function Home() {
+  const [teamReady, setTeamReady] = useState(false);
+  const [teamName, setTeamName] = useState("北海道出片小队");
+  const [destination, setDestination] = useState("日本 · 北海道");
   const [items, setItems] = useState(seedItems);
   const [suggestions, setSuggestions] = useState(seedSuggestions);
   const [phase, setPhase] = useState<Phase>("prepare");
@@ -144,6 +153,31 @@ export default function Home() {
     const total = items.filter((item) => item.owners.includes(currentMember) && !item.checked[currentMember]).length;
     return { total };
   }, [currentMember, items]);
+  const destinationLabel = destination.trim().split(/[·,，]/).pop()?.trim() || "目的地";
+
+  if (!teamReady) {
+    return (
+      <main className="app-shell setup-shell">
+        <section className="phone-frame setup-frame" aria-label="创建旅行队伍">
+          <header className="topbar setup-topbar">
+            <div className="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div className="brand-name">带齐</div>
+            <span className="setup-step">创建队伍</span>
+          </header>
+          <div className="setup-content">
+            <div className="setup-illustration"><span>我</span><span>哲</span><span>雨</span><i>＋</i></div>
+            <p className="eyebrow">先把朋友聚到一起</p>
+            <h1>一起准备，<br />这次别漏带。</h1>
+            <p className="setup-intro">创建旅行队伍并填写目的地，AI 会生成一份大家可以同时认领的准备清单。</p>
+            <label className="setup-field"><span>队伍名称</span><input value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder="例如：北海道出片小队" /></label>
+            <label className="setup-field"><span>目的地</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：日本 · 北海道" /></label>
+            <div className="setup-members"><div><b>队伍成员</b><small>进入后可继续邀请朋友</small></div><div className="setup-member-dots"><i className="member-me">我</i><i className="member-zhe">哲</i><i className="member-yu">雨</i></div></div>
+            <button className="setup-submit" onClick={() => teamName.trim() && destination.trim() && setTeamReady(true)}>创建队伍并生成清单 <span>→</span></button>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   function notify(message: string) {
     setToast(message);
@@ -221,7 +255,6 @@ export default function Home() {
         ) : <span className="item-icon" aria-hidden="true">{item.icon}</span>}
         <div className="item-copy">
           <b>{item.name}</b>
-          <div className="item-meta"><small>{item.aiReason ? <><i>✦</i>{item.aiReason}</> : item.group}</small></div>
         </div>
         {phase === "prepare" && (item.owners.length ? (
             <div className="shared-owner-action">
@@ -250,18 +283,21 @@ export default function Home() {
         <header className="topbar">
           <div className="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
           <div className="brand-name">带齐</div>
-          <button className="trip-chip">北海道 · 5天⌄</button>
+          <button className="trip-chip">{destinationLabel} · 5天⌄</button>
           <button className="icon-button" aria-label="更多选项">•••</button>
         </header>
 
         <div className="scroll-area">
           <section className="trip-hero">
             <div>
-              <p className="eyebrow">日本 · 北海道 · 3 人同行</p>
+              <p className="eyebrow">{destination} · {teamName} · 3 人</p>
               <h1>{phase === "prepare" ? "这次，带什么？" : "出发前，逐件确认"}</h1>
             </div>
-            <div className="member-switch" aria-label="切换成员">
-              {members.map((member) => <button key={member.name} className={`${member.className} ${currentMember === member.name ? "selected" : ""}`} onClick={() => setCurrentMember(member.name)}>{member.short}</button>)}
+            <div className="presence-panel">
+              <div className="member-switch" aria-label="成员在线状态与清单切换">
+                {members.map((member) => <button key={member.name} className={`${member.className} ${currentMember === member.name ? "selected" : ""}`} onClick={() => setCurrentMember(member.name)} title={`${member.name}${member.online ? "在线" : "离线"}`}>{member.short}<i className={member.online ? "online" : "offline"} /></button>)}
+              </div>
+              <small>{members.filter((member) => member.online).length} 人在线</small>
             </div>
           </section>
 
@@ -280,7 +316,7 @@ export default function Home() {
 
           {phase === "prepare" && <section className="ai-section">
             <header>
-              <div className="ai-title"><span>✦</span><div><p className="eyebrow">AI 已自动归类</p><h2>北海道建议，加入固定分类</h2></div></div>
+              <div className="ai-title"><span>✦</span><div><p className="eyebrow">AI 已自动归类</p><h2>{destinationLabel}建议</h2></div></div>
               <small>{suggestions.filter((item) => !item.added).length} 条建议</small>
             </header>
             <div className="suggestion-scroll">
@@ -345,7 +381,7 @@ export default function Home() {
             <button className="sheet-backdrop" aria-label="关闭" onClick={() => setShowChat(false)} />
             <section className="sheet-card chat-card">
               <span className="sheet-handle" />
-              <header className="chat-header"><div><p className="eyebrow">北海道 · 3 人</p><h2>物品讨论</h2></div><button onClick={() => setShowChat(false)}>×</button></header>
+              <header className="chat-header"><div><p className="eyebrow">{destinationLabel} · 3 人</p><h2>物品讨论</h2></div><button onClick={() => setShowChat(false)}>×</button></header>
               <div className="chat-context"><span>✦</span><p><b>对话会同步认领</b><small>试试发送“充电线我来带”。</small></p></div>
               <div className="chat-messages">
                 {messages.map((message) => {
