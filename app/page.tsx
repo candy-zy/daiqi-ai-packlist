@@ -288,6 +288,15 @@ export default function Home() {
     } : entry));
   }
 
+  function selectAllPacked() {
+    if (currentMember !== "我") return;
+    setItems((current) => current.map((item) => isPersonalItem(item) || item.owners.includes(currentMember) ? {
+      ...item,
+      checked: { ...item.checked, [currentMember]: true },
+    } : item));
+    notify("我的待带物品已全部勾选");
+  }
+
   function addSuggestion(suggestion: Suggestion) {
     if (suggestion.added) return;
     setItems((current) => [...current, {
@@ -456,7 +465,10 @@ export default function Home() {
           </section> : <section className="list-section verify-list-section">
             <header className="section-head">
               <div><span className="scope-icon private-icon">✓</span><div><h2>{currentMember === "我" ? "我的待带清单" : `${currentMember}的待带清单`}</h2><p>个人自备物品＋自己认领的团队物品</p></div></div>
-              <span>{verifyItems.length} 件</span>
+              <div className="verify-list-actions">
+                <span>{verifyItems.length} 件</span>
+                {currentMember === "我" && <button className="select-all-button" onClick={selectAllPacked} disabled={status.total === 0}>{status.total === 0 ? "✓ 已全选" : "✓ 一键全选"}</button>}
+              </div>
             </header>
             <div className="item-list">{verifyItems.map(renderItem)}</div>
           </section>}

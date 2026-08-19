@@ -74,3 +74,15 @@ test("AI suggestions endpoint returns exactly two unseen Seoul items without a k
   assert.equal(result.source, "fallback");
   assert.deepEqual(result.suggestions.map((item) => item.name), ["T-money 交通卡", "流量卡"]);
 });
+
+test("onboarding avatars stay consistent and verification supports select all", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /function selectAllPacked/);
+  assert.match(page, /一键全选/);
+  assert.match(page, /currentMember !== "我"/);
+  assert.match(css, /setup-illustration>\.avatar-me\{background-position:left center!important\}/);
+  assert.match(css, /select-all-button/);
+});
