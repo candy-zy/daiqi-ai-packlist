@@ -82,9 +82,28 @@ test("onboarding avatars stay consistent and verification supports select all", 
   ]);
   assert.match(page, /function selectAllPacked/);
   assert.match(page, /一键全选/);
-  assert.match(page, /currentMember !== "我"/);
+  assert.match(page, /viewedMember !== "我"/);
+  assert.match(page, /朋友的核对状态仅供查看，可以提醒但不能代勾/);
+  assert.match(page, /提醒TA/);
   assert.match(css, /setup-illustration>\.avatar-me\{background-position:left center!important\}/);
   assert.match(css, /select-all-button/);
+});
+
+test("preparation prioritizes real assignment progress without impersonating teammates", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /const assignmentProgress/);
+  assert.match(page, /团队分工/);
+  assert.match(page, /只看待分配/);
+  assert.match(page, /function focusUnassigned/);
+  assert.match(page, /scrollIntoView/);
+  assert.match(page, /phase === "verify" \? <button/);
+  assert.match(page, /author: "我"/);
+  assert.doesNotMatch(page, /setCurrentMember|prototype-note|context-tags/);
+  assert.match(css, /assignment-overview/);
+  assert.match(css, /topbar-presence/);
 });
 
 test("completed checklist opens a dedicated illustrated departure page", async () => {
