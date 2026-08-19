@@ -39,7 +39,7 @@ test("onboarding removes repeated team fields and derives the team name", async 
   assert.match(page, /这次去哪儿/);
 });
 
-test("ships hand-drawn characters and colorful sticker item icons", async () => {
+test("ships hand-drawn characters and consistent line item icons", async () => {
   const [page, css, layout] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -48,12 +48,14 @@ test("ships hand-drawn characters and colorful sticker item icons", async () => 
 
   assert.match(page, /from "lucide-react"/);
   assert.match(page, /function ItemGraphic/);
-  assert.match(page, /const itemIcons: Record<string, string>/);
-  assert.match(page, /className="item-sticker-emoji"/);
+  assert.match(page, /const itemIcons: Record<string, LucideIcon>/);
+  assert.match(page, /const Icon = itemIcons\[item\.name\] \?\? Package/);
+  assert.doesNotMatch(page, /className="item-sticker-emoji"/);
   assert.match(page, /function CharacterAvatar/);
   assert.match(css, /team-characters\.png/);
   assert.match(css, /Apple Color Emoji/);
-  assert.match(css, /item-sticker-emoji/);
+  assert.doesNotMatch(css, /item-sticker-emoji/);
+  assert.match(css, /item-icon svg/);
   assert.match(css, /Hand-drawn travel journal theme/);
   assert.match(layout, /title: "带齐｜朋友一起收拾行李"/);
   await access(new URL("../public/team-characters.png", import.meta.url));

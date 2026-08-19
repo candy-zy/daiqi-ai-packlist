@@ -2,8 +2,14 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
-  Menu, Trash2, Wifi,
+  BadgeCheck, Banknote, Bath, BatteryCharging, BookOpenCheck, Bug, Cable,
+  Camera, Car, CircleDotDashed, Cookie, Cpu, CreditCard, CupSoda, Droplets,
+  Ear, FileText, Footprints, Glasses, GlassWater, Headphones, HeartPulse,
+  Layers3, Menu, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
+  ShieldCheck, Shirt, Sparkles, Sun, Toilet, TowelRack, Trash2, Umbrella,
+  Unplug, Waves, Wifi,
 } from "lucide-react";
 
 type Member = "我" | "阿哲" | "小雨";
@@ -63,17 +69,17 @@ const categories: { name: Category; icon: string }[] = [
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
 const personalItemNames = new Set(["牙刷", "毛巾", "流量卡"]);
 
-const itemIcons: Record<string, string> = {
-  "身份证": "🪪", "护照 / 签证": "📘", "银行卡": "💳", "现金": "💵", "驾驶证": "🪪",
-  "充电器": "🔌", "充电宝": "🔋", "充电线": "🔗", "耳机": "🎧", "转换插头": "🔌",
-  "相机": "📷", "自拍杆": "🤳", "SD 卡": "💾",
-  "上衣": "👕", "裤子": "👖", "外套": "🧥", "内衣": "🩲", "袜子": "🧦", "睡衣": "🛌",
-  "拖鞋": "🩴", "鞋子": "👟", "墨镜": "🕶️", "帽子": "🧢",
-  "牙刷": "🪥", "牙膏": "🧴", "毛巾": "🧺", "洗面奶": "🫧", "卸妆油": "🧴",
-  "防晒霜": "🌞", "洗发水": "🧴", "沐浴露": "🧼", "水乳": "💧", "面霜": "🫙", "面膜": "🎭",
-  "皮筋": "🎀", "个人慢性病药物": "💊", "驱蚊液": "🦟", "晕车药": "💊", "过敏药": "💊",
-  "雨伞": "☂️", "纸巾": "🧻", "湿巾": "🧻", "水杯": "🥤", "口罩": "😷", "耳塞": "🎧",
-  "一次性马桶垫": "🚽", "零食": "🍪", "饮料": "🧃", "T-money 交通卡": "🚇", "流量卡": "📶",
+const itemIcons: Record<string, LucideIcon> = {
+  "身份证": BadgeCheck, "护照 / 签证": BookOpenCheck, "银行卡": CreditCard, "现金": Banknote, "驾驶证": Car,
+  "充电器": Plug, "充电宝": BatteryCharging, "充电线": Cable, "耳机": Headphones, "转换插头": Unplug,
+  "相机": Camera, "自拍杆": ScanLine, "SD 卡": Cpu,
+  "上衣": Shirt, "裤子": Layers3, "外套": Shirt, "内衣": ShieldCheck, "袜子": Footprints, "睡衣": MoonStar,
+  "拖鞋": Footprints, "鞋子": Footprints, "墨镜": Glasses, "帽子": CircleDotDashed,
+  "牙刷": Paintbrush, "牙膏": Droplets, "毛巾": TowelRack, "洗面奶": Droplets, "卸妆油": Droplets,
+  "防晒霜": Sun, "洗发水": Waves, "沐浴露": Bath, "水乳": Droplets, "面霜": Sparkles, "面膜": ShieldCheck,
+  "皮筋": CircleDotDashed, "个人慢性病药物": HeartPulse, "驱蚊液": Bug, "晕车药": Pill, "过敏药": Pill,
+  "雨伞": Umbrella, "纸巾": FileText, "湿巾": FileText, "水杯": GlassWater, "口罩": ShieldCheck, "耳塞": Ear,
+  "一次性马桶垫": Toilet, "零食": Cookie, "饮料": CupSoda, "T-money 交通卡": CreditCard, "流量卡": Cpu,
 };
 
 const categoryIcons: Record<Category, string> = {
@@ -93,7 +99,8 @@ function CharacterAvatar({ member, className = "" }: { member: Member; className
 }
 
 function ItemGraphic({ item }: { item: Pick<PackItem, "name" | "group"> }) {
-  return <span className="item-sticker-emoji" aria-hidden="true">{itemIcons[item.name] ?? categoryIcons[item.group] ?? "🎒"}</span>;
+  const Icon = itemIcons[item.name] ?? Package;
+  return <Icon aria-hidden="true" strokeWidth={2.35} />;
 }
 
 function CategoryGraphic({ category }: { category: Category }) {
