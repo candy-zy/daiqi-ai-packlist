@@ -97,6 +97,8 @@ test("completed checklist opens a dedicated illustrated departure page", async (
   assert.match(page, /东西带齐了/);
   assert.match(css, /departure-girl\.png/);
   assert.match(css, /departure-page/);
+  assert.match(css, /departure-illustration[^}]*overflow:hidden/);
+  assert.doesNotMatch(page, /departure-route/);
   await access(new URL("../public/departure-girl.png", import.meta.url));
 });
 

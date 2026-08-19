@@ -284,7 +284,6 @@ export default function Home() {
             </div>
             <div className="departure-illustration">
               <div className="departure-character" role="img" aria-label="背着相机、拉着行李箱准备出发的女孩" />
-              <span className="departure-route" aria-hidden="true">· · · ✦</span>
             </div>
             <div className="departure-team-card">
               <div className="departure-avatars"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div>
