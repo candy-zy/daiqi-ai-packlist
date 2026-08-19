@@ -36,6 +36,7 @@ test("onboarding removes repeated team fields and derives the team name", async 
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /setTeamName\(`\$\{place\}逛拍小队`\)/);
   assert.doesNotMatch(page, /队伍名称|队伍成员|先把朋友聚到一起|创建队伍并生成清单/);
+  assert.doesNotMatch(page, /<i>＋<\/i>/);
   assert.match(page, /这次去哪儿/);
 });
 
@@ -96,21 +97,24 @@ test("AI suggestions endpoint returns exactly two unseen Seoul items without a k
   assert.deepEqual(result.suggestions.map((item) => item.name), ["T-money 交通卡", "流量卡"]);
 });
 
-test("onboarding avatars stay consistent and verification supports select all", async () => {
+test("onboarding avatars stay consistent and verification keeps one compact progress row", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /function selectAllPacked/);
-  assert.match(page, /一键全选/);
+  assert.match(page, /"全选"/);
   assert.match(page, /viewedMember !== "我"/);
-  assert.match(page, /朋友的核对状态仅供查看，可以提醒但不能代勾/);
   assert.match(page, /提醒TA/);
+  assert.match(page, /className="verify-toolbar"/);
+  assert.match(page, /我的物品/);
+  assert.match(page, /下一件未确认/);
+  assert.doesNotMatch(page, /className="verify-banner"/);
   assert.match(css, /setup-illustration>\.avatar-me\{background-position:left center!important\}/);
   assert.match(css, /select-all-button/);
 });
 
-test("preparation keeps the primary screen focused and avoids repeated status blocks", async () => {
+test("preparation defaults to a calm pending view and keeps the full list collapsible", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -118,12 +122,18 @@ test("preparation keeps the primary screen focused and avoids repeated status bl
   assert.match(page, /className="team-chat-entry"/);
   assert.match(page, /AI 帮你同步分工/);
   assert.match(page, /className="list-toolbar"/);
-  assert.doesNotMatch(page, /const assignmentProgress|assignment-overview|只看待分配|团队物品在前，个人物品在底部|点击讨论/);
+  assert.match(page, /useState<ListFilter>\("pending"\)/);
+  assert.match(page, />待处理 /);
+  assert.match(page, /expandedCategories/);
+  assert.match(page, /className="section-head section-toggle"/);
+  assert.match(page, /personalExpanded/);
+  assert.doesNotMatch(page, /const assignmentProgress|assignment-overview|只看待分配|团队物品在前，个人物品在底部|点击讨论|>待分配/);
   assert.match(page, /phase === "verify" \? <button/);
   assert.match(page, /author: "我"/);
   assert.doesNotMatch(page, /setCurrentMember|prototype-note|context-tags/);
   assert.match(css, /team-chat-entry/);
   assert.match(css, /list-toolbar/);
+  assert.match(css, /section-toggle/);
 });
 
 test("completed checklist opens a dedicated illustrated departure page", async () => {
@@ -164,20 +174,25 @@ test("preset items are managed through a dedicated preparation edit mode", async
   assert.match(css, /edit-delete-button/);
 });
 
-test("every item opens a focused discussion and unread replies show a red dot", async () => {
+test("item discussions reuse team chat and unread replies show a red dot", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /const seedItemMessages/);
+  assert.match(page, /itemId\?: number/);
+  assert.doesNotMatch(page, /seedItemMessages|setItemMessages/);
   assert.match(page, /unreadItemIds/);
   assert.match(page, /function openItemChat/);
   assert.match(page, /function sendItemMessage/);
   assert.match(page, /className="item-copy item-chat-trigger"/);
   assert.match(page, /className="unread-dot"/);
   assert.match(page, /有新消息/);
+  assert.match(page, /setShowChat\(true\)/);
+  assert.match(page, /activeChatMessages/);
+  assert.match(page, /查看全部消息/);
+  assert.doesNotMatch(page, /item-chat-card/);
   assert.match(css, /unread-dot/);
-  assert.match(css, /item-chat-card/);
+  assert.match(css, /chat-filter-clear/);
 });
 
 test("chat assignments require the named traveler to confirm before changing the list", async () => {
