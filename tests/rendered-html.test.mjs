@@ -86,3 +86,16 @@ test("onboarding avatars stay consistent and verification supports select all", 
   assert.match(css, /setup-illustration>\.avatar-me\{background-position:left center!important\}/);
   assert.match(css, /select-all-button/);
 });
+
+test("completed checklist opens a dedicated illustrated departure page", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /"prepare" \| "verify" \| "departed"/);
+  assert.match(page, /setPhase\("departed"\)/);
+  assert.match(page, /东西带齐了/);
+  assert.match(css, /departure-girl\.png/);
+  assert.match(css, /departure-page/);
+  await access(new URL("../public/departure-girl.png", import.meta.url));
+});

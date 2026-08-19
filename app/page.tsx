@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 type Member = "我" | "阿哲" | "小雨";
-type Phase = "prepare" | "verify";
+type Phase = "prepare" | "verify" | "departed";
 type ListFilter = "all" | "mine" | "unassigned";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
 
@@ -265,6 +265,39 @@ export default function Home() {
     );
   }
 
+  if (phase === "departed") {
+    return (
+      <main className="app-shell departure-shell">
+        <section className="phone-frame departure-frame" aria-label="旅行准备完成">
+          <header className="topbar">
+            <div className="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div className="brand-name">带齐</div>
+            <span className="trip-chip">{destinationLabel} · 5天</span>
+            <button className="departure-back" onClick={() => setPhase("verify")}>← 返回清单</button>
+          </header>
+          <section className="departure-page">
+            <div className="departure-copy">
+              <span className="departure-badge">✓ {verifyItems.length} 件全部确认</span>
+              <p className="eyebrow">READY TO GO · {teamName}</p>
+              <h1>东西带齐了，<br />出发！</h1>
+              <p>{destinationLabel}在等你们。放心关上行李箱，带着朋友和好心情出门吧。</p>
+            </div>
+            <div className="departure-illustration">
+              <div className="departure-character" role="img" aria-label="背着相机、拉着行李箱准备出发的女孩" />
+              <span className="departure-route" aria-hidden="true">· · · ✦</span>
+            </div>
+            <div className="departure-team-card">
+              <div className="departure-avatars"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div>
+              <div><b>首尔逛拍小队已就绪</b><small>3 个人，行李都带齐</small></div>
+              <span>GO!</span>
+            </div>
+          </section>
+          <footer className="departure-footer"><button onClick={() => setPhase("verify")}>返回核对清单</button></footer>
+        </section>
+      </main>
+    );
+  }
+
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(""), 1800);
@@ -479,7 +512,7 @@ export default function Home() {
           {phase === "prepare" ? (
             <button className="primary-action" onClick={() => setPhase("verify")}>进入出发核对 <span>→</span></button>
           ) : (
-            <button className={`primary-action ${status.total === 0 ? "ready" : ""}`} onClick={() => notify(status.total ? `还有 ${status.total} 项需要处理` : "东西都带齐了，出发！")}>{status.total ? `继续核对 · 还有 ${status.total} 项` : "全部带齐 · 出发"}<span>{status.total ? "↑" : "✓"}</span></button>
+            <button className={`primary-action ${status.total === 0 ? "ready" : ""}`} onClick={() => status.total ? notify(`还有 ${status.total} 项需要处理`) : setPhase("departed")}>{status.total ? `继续核对 · 还有 ${status.total} 项` : "全部带齐 · 出发"}<span>{status.total ? "↑" : "→"}</span></button>
           )}
         </footer>
 
