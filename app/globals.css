@@ -869,7 +869,7 @@ h1,.setup-content h1,.departure-page h1 {
   .compact-trip-hero .member-switch button { width:34px; height:34px; }
 }
 
-/* Item notes use a centered receipt-style modal, separate from team chat. */
+/* Item notes use a fixed centered card modal, separate from team chat. */
 .item-note-modal {
   position:absolute;
   z-index:30;
@@ -888,8 +888,9 @@ h1,.setup-content h1,.departure-page h1 {
 }
 .item-notes-card {
   width:100%;
-  min-height:330px;
-  max-height:min(570px,calc(100vh - 190px));
+  height:570px;
+  min-height:0;
+  max-height:calc(100dvh - 190px);
   position:relative;
   display:flex;
   flex-direction:column;
@@ -918,10 +919,13 @@ h1,.setup-content h1,.departure-page h1 {
   min-height:0;
   flex:1;
   overflow-y:auto;
+  overscroll-behavior:contain;
   padding:7px 20px 4px;
-  scrollbar-width:none;
+  scrollbar-width:thin;
+  scrollbar-color:#b7b5ad transparent;
 }
-.item-note-list::-webkit-scrollbar { display:none; }
+.item-note-list::-webkit-scrollbar { width:5px; }
+.item-note-list::-webkit-scrollbar-thumb { border-radius:999px; background:#b7b5ad; }
 .item-note-row {
   display:grid;
   grid-template-columns:36px minmax(0,1fr);
@@ -982,7 +986,8 @@ h1,.setup-content h1,.departure-page h1 {
 .item-note-actions button>small { color:#fff; font-size:var(--type-caption-size); line-height:var(--type-caption-line); text-shadow:0 1px 2px rgba(0,0,0,.45); }
 .item-note-actions button svg { width:23px; height:23px; }
 .item-note-actions .note-delete-action>span { color:#b74439; }
-.item-note-actions .note-bring-action.primary>span { background:var(--lime); }
+.item-note-actions .note-bring-action.is-selected>span { background:var(--lime); }
+.item-note-actions .note-release-action.is-selected>span { color:#a83f35; background:#ffe3dd; }
 .item-note-actions button:active>span { transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
 .item-icon-button { padding:0; cursor:pointer; }
 .item-icon-button:disabled { cursor:default; }
