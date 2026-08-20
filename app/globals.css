@@ -238,6 +238,7 @@ h1 { font-size:31px; line-height:1.04; letter-spacing:-.05em; }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 
 /* Photo-abstract editorial preview — adapted for a fast, functional packing list */
+@media (max-width:0px) {
 :root {
   --ink:#243a35;
   --line:#cbc6ba;
@@ -678,3 +679,28 @@ h1,.setup-content h1,.departure-page h1 {
   body { background:var(--paper); }
   .phone-frame { border:0; border-radius:0; }
 }
+}
+
+/* Calm cartoon controls: keep secondary choices light and familiar. */
+.editorial-motif { display:none; }
+.make-personal-button {
+  min-height:24px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 8px;
+  border:1.5px solid #aaa89f;
+  border-radius:999px;
+  color:#696b64;
+  background:#fffdf6;
+  box-shadow:none;
+  font-size:6.5px;
+  font-weight:850;
+}
+.make-personal-button:hover { border-color:var(--ink); }
+.make-personal-button.active {
+  border-color:var(--ink);
+  color:var(--ink);
+  background:#e9dcff;
+}
+.item-icon svg { stroke-linecap:round; stroke-linejoin:round; }

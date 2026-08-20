@@ -57,6 +57,7 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
   assert.match(page, /"裤子": Pants/);
   assert.match(page, /"袜子": Sock/);
   assert.match(page, /"流量卡": SimCard/);
+  assert.match(page, /weight="duotone"/);
   assert.doesNotMatch(page, /className="item-sticker-emoji"/);
   assert.match(page, /function CharacterAvatar/);
   assert.match(css, /team-characters\.png/);
@@ -64,6 +65,7 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
   assert.doesNotMatch(css, /item-sticker-emoji/);
   assert.match(css, /item-icon svg/);
   assert.match(css, /Hand-drawn travel journal theme/);
+  assert.match(css, /\.make-personal-button \{[\s\S]*border-radius:999px/);
   assert.match(layout, /title: "带齐｜朋友一起收拾行李"/);
   await access(new URL("../public/team-characters.png", import.meta.url));
 });

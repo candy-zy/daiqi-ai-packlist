@@ -105,7 +105,7 @@ function CharacterAvatar({ member, className = "" }: { member: Member; className
 
 function ItemGraphic({ item }: { item: Pick<PackItem, "name" | "group"> }) {
   const PhosphorItemIcon = phosphorItemIcons[item.name];
-  if (PhosphorItemIcon) return <PhosphorItemIcon aria-hidden="true" weight="regular" />;
+  if (PhosphorItemIcon) return <PhosphorItemIcon aria-hidden="true" weight="duotone" />;
 
   const LucideItemIcon = lucideItemIcons[item.name] ?? Package;
   return <LucideItemIcon aria-hidden="true" strokeWidth={2.15} />;
