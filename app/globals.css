@@ -550,6 +550,9 @@ h1,.setup-content h1,.departure-page h1 {
 }
 .personal-zone-head>small { border:0; border-radius:0; color:#6b736f; background:transparent; }
 .list-item.editing { background:#eee7dc; }
+.list-item.editing .item-copy { align-items:center; }
+.list-item.editing .item-chat-trigger { flex:0 1 auto; }
+.list-item.editing .edit-delete-button { width:30px; height:30px; margin-left:2px; }
 .drag-handle,.edit-delete-button {
   border:1px solid var(--line);
   border-radius:1px;

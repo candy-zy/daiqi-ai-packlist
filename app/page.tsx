@@ -495,8 +495,8 @@ export default function Home() {
             {(hasUnreadDiscussion || discussionCount > 0) && <small>{hasUnreadDiscussion ? "有新消息" : `${discussionCount} 条讨论`}</small>}
           </button>
           {phase === "prepare" && !editMode && canChoosePersonal(item) && <button className={`make-personal-button ${item.personal ? "active" : ""}`} onClick={() => togglePersonal(item)} aria-pressed={Boolean(item.personal)}>{item.personal ? "✓ 各带各的" : "各带各的"}</button>}
+          {phase === "prepare" && editMode && <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`} title="删除"><Trash2 aria-hidden="true" /></button>}
         </div>
-        {phase === "prepare" && editMode && <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`} title="删除"><Trash2 aria-hidden="true" /></button>}
         {phase === "prepare" && editMode && <button
           className="drag-handle"
           onPointerDown={(event) => startDragging(event, item.id)}
