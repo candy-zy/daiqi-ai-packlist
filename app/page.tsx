@@ -5,7 +5,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
-  Banknote, BookOpenCheck, Bug, CupSoda, GlassWater, MemoryStick,
+  ArrowLeft, Banknote, BookOpenCheck, Bug, CupSoda, GlassWater, MemoryStick,
   Check, Download, Menu, MessageCircle, MoonStar, Package, Share2, Sparkles, Trash2, X,
 } from "lucide-react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
@@ -559,6 +559,16 @@ export default function Home() {
     setShowProfile(false);
   }
 
+  function goBackOneStep() {
+    setEditMode(false);
+    if (phase === "verify") {
+      setViewedMember("我");
+      setPhase("prepare");
+      return;
+    }
+    setTeamReady(false);
+  }
+
   function renderProfileCenter() {
     if (!showProfile) return null;
     return <div className="profile-modal" role="dialog" aria-modal="true" aria-label="个人中心">
@@ -940,6 +950,7 @@ export default function Home() {
       <section className="phone-frame" aria-label="带齐旅行物品清单原型">
         <div className="scroll-area main-scroll-area">
           <section className="trip-hero compact-trip-hero">
+            <button className="main-back-button" onClick={goBackOneStep} aria-label="返回上一步" title="返回上一步"><ArrowLeft aria-hidden="true" /></button>
             <h1>{phase === "prepare" ? "这次带什么？" : "出发前逐件确认"}</h1>
             <div className="presence-panel">
               <div className={`member-switch ${phase === "verify" ? "switchable" : ""}`} aria-label={phase === "verify" ? "切换查看成员清单" : "成员在线状态"}>

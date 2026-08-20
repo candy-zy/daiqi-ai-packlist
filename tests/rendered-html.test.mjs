@@ -253,6 +253,19 @@ test("preparation defaults to the full list, includes unassigned view, and stays
   assert.match(css, /section-toggle/);
 });
 
+test("main workflow has a one-step back action without a heavy divider below filters", async () => {
+  const [page, css] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /function goBackOneStep/);
+  assert.match(page, /aria-label="返回上一步"/);
+  assert.match(css, /\.main-back-button/);
+  const controlsBlock = css.slice(css.indexOf(".list-controls {"), css.indexOf(".list-controls .list-filters"));
+  assert.match(controlsBlock, /border-bottom:0/);
+  assert.match(controlsBlock, /box-shadow:none/);
+});
+
 test("completed checklist opens a dedicated illustrated departure page", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

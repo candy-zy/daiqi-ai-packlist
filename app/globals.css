@@ -742,8 +742,8 @@ h1,.setup-content h1,.departure-page h1 {
   margin:0 -17px 20px;
   padding:10px 17px 12px;
   background:var(--paper);
-  border-bottom:2px solid var(--ink);
-  box-shadow:0 5px 0 rgba(27,31,36,.08);
+  border-bottom:0;
+  box-shadow:none;
 }
 .list-controls .list-filters {
   min-width:0;
@@ -835,12 +835,29 @@ h1,.setup-content h1,.departure-page h1 {
 .compact-trip-hero {
   min-height:0;
   align-items:flex-start;
+  gap:10px;
   padding:24px 3px 16px;
   border-bottom:0;
 }
+.main-back-button {
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  flex:none;
+  padding:0;
+  border:2px solid var(--ink);
+  border-radius:50%;
+  color:var(--ink);
+  background:#fff;
+  box-shadow:0 3px 0 var(--ink);
+  cursor:pointer;
+}
+.main-back-button:active { transform:translateY(2px); box-shadow:0 1px 0 var(--ink); }
+.main-back-button svg { width:20px; height:20px; stroke-width:2.5; }
 .compact-trip-hero>h1 {
   min-width:0;
-  margin:3px 12px 0 0;
+  margin:3px 2px 0 0;
   font-family:inherit;
   font-size:var(--type-h1-size);
   line-height:var(--type-h1-line);
@@ -866,6 +883,7 @@ h1,.setup-content h1,.departure-page h1 {
   .also-bring-button { width:38px; grid-template-rows:30px 16px; }
   .also-bring-button>span { width:30px; height:30px; }
   .compact-trip-hero { padding-inline:0; }
+  .main-back-button { width:34px; height:34px; }
   .compact-trip-hero>h1 { margin-right:8px; font-size:var(--type-h2-size); line-height:var(--type-h2-line); }
   .compact-trip-hero .member-presence,
   .compact-trip-hero .member-switch button { width:34px; height:34px; }
