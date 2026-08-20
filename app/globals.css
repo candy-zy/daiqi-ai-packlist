@@ -894,25 +894,13 @@ h1,.setup-content h1,.departure-page h1 {
   display:flex;
   flex-direction:column;
   padding:18px 0 14px;
-  overflow:visible;
+  overflow:hidden;
   border:2px solid var(--ink);
-  border-radius:8px;
+  border-radius:24px;
   background:var(--paper);
-  box-shadow:7px 8px 0 var(--ink),0 24px 60px rgba(0,0,0,.25);
+  box-shadow:0 24px 58px rgba(17,19,15,.32),0 6px 16px rgba(17,19,15,.16);
   animation:notePop .18s ease-out;
 }
-.item-notes-card::before,
-.item-notes-card::after {
-  content:"";
-  position:absolute;
-  z-index:-1;
-  left:10px;
-  right:10px;
-  height:12px;
-  background:linear-gradient(135deg,transparent 50%,var(--paper) 51%) 0 0/18px 12px repeat-x,linear-gradient(225deg,transparent 50%,var(--paper) 51%) 9px 0/18px 12px repeat-x;
-}
-.item-notes-card::before { top:-10px; transform:rotate(180deg); }
-.item-notes-card::after { bottom:-10px; }
 .item-notes-header {
   display:grid;
   grid-template-columns:48px minmax(0,1fr);
@@ -920,7 +908,7 @@ h1,.setup-content h1,.departure-page h1 {
   gap:12px;
   flex:none;
   padding:0 20px 15px;
-  border-bottom:1px dashed #aaa79e;
+  border-bottom:1px solid #d3d0c7;
 }
 .item-notes-header>.item-icon { width:48px; height:48px; }
 .item-notes-header>div { min-width:0; }
@@ -939,7 +927,7 @@ h1,.setup-content h1,.departure-page h1 {
   grid-template-columns:36px minmax(0,1fr);
   gap:10px;
   padding:13px 0;
-  border-bottom:1px dashed #c8c5bc;
+  border-bottom:1px solid #dedbd3;
 }
 .item-note-avatar { width:36px; height:36px; }
 .item-note-row>div { min-width:0; }

@@ -267,6 +267,8 @@ test("item notes stay separate from team chat and keep chronological context", a
   assert.match(css, /unread-dot/);
   assert.match(css, /\.item-note-modal \{[\s\S]*place-items:center/);
   assert.match(css, /item-notes-card/);
+  assert.match(css, /\.item-notes-card \{[\s\S]*border-radius:24px;[\s\S]*box-shadow:/);
+  assert.doesNotMatch(css, /\.item-notes-card::before|\.item-notes-card::after/);
   assert.match(css, /item-note-actions/);
   assert.match(css, /\.item-note-actions button>span \{[\s\S]*border-radius:50%/);
 });
