@@ -41,6 +41,7 @@ test("onboarding and the main header avoid repeated trip metadata", async () => 
   assert.match(page, /className="trip-hero compact-trip-hero"/);
   assert.match(page, /"这次带什么？"/);
   assert.match(page, /className="presence-panel"/);
+  assert.doesNotMatch(page, /点头像查看队友/);
   assert.equal(page.match(/className="topbar/g)?.length, 1, "only onboarding keeps a brand header");
 });
 
