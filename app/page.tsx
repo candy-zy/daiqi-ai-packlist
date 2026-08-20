@@ -65,6 +65,15 @@ type AssignmentProposal = {
   afterMessageId: number;
 };
 
+type DeletedItemSnapshot = {
+  item: PackItem;
+  index: number;
+  notes: ItemNote[];
+  wasUnread: boolean;
+  proposal: AssignmentProposal | null;
+  suggestionStates: { id: number; added: boolean }[];
+};
+
 const members: { name: Member; short: string; profile: string; className: string; online: boolean }[] = [
   { name: "我", short: "我", profile: "有充电宝", className: "member-me", online: true },
   { name: "阿哲", short: "哲", profile: "有相机", className: "member-zhe", online: true },
@@ -229,8 +238,10 @@ export default function Home() {
   const [expandedCategories, setExpandedCategories] = useState<Set<Category>>(() => new Set(["电子数码类"]));
   const [personalExpanded, setPersonalExpanded] = useState(false);
   const [draggingItemId, setDraggingItemId] = useState<number | null>(null);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ message: string; canUndo: boolean } | null>(null);
   const draggingItemRef = useRef<number | null>(null);
+  const deletedItemRef = useRef<DeletedItemSnapshot | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   const myItems = [
     ...items.filter((item) => !isPersonalItem(item) && item.owners.includes("我")),
@@ -313,9 +324,15 @@ export default function Home() {
     );
   }
 
-  function notify(message: string) {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 1800);
+  function notify(message: string, duration = 1800, canUndo = false) {
+    if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+    if (!canUndo) deletedItemRef.current = null;
+    setToast({ message, canUndo });
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      if (canUndo) deletedItemRef.current = null;
+      toastTimerRef.current = null;
+    }, duration);
   }
 
   function claim(id: number) {
@@ -364,6 +381,14 @@ export default function Home() {
 
   function removeItem(item: PackItem, fromNotes = false) {
     if (!editMode && !fromNotes) return;
+    deletedItemRef.current = {
+      item,
+      index: items.findIndex((entry) => entry.id === item.id),
+      notes: itemNotes.filter((note) => note.itemId === item.id),
+      wasUnread: unreadItemIds.has(item.id),
+      proposal: assignmentProposal?.itemId === item.id ? assignmentProposal : null,
+      suggestionStates: suggestions.filter((suggestion) => suggestion.name === item.name).map((suggestion) => ({ id: suggestion.id, added: suggestion.added })),
+    };
     setItems((current) => current.filter((entry) => entry.id !== item.id));
     setSuggestions((current) => current.map((suggestion) => suggestion.name === item.name ? { ...suggestion, added: false } : suggestion));
     setItemNotes((current) => current.filter((note) => note.itemId !== item.id));
@@ -375,8 +400,30 @@ export default function Home() {
     if (assignmentProposal?.itemId === item.id) setAssignmentProposal(null);
     if (fromNotes) {
       setActiveItemId(null);
-      notify(`已删除「${item.name}」`);
     }
+    notify(`已删除「${item.name}」`, 3000, true);
+  }
+
+  function undoDelete() {
+    const snapshot = deletedItemRef.current;
+    if (!snapshot) return;
+    setItems((current) => {
+      if (current.some((entry) => entry.id === snapshot.item.id)) return current;
+      const next = [...current];
+      next.splice(Math.max(0, Math.min(snapshot.index, next.length)), 0, snapshot.item);
+      return next;
+    });
+    setItemNotes((current) => [...current, ...snapshot.notes]);
+    if (snapshot.wasUnread) setUnreadItemIds((current) => new Set(current).add(snapshot.item.id));
+    if (snapshot.proposal) setAssignmentProposal((current) => current ?? snapshot.proposal);
+    setSuggestions((current) => current.map((suggestion) => {
+      const previous = snapshot.suggestionStates.find((entry) => entry.id === suggestion.id);
+      return previous ? { ...suggestion, added: previous.added } : suggestion;
+    }));
+    deletedItemRef.current = null;
+    if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = null;
+    setToast(null);
   }
 
   function swapItems(id: number, targetId: number) {
@@ -715,7 +762,7 @@ export default function Home() {
           </div>
         )}
 
-        {toast && <div className="toast" role="status">{toast}</div>}
+        {toast && <div className="toast" role="status"><span>{toast.message}</span>{toast.canUndo && <button onClick={undoDelete}>撤回</button>}</div>}
       </section>
 
     </main>

@@ -212,6 +212,11 @@ test("preset items are managed through a dedicated preparation edit mode", async
   assert.match(page, /const \[editMode, setEditMode\]/);
   assert.match(page, /function removeItem/);
   assert.match(page, /current\.filter\(\(entry\) => entry\.id !== item\.id\)/);
+  assert.match(page, /type DeletedItemSnapshot/);
+  assert.match(page, /function undoDelete\(\)/);
+  assert.match(page, /notify\(`已删除「\$\{item\.name\}」`, 3000, true\)/);
+  assert.match(page, /toast\.canUndo && <button onClick=\{undoDelete\}>撤回<\/button>/);
+  assert.match(css, /\.toast button \{[\s\S]*background:var\(--lime\)/);
   assert.doesNotMatch(page, /function toggleEditMode\(\) \{[\s\S]{0,300}setListFilter\("all"\)/);
   assert.match(page, /function swapItems/);
   assert.match(page, /function startDragging/);
