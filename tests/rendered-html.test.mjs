@@ -164,7 +164,7 @@ test("AI suggestions endpoint returns exactly two unseen Seoul items without a k
   assert.deepEqual(result.suggestions.map((item) => item.name), ["T-money 交通卡", "流量卡"]);
 });
 
-test("personal center exposes explicit preferences without auto-assigning owned gear", async () => {
+test("personal center uses preferences and gear only to preset unassigned items", async () => {
   const [page, css, route, prd] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -177,15 +177,25 @@ test("personal center exposes explicit preferences without auto-assigning owned 
   assert.match(page, /我有这些设备/);
   assert.match(page, /喜欢拍照/);
   assert.match(page, /有相机/);
-  assert.match(page, /系统只推荐分工，不会替你认领/);
+  assert.match(page, /系统会把相关物品预设进清单，但不会替你认领/);
+  assert.doesNotMatch(page, /有转换插头/);
+  assert.match(page, /function isInternationalDestination/);
+  assert.match(page, /function applyPresetItems/);
+  assert.match(page, /境外目的地预设/);
+  const seedBlock = page.slice(page.indexOf("const seedItems"), page.indexOf("const seedSuggestions"));
+  assert.doesNotMatch(seedBlock, /name: "转换插头"/);
+  const gearBlock = page.slice(page.indexOf("const gearOptions"), page.indexOf("const defaultProfile"));
+  assert.doesNotMatch(gearBlock, /adapter|转换插头/);
   assert.match(page, /preferences:/);
   assert.match(css, /\.profile-modal/);
   assert.match(css, /\.preference-grid>button\.selected/);
   assert.match(route, /body\.preferences/);
-  assert.match(route, /我的偏好和已有设备/);
+  assert.match(route, /我的出行偏好/);
   assert.match(prd, /拥有不等于携带/);
   assert.match(prd, /GET \| `\/api\/me\/profile`/);
   assert.match(prd, /设备拥有不会自动生成已认领状态/);
+  assert.match(prd, /设备库只影响预设物品/);
+  assert.match(prd, /仅境外目的地预设/);
 });
 
 test("onboarding avatars stay consistent and verification keeps one compact progress row", async () => {

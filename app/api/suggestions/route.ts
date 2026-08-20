@@ -107,7 +107,7 @@ export async function POST(request: Request) {
           },
           {
             role: "user",
-            content: `去${destination}旅游，你建议我带什么，是我比较容易没想到的东西？当前清单已有：${existingItems.join("、") || "暂无"}。我的偏好和已有设备：${preferences.join("、") || "未填写"}。只给2个，不能与清单重复；偏好只用于提高相关性，不要重复推荐用户已经拥有且清单已包含的设备。`,
+            content: `去${destination}旅游，你建议我带什么，是我比较容易没想到的东西？当前清单已有：${existingItems.join("、") || "暂无"}。我的出行偏好：${preferences.join("、") || "未填写"}。只给2个，不能与清单重复；偏好只用于提高相关性。`,
           },
         ],
         text: {

@@ -23,7 +23,7 @@ type Phase = "prepare" | "verify" | "departed";
 type ListFilter = "all" | "mine" | "unassigned";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
 type HabitPreference = "photo" | "makeup" | "skincare" | "motion" | "allergy" | "snacks";
-type GearPreference = "camera" | "instant-camera" | "selfie-stick" | "power-bank" | "adapter";
+type GearPreference = "camera" | "instant-camera" | "selfie-stick" | "power-bank";
 
 type TravelProfile = {
   displayName: string;
@@ -137,11 +137,10 @@ const habitOptions: PreferenceOption<HabitPreference>[] = [
 ];
 
 const gearOptions: PreferenceOption<GearPreference>[] = [
-  { id: "camera", label: "有相机", impact: "可推荐你负责相机", items: ["相机", "SD 卡"] },
-  { id: "instant-camera", label: "有拍立得", impact: "补充拍立得与相纸提醒", items: ["拍立得", "拍立得相纸"] },
-  { id: "selfie-stick", label: "有自拍杆", impact: "可推荐你负责自拍杆", items: ["自拍杆"] },
-  { id: "power-bank", label: "有充电宝", impact: "可推荐你负责充电宝", items: ["充电宝"] },
-  { id: "adapter", label: "有转换插头", impact: "可推荐你负责转换插头", items: ["转换插头"] },
+  { id: "camera", label: "有相机", impact: "预设相机和 SD 卡", items: ["相机", "SD 卡"] },
+  { id: "instant-camera", label: "有拍立得", impact: "预设拍立得与相纸", items: ["拍立得", "拍立得相纸"] },
+  { id: "selfie-stick", label: "有自拍杆", impact: "预设自拍杆", items: ["自拍杆"] },
+  { id: "power-bank", label: "有充电宝", impact: "预设充电宝", items: ["充电宝"] },
 ];
 
 const defaultProfile: TravelProfile = {
@@ -159,7 +158,7 @@ const personalItemNames = new Set([
 const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
 const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
 const departureImageSrc = "/departure-team-v2.webp";
-const localStateKey = "daiqi-app-state-v1";
+const localStateKey = "daiqi-app-state-v2";
 
 function hasReleaseIntent(text: string) {
   return releaseIntentPattern.test(text);
@@ -207,6 +206,47 @@ function isPersonalItem(item: PackItem) {
   return personalCategories.includes(item.group) || personalItemNames.has(item.name);
 }
 
+const presetItemCatalog: Record<string, Omit<PackItem, "owners" | "checked" | "aiReason">> = {
+  "充电宝": { id: 8, name: "充电宝", icon: "▮", group: "电子数码类" },
+  "转换插头": { id: 11, name: "转换插头", icon: "⌁", group: "电子数码类" },
+  "相机": { id: 12, name: "相机", icon: "📷", group: "电子数码类" },
+  "自拍杆": { id: 13, name: "自拍杆", icon: "│", group: "电子数码类" },
+  "SD 卡": { id: 14, name: "SD 卡", icon: "▮", group: "电子数码类" },
+  "拍立得": { id: 50, name: "拍立得", icon: "◇", group: "电子数码类" },
+  "拍立得相纸": { id: 51, name: "拍立得相纸", icon: "□", group: "电子数码类" },
+};
+
+const mainlandDestinationMarkers = [
+  "中国", "北京", "上海", "广州", "深圳", "杭州", "成都", "重庆", "南京", "苏州", "武汉", "西安", "长沙", "厦门", "青岛", "天津", "郑州", "昆明", "三亚", "哈尔滨", "沈阳", "大连", "济南", "福州", "南昌", "合肥", "太原", "石家庄", "贵阳", "南宁", "海口", "拉萨", "乌鲁木齐", "呼和浩特", "兰州", "银川", "西宁",
+];
+
+function isInternationalDestination(destination: string) {
+  const normalized = destination.trim();
+  if (!normalized) return false;
+  return !mainlandDestinationMarkers.some((marker) => normalized.includes(marker));
+}
+
+function applyPresetItems(current: PackItem[], profile: TravelProfile, destination: string) {
+  const reasons = new Map<string, string>();
+  habitOptions
+    .filter((option) => profile.habits.includes(option.id))
+    .forEach((option) => option.items.forEach((name) => reasons.set(name, "根据你的出行偏好预设")));
+  gearOptions
+    .filter((option) => profile.gear.includes(option.id))
+    .forEach((option) => option.items.forEach((name) => reasons.set(name, "根据你的设备信息预设")));
+  if (isInternationalDestination(destination)) reasons.set("转换插头", "境外目的地预设");
+
+  const next = [...current];
+  const existingNames = new Set(next.map((item) => item.name));
+  reasons.forEach((aiReason, name) => {
+    const catalogItem = presetItemCatalog[name];
+    if (!catalogItem || existingNames.has(name)) return;
+    next.push({ ...catalogItem, owners: [], checked: {}, aiReason });
+    existingNames.add(name);
+  });
+  return next;
+}
+
 const seedItems: PackItem[] = [
   { id: 1, name: "身份证", icon: "▣", group: "证件与钱财类", owners: ["我", "阿哲", "小雨"], checked: {} },
   { id: 2, name: "护照 / 签证", icon: "▦", group: "证件与钱财类", owners: ["我", "阿哲", "小雨"], checked: {} },
@@ -214,12 +254,7 @@ const seedItems: PackItem[] = [
   { id: 4, name: "现金", icon: "¥", group: "证件与钱财类", owners: [], checked: {} },
 
   { id: 7, name: "充电器", icon: "▰", group: "电子数码类", owners: [], checked: {} },
-  { id: 8, name: "充电宝", icon: "▮", group: "电子数码类", owners: ["我"], checked: {}, aiReason: "你登记了大容量充电宝" },
   { id: 10, name: "耳机", icon: "◉", group: "电子数码类", owners: ["小雨"], checked: {} },
-  { id: 11, name: "转换插头", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
-  { id: 12, name: "相机", icon: "📷", group: "电子数码类", owners: ["阿哲"], checked: {}, aiReason: "阿哲登记了相机" },
-  { id: 13, name: "自拍杆", icon: "│", group: "电子数码类", owners: [], checked: {} },
-  { id: 14, name: "SD 卡", icon: "▮", group: "电子数码类", owners: [], checked: {} },
 
   { id: 15, name: "上衣", icon: "◫", group: "衣物鞋帽类", owners: [], checked: {} },
   { id: 16, name: "裤子", icon: "▥", group: "衣物鞋帽类", owners: [], checked: {} },
@@ -268,6 +303,12 @@ const seedSuggestions: Suggestion[] = [
 const seedMessages: ChatMessage[] = [
   { id: 1, author: "小雨", text: "流量卡要不要提前一起买？" },
   { id: 2, author: "阿哲", text: "转换插头你来带吧，我带相机。" },
+  { id: 3, author: "我", text: "好。" },
+];
+
+const domesticSeedMessages: ChatMessage[] = [
+  { id: 1, author: "小雨", text: "雨伞要不要多带一把？" },
+  { id: 2, author: "阿哲", text: "充电器你来带吧，我带相机。" },
   { id: 3, author: "我", text: "好。" },
 ];
 
@@ -450,7 +491,16 @@ export default function Home() {
   }
 
   async function createTeam() {
-    if (!destination.trim()) return;
+    const cleanDestination = destination.trim();
+    if (!cleanDestination) return;
+    const preparedItems = applyPresetItems(items, profile, cleanDestination);
+    const international = isInternationalDestination(cleanDestination);
+    setItems(preparedItems);
+    setMessages(international ? seedMessages : domesticSeedMessages);
+    setAssignmentProposal({ itemId: international ? 11 : 7, requester: "阿哲", target: "我", afterMessageId: 3 });
+    const visibleNotes = seedItemNotes.filter((note) => preparedItems.some((item) => item.id === note.itemId));
+    setItemNotes(visibleNotes);
+    setUnreadItemIds(new Set(visibleNotes.map((note) => note.itemId)));
     setTeamReady(true);
     setSuggestionStatus("loading");
 
@@ -459,18 +509,17 @@ export default function Home() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          destination: destination.trim(),
-          existingItems: items.map((item) => item.name),
+          destination: cleanDestination,
+          existingItems: preparedItems.map((item) => item.name),
           preferences: [
             ...habitOptions.filter((option) => profile.habits.includes(option.id)).map((option) => option.label),
-            ...gearOptions.filter((option) => profile.gear.includes(option.id)).map((option) => option.label),
           ],
         }),
       });
       if (!response.ok) throw new Error("AI suggestions request failed");
 
       const result = await response.json() as { suggestions?: Omit<Suggestion, "id" | "icon" | "added">[]; source?: "model" | "fallback" };
-      const existingNames = new Set(items.map((item) => item.name.trim().toLowerCase()));
+      const existingNames = new Set(preparedItems.map((item) => item.name.trim().toLowerCase()));
       const uniqueSuggestions = (result.suggestions ?? [])
         .filter((item, index, all) => !existingNames.has(item.name.trim().toLowerCase()) && all.findIndex((candidate) => candidate.name.trim().toLowerCase() === item.name.trim().toLowerCase()) === index)
         .slice(0, 2)
@@ -505,29 +554,7 @@ export default function Home() {
 
   function saveProfile() {
     const nextProfile = { ...profileDraft, displayName: profileDraft.displayName.trim() || "我" };
-    const selectedOptions = [
-      ...habitOptions.filter((option) => nextProfile.habits.includes(option.id)),
-      ...gearOptions.filter((option) => nextProfile.gear.includes(option.id)),
-    ];
-    const itemSignals = new Map<string, string>();
-    selectedOptions.forEach((option) => option.items.forEach((name) => {
-      if (!itemSignals.has(name)) itemSignals.set(name, option.impact);
-    }));
-
-    setItems((current) => {
-      const next = current.map((item) => itemSignals.has(item.name) ? { ...item, aiReason: itemSignals.get(item.name) } : item);
-      const existingNames = new Set(next.map((item) => item.name));
-      const categoryByName: Partial<Record<string, Category>> = {
-        "拍立得": "电子数码类",
-        "拍立得相纸": "电子数码类",
-      };
-      [...itemSignals.entries()].forEach(([name, aiReason], index) => {
-        if (existingNames.has(name) || !categoryByName[name]) return;
-        next.push({ id: Date.now() + index, name, icon: "◇", group: categoryByName[name]!, owners: [], checked: {}, aiReason });
-        existingNames.add(name);
-      });
-      return next;
-    });
+    setItems((current) => applyPresetItems(current, nextProfile, destination));
     setProfile(nextProfile);
     setShowProfile(false);
   }
@@ -553,7 +580,7 @@ export default function Home() {
           </section>
 
           <section className="profile-section">
-            <div className="profile-section-head"><div><h3>我有这些设备</h3><p>队友可以看到，系统只推荐分工，不会替你认领。</p></div><span>{profileDraft.gear.length} 项</span></div>
+            <div className="profile-section-head"><div><h3>我有这些设备</h3><p>系统会把相关物品预设进清单，但不会替你认领。</p></div><span>{profileDraft.gear.length} 项</span></div>
             <div className="preference-grid">{gearOptions.map((option) => {
               const selected = profileDraft.gear.includes(option.id);
               return <button key={option.id} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => toggleGear(option.id)}><span>{selected && <Check aria-hidden="true" />}</span><div><b>{option.label}</b><small>{option.impact}</small></div></button>;
@@ -562,9 +589,9 @@ export default function Home() {
 
           <aside className="profile-impact">
             <span><Sparkles aria-hidden="true" /></span>
-            <div><b>将重点关注 {profileImpactItems.length} 件物品</b><p>{profileImpactItems.length ? profileImpactItems.slice(0, 6).join("、") : "暂不增加个性化提醒"}{profileImpactItems.length > 6 ? "等" : ""}</p></div>
+            <div><b>将预设或重点关注 {profileImpactItems.length} 件物品</b><p>{profileImpactItems.length ? profileImpactItems.slice(0, 6).join("、") : "暂不增加个性化提醒"}{profileImpactItems.length > 6 ? "等" : ""}</p></div>
           </aside>
-          <p className="profile-privacy">健康相关偏好仅用于你的个人清单；设备信息可用于团队分工建议。</p>
+          <p className="profile-privacy">健康相关偏好仅用于你的个人清单；设备信息只用于预设物品。</p>
         </div>
         <footer className="profile-footer"><button onClick={saveProfile}>保存并更新清单 <span>→</span></button></footer>
       </section>
