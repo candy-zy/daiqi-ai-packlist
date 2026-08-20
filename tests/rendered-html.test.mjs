@@ -115,7 +115,7 @@ test("onboarding avatars stay consistent and verification keeps one compact prog
   assert.match(css, /select-all-button/);
 });
 
-test("preparation defaults to a calm pending view and keeps the full list collapsible", async () => {
+test("preparation defaults to the full list, removes pending view, and stays collapsible", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -123,8 +123,10 @@ test("preparation defaults to a calm pending view and keeps the full list collap
   assert.match(page, /className="team-chat-action"/);
   assert.match(page, /<MessageCircle aria-hidden="true"/);
   assert.match(page, /className="list-toolbar"/);
-  assert.match(page, /useState<ListFilter>\("pending"\)/);
-  assert.match(page, />待处理 /);
+  assert.match(page, /useState<ListFilter>\("all"\)/);
+  assert.doesNotMatch(page, /ListFilter = "pending"|>待处理 /);
+  assert.match(page, />全部 <span>/);
+  assert.match(page, />我的 <span>/);
   assert.match(page, /expandedCategories/);
   assert.match(page, /className="section-head section-toggle"/);
   assert.match(page, /personalExpanded/);
@@ -187,7 +189,11 @@ test("item discussions reuse team chat and unread replies show a red dot", async
   assert.match(page, /unreadItemIds/);
   assert.match(page, /function openItemChat/);
   assert.match(page, /function sendItemMessage/);
-  assert.match(page, /className="item-copy item-chat-trigger"/);
+  assert.match(page, /className="item-copy"/);
+  assert.match(page, /className="item-chat-trigger"/);
+  assert.match(page, /function togglePersonal/);
+  assert.match(page, /make-personal-button/);
+  assert.match(page, /各带各的/);
   assert.match(page, /className="unread-dot"/);
   assert.match(page, /有新消息/);
   assert.match(page, /setShowChat\(true\)/);

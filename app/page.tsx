@@ -15,7 +15,7 @@ import {
 
 type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify" | "departed";
-type ListFilter = "pending" | "mine" | "all";
+type ListFilter = "mine" | "all";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
 
 type PackItem = {
@@ -25,6 +25,7 @@ type PackItem = {
   group: Category;
   owners: Member[];
   checked: Partial<Record<Member, boolean>>;
+  personal?: boolean;
   aiReason?: string;
 };
 
@@ -96,7 +97,11 @@ function ItemGraphic({ item }: { item: Pick<PackItem, "name" | "group"> }) {
 }
 
 function isPersonalItem(item: PackItem) {
-  return personalCategories.includes(item.group) || personalItemNames.has(item.name);
+  return Boolean(item.personal) || personalCategories.includes(item.group) || personalItemNames.has(item.name);
+}
+
+function canChoosePersonal(item: PackItem) {
+  return !personalCategories.includes(item.group) && !personalItemNames.has(item.name);
 }
 
 const seedItems: PackItem[] = [
@@ -180,7 +185,7 @@ export default function Home() {
   const [suggestionStatus, setSuggestionStatus] = useState<"idle" | "loading" | "model" | "fallback">("idle");
   const [phase, setPhase] = useState<Phase>("prepare");
   const [editMode, setEditMode] = useState(false);
-  const [listFilter, setListFilter] = useState<ListFilter>("pending");
+  const [listFilter, setListFilter] = useState<ListFilter>("all");
   const [viewedMember, setViewedMember] = useState<Member>("我");
   const [showChat, setShowChat] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -198,10 +203,8 @@ export default function Home() {
   const draggingItemRef = useRef<number | null>(null);
 
   const myItems = items.filter((item) => isPersonalItem(item) || item.owners.includes("我"));
-  const priorityNames = new Set(["充电器", "充电线", "转换插头", "自拍杆", "个人慢性病药物", "雨伞", "口罩"]);
-  const pendingItems = items.filter((item) => unreadItemIds.has(item.id) || (!isPersonalItem(item) && item.owners.length === 0 && priorityNames.has(item.name)));
   const verifyItems = items.filter((item) => isPersonalItem(item) || item.owners.includes(viewedMember));
-  const prepareItems = listFilter === "pending" ? pendingItems : listFilter === "mine" ? myItems : items;
+  const prepareItems = listFilter === "mine" ? myItems : items;
   const teamPrepareItems = prepareItems.filter((item) => !isPersonalItem(item));
   const personalPrepareItems = prepareItems.filter(isPersonalItem);
   const status = useMemo(() => {
@@ -292,6 +295,15 @@ export default function Home() {
 
   function release(id: number) {
     setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) ? { ...item, owners: item.owners.filter((member) => member !== "我"), checked: { ...item.checked, "我": false } } : item));
+  }
+
+  function togglePersonal(item: PackItem) {
+    if (!canChoosePersonal(item)) return;
+    setItems((current) => current.map((entry) => entry.id === item.id ? {
+      ...entry,
+      personal: !entry.personal,
+      owners: entry.personal ? entry.owners : [],
+    } : entry));
   }
 
   function togglePacked(item: PackItem) {
@@ -470,16 +482,20 @@ export default function Home() {
     const peerPosition = visiblePeerIds.indexOf(item.id);
     const discussionCount = messages.filter((message) => message.itemId === item.id).length;
     const hasUnreadDiscussion = unreadItemIds.has(item.id);
+    const fixedPersonal = personal && !item.personal;
 
     return (
       <article className={`list-item ${packed ? "packed" : ""} ${editMode && phase === "prepare" ? "editing" : ""} ${draggingItemId === item.id ? "dragging" : ""}`} data-sort-item-id={item.id} data-unchecked={phase === "verify" && canCheck && !packed ? "true" : undefined} key={item.id}>
         {phase === "verify" ? (
           <button className={`pack-check ${packed ? "checked" : ""}`} onClick={() => togglePacked(item)} disabled={!canCheck} aria-label={`${packed ? "取消" : "确认"}${item.name}已装包`}>{packed ? "✓" : ""}</button>
         ) : <span className={`item-icon item-group-${categories.findIndex((category) => category.name === item.group)}`}><ItemGraphic item={item} /></span>}
-        <button className="item-copy item-chat-trigger" onClick={() => openItemChat(item.id)} disabled={editMode} aria-label={`打开${item.name}的讨论`}>
-          <span className="item-title-row"><b>{item.name}</b>{hasUnreadDiscussion && <i className="unread-dot" aria-label="有未读消息" />}</span>
-          {(hasUnreadDiscussion || discussionCount > 0) && <small>{hasUnreadDiscussion ? "有新消息" : `${discussionCount} 条讨论`}</small>}
-        </button>
+        <div className="item-copy">
+          <button className="item-chat-trigger" onClick={() => openItemChat(item.id)} disabled={editMode} aria-label={`打开${item.name}的讨论`}>
+            <span className="item-title-row"><b>{item.name}</b>{hasUnreadDiscussion && <i className="unread-dot" aria-label="有未读消息" />}</span>
+            {(hasUnreadDiscussion || discussionCount > 0) && <small>{hasUnreadDiscussion ? "有新消息" : `${discussionCount} 条讨论`}</small>}
+          </button>
+          {phase === "prepare" && !editMode && canChoosePersonal(item) && <button className={`make-personal-button ${item.personal ? "active" : ""}`} onClick={() => togglePersonal(item)} aria-pressed={Boolean(item.personal)}>{item.personal ? "✓ 各带各的" : "各带各的"}</button>}
+        </div>
         {phase === "prepare" && editMode && <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`} title="删除"><Trash2 aria-hidden="true" /></button>}
         {phase === "prepare" && editMode && <button
           className="drag-handle"
@@ -494,7 +510,7 @@ export default function Home() {
           aria-label={`拖动调整${item.name}的顺序`}
           title="按住拖动排序"
         ><Menu aria-hidden="true" /></button>}
-        {phase === "prepare" && !editMode && (personal ? <span className="personal-pill">每人自备</span> : item.owners.length ? (
+        {phase === "prepare" && !editMode && (fixedPersonal ? <span className="personal-pill">每人自备</span> : personal ? null : item.owners.length ? (
             <div className="shared-owner-action">
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
                 {ownerMembers.slice(0, 3).map((owner) => <button className="owner-avatar" key={owner?.name} onClick={() => phase === "prepare" && owner?.name === "我" && release(item.id)} disabled={owner?.name !== "我"} title={owner?.name === "我" ? "取消我会带" : `${owner?.name}会带`}>{owner && <CharacterAvatar member={owner.name} />}</button>)}
@@ -560,13 +576,12 @@ export default function Home() {
           </section>}
 
           {phase === "prepare" && <nav className="list-filters" aria-label="筛选准备清单">
-            <button className={listFilter === "pending" ? "active" : ""} onClick={() => { setEditMode(false); setListFilter("pending"); }}>待处理 {assignmentProposal && <i />}</button>
-            <button className={listFilter === "mine" ? "active" : ""} onClick={() => { setEditMode(false); setListFilter("mine"); }}>我的 <span>{myItems.length}</span></button>
             <button className={listFilter === "all" ? "active" : ""} onClick={() => setListFilter("all")}>全部 <span>{items.length}</span></button>
+            <button className={listFilter === "mine" ? "active" : ""} onClick={() => { setEditMode(false); setListFilter("mine"); }}>我的 <span>{myItems.length}</span></button>
           </nav>}
 
           {phase === "prepare" ? <section className="filtered-list-section">
-            <header className="list-toolbar"><span>{editMode ? "拖动排序，或删除不需要的物品" : listFilter === "pending" ? "先确认重要物品和新消息" : ""}</span>{listFilter === "all" && <button className={editMode ? "active" : ""} onClick={toggleEditMode}>{editMode ? "✓ 完成" : "✎ 编辑"}</button>}</header>
+            <header className="list-toolbar"><span>{editMode ? "拖动排序，或删除不需要的物品" : ""}</span>{listFilter === "all" && <button className={editMode ? "active" : ""} onClick={toggleEditMode}>{editMode ? "✓ 完成" : "✎ 编辑"}</button>}</header>
             {prepareItems.length ? listFilter !== "all" ? <div className="focus-list"><div className="item-list">{prepareItems.map(renderItem)}</div></div> : <div className="category-sections">{categories.filter((category) => !personalCategories.includes(category.name)).map((category) => {
               const categoryItems = teamPrepareItems.filter((item) => item.group === category.name);
               if (!categoryItems.length) return null;
