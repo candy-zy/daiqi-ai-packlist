@@ -697,6 +697,14 @@ h1,.setup-content h1,.departure-page h1 {
 
 /* Unified preparation cards and list rows: one rhythm, one action column. */
 .suggestion-scroll { align-items:stretch; }
+.ai-title>span {
+  width:36px;
+  height:36px;
+}
+.ai-title>span svg {
+  width:23px;
+  height:23px;
+}
 .suggestion-card {
   min-height:178px;
   display:flex;
@@ -729,11 +737,11 @@ h1,.setup-content h1,.departure-page h1 {
   display:flex;
   align-items:center;
   gap:10px;
-  margin:0 -6px 20px;
-  padding:10px 6px 9px;
-  background:rgba(255,253,250,.94);
-  border-bottom:1px solid rgba(27,31,36,.08);
-  backdrop-filter:blur(12px);
+  margin:0 -17px 20px;
+  padding:10px 17px 12px;
+  background:var(--paper);
+  border-bottom:2px solid var(--ink);
+  box-shadow:0 5px 0 rgba(27,31,36,.08);
 }
 .list-controls .list-filters {
   min-width:0;

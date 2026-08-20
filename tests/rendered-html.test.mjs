@@ -156,6 +156,7 @@ test("preparation defaults to the full list, includes unassigned view, and stays
   assert.match(page, /<MessageCircle aria-hidden="true"/);
   assert.match(page, /className="list-controls"/);
   assert.match(page, /className={`edit-list-button/);
+  assert.match(page, /<Sparkles aria-hidden="true"/);
   assert.match(page, /useState<ListFilter>\("all"\)/);
   assert.match(page, /type ListFilter = "all" \| "mine" \| "unassigned"/);
   assert.match(page, />全部 <span>/);
@@ -172,6 +173,8 @@ test("preparation defaults to the full list, includes unassigned view, and stays
   assert.match(css, /team-chat-action/);
   assert.match(css, /list-controls/);
   assert.match(css, /\.list-controls \{[\s\S]*position:sticky;[\s\S]*top:0;[\s\S]*z-index:8/);
+  assert.match(css, /\.list-controls \{[\s\S]*background:var\(--paper\);[\s\S]*border-bottom:2px solid var\(--ink\)/);
+  assert.doesNotMatch(css, /\.list-controls \{[\s\S]*backdrop-filter/);
   assert.match(css, /section-toggle/);
 });
 

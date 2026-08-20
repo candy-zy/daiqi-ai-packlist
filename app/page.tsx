@@ -6,7 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
   Banknote, BookOpenCheck, Bug, Cable, CupSoda, GlassWater, MemoryStick,
-  Menu, MessageCircle, MoonStar, Package, Trash2, Wifi,
+  Menu, MessageCircle, MoonStar, Package, Sparkles, Trash2,
 } from "lucide-react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -582,7 +582,7 @@ export default function Home() {
 
           {phase === "prepare" && <section className="ai-section">
             <header>
-              <div className="ai-title"><span>{suggestionStatus === "loading" ? <Wifi aria-hidden="true" /> : "✦"}</span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : "AI 帮你补充了 2 件容易漏带的物品"}</h2></div>
+              <div className="ai-title"><span><Sparkles aria-hidden="true" /></span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : "AI 帮你补充了 2 件容易漏带的物品"}</h2></div>
             </header>
             <div className={`suggestion-scroll ${suggestionStatus === "loading" ? "loading" : ""}`}>
               {suggestions.slice(0, 2).map((suggestion) => (
