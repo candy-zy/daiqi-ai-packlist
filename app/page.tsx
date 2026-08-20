@@ -20,7 +20,7 @@ import {
 
 type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify" | "departed";
-type ListFilter = "mine" | "all";
+type ListFilter = "all" | "mine" | "unassigned";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
 
 type PackItem = {
@@ -228,8 +228,9 @@ export default function Home() {
   const draggingItemRef = useRef<number | null>(null);
 
   const myItems = items.filter((item) => isPersonalItem(item) || item.owners.includes("我"));
+  const unassignedItems = items.filter((item) => !isPersonalItem(item) && item.owners.length === 0);
   const verifyItems = items.filter((item) => isPersonalItem(item) || item.owners.includes(viewedMember));
-  const prepareItems = listFilter === "mine" ? myItems : items;
+  const prepareItems = listFilter === "mine" ? myItems : listFilter === "unassigned" ? unassignedItems : items;
   const teamPrepareItems = prepareItems.filter((item) => !isPersonalItem(item));
   const personalPrepareItems = prepareItems.filter(isPersonalItem);
   const status = useMemo(() => {
@@ -613,6 +614,7 @@ export default function Home() {
           {phase === "prepare" && <nav className="list-filters" aria-label="筛选准备清单">
             <button className={listFilter === "all" ? "active" : ""} onClick={() => setListFilter("all")}>全部 <span>{items.length}</span></button>
             <button className={listFilter === "mine" ? "active" : ""} onClick={() => { setEditMode(false); setListFilter("mine"); }}>我的 <span>{myItems.length}</span></button>
+            <button className={listFilter === "unassigned" ? "active" : ""} onClick={() => { setEditMode(false); setListFilter("unassigned"); }}>待分配 <span>{unassignedItems.length}</span></button>
           </nav>}
 
           {phase === "prepare" ? <section className="filtered-list-section">

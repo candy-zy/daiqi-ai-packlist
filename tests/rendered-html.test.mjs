@@ -146,7 +146,7 @@ test("onboarding avatars stay consistent and verification keeps one compact prog
   assert.match(css, /select-all-button/);
 });
 
-test("preparation defaults to the full list, removes pending view, and stays collapsible", async () => {
+test("preparation defaults to the full list, includes unassigned view, and stays collapsible", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -155,13 +155,15 @@ test("preparation defaults to the full list, removes pending view, and stays col
   assert.match(page, /<MessageCircle aria-hidden="true"/);
   assert.match(page, /className="list-toolbar"/);
   assert.match(page, /useState<ListFilter>\("all"\)/);
-  assert.doesNotMatch(page, /ListFilter = "pending"|>待处理 /);
+  assert.match(page, /type ListFilter = "all" \| "mine" \| "unassigned"/);
   assert.match(page, />全部 <span>/);
   assert.match(page, />我的 <span>/);
+  assert.match(page, />待分配 <span>/);
+  assert.match(page, /const unassignedItems = items\.filter/);
   assert.match(page, /expandedCategories/);
   assert.match(page, /className="section-head section-toggle"/);
   assert.match(page, /personalExpanded/);
-  assert.doesNotMatch(page, /const assignmentProgress|assignment-overview|只看待分配|团队物品在前，个人物品在底部|点击讨论|>待分配/);
+  assert.doesNotMatch(page, /const assignmentProgress|assignment-overview|只看待分配|团队物品在前，个人物品在底部|点击讨论/);
   assert.match(page, /phase === "verify" \? <button/);
   assert.match(page, /author: "我"/);
   assert.doesNotMatch(page, /setCurrentMember|prototype-note|context-tags/);
@@ -278,4 +280,7 @@ test("claim actions stay quiet and AI suggestions use two compact fixed cards", 
   assert.match(page, /＋ 加入清单/);
   assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /scroll-snap-type:none/);
+  assert.match(css, /suggestion-card>button\s*\{[\s\S]*margin-top:auto/);
+  assert.match(css, /list-filters \{ grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css, /grid-template-columns:43px minmax\(0,1fr\) auto/);
 });

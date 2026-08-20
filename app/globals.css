@@ -721,3 +721,89 @@ h1,.setup-content h1,.departure-page h1 {
   background:#fff0bd;
   box-shadow:2px 2px 0 var(--ink);
 }
+
+/* Unified preparation cards and list rows: one rhythm, one action column. */
+.suggestion-scroll { align-items:stretch; }
+.suggestion-card {
+  min-height:178px;
+  display:flex;
+  flex-direction:column;
+  padding:12px;
+}
+.suggestion-main {
+  min-height:38px;
+  align-items:center;
+  flex-wrap:nowrap;
+  gap:9px;
+  margin-bottom:8px;
+}
+.suggestion-main h3 {
+  overflow:visible;
+  white-space:normal;
+  text-overflow:clip;
+}
+.suggestion-card p {
+  margin-bottom:12px;
+}
+.suggestion-card>button {
+  margin-top:auto;
+}
+
+.list-filters { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.filtered-list-section { padding-bottom:8px; }
+.category-section { margin-bottom:26px; }
+.section-head { padding-inline:4px; padding-bottom:11px; }
+.item-list { overflow:hidden; }
+.list-item {
+  min-height:74px;
+  display:grid;
+  grid-template-columns:43px minmax(0,1fr) auto;
+  align-items:center;
+  column-gap:12px;
+  row-gap:6px;
+  padding:12px 14px;
+}
+.list-item>.item-icon,
+.list-item>.pack-check { grid-column:1; }
+.item-copy {
+  grid-column:2;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  flex-wrap:nowrap;
+  gap:8px;
+}
+.item-chat-trigger {
+  min-width:0;
+  flex:1 1 auto;
+}
+.item-title-row>b {
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.make-personal-button { white-space:nowrap; }
+.list-item>.shared-owner-action,
+.list-item>.claim-button,
+.list-item>.personal-pill,
+.list-item>.verify-release-button,
+.list-item>.drag-handle {
+  grid-column:3;
+  justify-self:end;
+  margin-left:0;
+}
+.shared-owner-action { justify-content:flex-end; }
+.claim-button,.personal-pill,.verify-release-button { white-space:nowrap; }
+.list-item.editing .item-copy { min-width:0; }
+.list-item.editing .item-chat-trigger { flex:1 1 auto; }
+
+@media(max-width:370px){
+  .list-item {
+    grid-template-columns:39px minmax(0,1fr) auto;
+    column-gap:8px;
+    padding-inline:10px;
+  }
+  .owner-avatars { gap:1px; }
+  .owner-avatar { width:30px; height:30px; }
+  .also-bring-button { width:34px; }
+}
