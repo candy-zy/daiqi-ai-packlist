@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./typography.css";
 
 export const metadata: Metadata = {
   title: "带齐｜朋友一起收拾行李",

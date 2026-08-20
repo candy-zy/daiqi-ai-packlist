@@ -1,0 +1,396 @@
+/*
+ * 带齐 UI Typography
+ * Web uses rem so browser defaults and user font scaling are respected.
+ * Icon glyph sizes are the only centralized non-text exceptions.
+ */
+:root {
+  --type-display-size:2rem;
+  --type-display-line:2.5rem;
+  --type-display-weight:700;
+
+  --type-h1-size:1.5rem;
+  --type-h1-line:2rem;
+  --type-h1-weight:600;
+
+  --type-h2-size:1.25rem;
+  --type-h2-line:1.75rem;
+  --type-h2-weight:600;
+
+  --type-h3-size:1.0625rem;
+  --type-h3-line:1.5rem;
+  --type-h3-weight:600;
+
+  --type-body-size:1rem;
+  --type-body-line:1.5rem;
+  --type-body-weight:400;
+
+  --type-secondary-size:.875rem;
+  --type-secondary-line:1.25rem;
+  --type-secondary-weight:400;
+
+  --type-caption-size:.75rem;
+  --type-caption-line:1rem;
+  --type-caption-weight:400;
+  --type-caption-medium-weight:500;
+
+  --type-button-primary-size:var(--type-body-size);
+  --type-button-primary-line:var(--type-body-line);
+  --type-button-primary-weight:600;
+  --type-button-secondary-size:var(--type-secondary-size);
+  --type-button-secondary-line:var(--type-secondary-line);
+  --type-button-secondary-weight:600;
+  --type-input-size:var(--type-body-size);
+  --type-input-line:var(--type-body-line);
+  --type-input-weight:400;
+  --type-label-size:var(--type-secondary-size);
+  --type-label-line:var(--type-secondary-line);
+  --type-label-weight:500;
+  --type-tab-size:var(--type-secondary-size);
+  --type-tab-line:var(--type-secondary-line);
+  --type-tab-weight:500;
+  --type-badge-size:var(--type-caption-size);
+  --type-badge-line:var(--type-caption-line);
+  --type-badge-weight:500;
+
+  --type-icon-md:1.125rem;
+  --type-icon-lg:1.5rem;
+  --font-regular:400;
+  --font-medium:500;
+  --font-semibold:600;
+  --font-bold:700;
+}
+
+html {
+  font-size:100%;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+
+body {
+  font-size:var(--type-body-size);
+  line-height:var(--type-body-line);
+  font-weight:var(--type-body-weight);
+}
+
+.type-display {
+  font-size:var(--type-display-size);
+  line-height:var(--type-display-line);
+  font-weight:var(--type-display-weight);
+}
+.type-h1 {
+  font-size:var(--type-h1-size);
+  line-height:var(--type-h1-line);
+  font-weight:var(--type-h1-weight);
+}
+.type-h2 {
+  font-size:var(--type-h2-size);
+  line-height:var(--type-h2-line);
+  font-weight:var(--type-h2-weight);
+}
+.type-h3 {
+  font-size:var(--type-h3-size);
+  line-height:var(--type-h3-line);
+  font-weight:var(--type-h3-weight);
+}
+.type-body {
+  font-size:var(--type-body-size);
+  line-height:var(--type-body-line);
+  font-weight:var(--type-body-weight);
+}
+.type-secondary {
+  font-size:var(--type-secondary-size);
+  line-height:var(--type-secondary-line);
+  font-weight:var(--type-secondary-weight);
+}
+.type-caption {
+  font-size:var(--type-caption-size);
+  line-height:var(--type-caption-line);
+  font-weight:var(--type-caption-weight);
+}
+
+/* Semantic component mapping */
+.setup-content h1,
+.departure-page h1 {
+  font-size:var(--type-display-size);
+  line-height:var(--type-display-line);
+  font-weight:var(--type-display-weight);
+}
+
+.trip-hero h1 {
+  font-size:var(--type-h1-size);
+  line-height:var(--type-h1-line);
+  font-weight:var(--type-h1-weight);
+  letter-spacing:normal;
+}
+
+.sheet-card h2,
+.chat-header h2,
+.filtered-list-head h2 {
+  font-size:var(--type-h2-size);
+  line-height:var(--type-h2-line);
+  font-weight:var(--type-h2-weight);
+}
+
+.brand-name,
+.ai-title h2,
+.suggestion-card h3,
+.section-head h2,
+.personal-zone-head h2,
+.verify-toolbar>b,
+.item-title-row>b,
+.empty-list b,
+.proposal-main b,
+.chat-entry b,
+.item-discussion-empty>b {
+  font-size:var(--type-h3-size);
+  line-height:var(--type-h3-line);
+  font-weight:var(--type-h3-weight);
+}
+
+.setup-intro,
+.sheet-card>p,
+.message-row p,
+.item-discussion-empty>small {
+  font-size:var(--type-body-size);
+  line-height:var(--type-body-line);
+  font-weight:var(--type-body-weight);
+}
+
+.suggestion-card p,
+.chat-entry small,
+.filtered-list-head p,
+.section-head p,
+.chat-context small,
+.proposal-main small,
+.chat-header p,
+.item-chat-trigger>small,
+.list-toolbar>span,
+.presence-panel>small {
+  font-size:var(--type-secondary-size);
+  line-height:var(--type-secondary-line);
+  font-weight:var(--type-secondary-weight);
+}
+
+.eyebrow,
+.trip-chip,
+.topbar-presence,
+.ai-section>header>small,
+.signal,
+.scope-decision,
+.category-decision,
+.chat-count,
+.list-filters button span,
+.filtered-list-head>span,
+.section-head>span,
+.verify-list-actions>span,
+.personal-pill,
+.private-pill,
+.personal-zone-head>small,
+.message-row>div>small,
+.proposal-label,
+.team-chat-action>i,
+.toast {
+  font-size:var(--type-badge-size);
+  line-height:var(--type-badge-line);
+  font-weight:var(--type-badge-weight);
+}
+
+button {
+  font-size:var(--type-button-secondary-size);
+  line-height:var(--type-button-secondary-line);
+  font-weight:var(--type-button-secondary-weight);
+  letter-spacing:normal;
+}
+
+.primary-action,
+.setup-submit,
+.suggestion-card>button {
+  font-size:var(--type-button-primary-size);
+  line-height:var(--type-button-primary-line);
+  font-weight:var(--type-button-primary-weight);
+}
+
+.phase-tabs button,
+.list-filters button {
+  font-size:var(--type-tab-size);
+  line-height:var(--type-tab-line);
+  font-weight:var(--type-tab-weight);
+}
+
+.claim-button,
+.make-personal-button,
+.select-all-button,
+.remind-button,
+.list-toolbar>button,
+.list-head-actions>button,
+.chat-filter-clear,
+.chat-suggestions button,
+.category-picker button,
+.proposal-actions button {
+  font-size:var(--type-button-secondary-size);
+  line-height:var(--type-button-secondary-line);
+  font-weight:var(--type-button-secondary-weight);
+}
+
+input,
+textarea {
+  font-size:var(--type-input-size);
+  line-height:var(--type-input-line);
+  font-weight:var(--type-input-weight);
+  letter-spacing:normal;
+}
+
+.setup-field>span,
+label {
+  font-size:var(--type-label-size);
+  line-height:var(--type-label-line);
+  font-weight:var(--type-label-weight);
+}
+
+/* Text scaling resilience */
+.phone-frame {
+  display:flex;
+  flex-direction:column;
+}
+.topbar {
+  height:auto;
+  min-height:3.875rem;
+  flex:none;
+  flex-wrap:wrap;
+  gap:.5rem;
+  padding-block:.625rem;
+}
+.brand-name,.trip-chip { margin-left:0; }
+.scroll-area {
+  height:auto;
+  min-height:0;
+  flex:1;
+  padding-bottom:7.5rem;
+}
+.trip-hero {
+  height:auto;
+  flex-wrap:wrap;
+  gap:1rem;
+  align-items:flex-start;
+}
+.trip-hero>div:first-child { min-width:0; flex:1 1 13rem; }
+.context-tags,.verify-toolbar,.section-head,.personal-zone-head { flex-wrap:wrap; }
+
+.ai-section>header,
+.ai-title {
+  min-width:0;
+  flex-wrap:wrap;
+}
+.ai-title { flex:1 1 12rem; }
+.ai-title h2 {
+  min-width:0;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+
+.suggestion-scroll {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr));
+  overflow:visible;
+}
+.suggestion-card {
+  width:auto;
+  min-width:0;
+  min-height:0;
+}
+.suggestion-main { align-items:flex-start; flex-wrap:wrap; }
+.suggestion-card h3,
+.suggestion-card p {
+  height:auto;
+  overflow:visible;
+  white-space:normal;
+  text-overflow:clip;
+  overflow-wrap:anywhere;
+}
+
+.phase-tabs button,
+.list-filters button,
+.primary-action,
+.setup-submit,
+.suggestion-card>button,
+.claim-button,
+.make-personal-button,
+.select-all-button,
+.remind-button,
+.category-picker button,
+.proposal-actions button {
+  min-height:2.75rem;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.phase-tabs button span {
+  width:auto;
+  height:auto;
+  min-width:1.75rem;
+  min-height:1.75rem;
+  padding:.25rem;
+  line-height:var(--type-caption-line);
+}
+.list-filters button span,
+.chat-count,
+.team-chat-action>i {
+  width:auto;
+  height:auto;
+  min-width:1.5rem;
+  min-height:1.5rem;
+  padding:.25rem;
+}
+
+.list-item {
+  min-height:0;
+  flex-wrap:wrap;
+  align-items:flex-start;
+}
+.item-copy { flex:1 1 12rem; flex-wrap:wrap; align-items:flex-start; }
+.item-chat-trigger { min-width:8rem; }
+.item-title-row { align-items:flex-start; }
+.item-title-row>b,
+.item-chat-trigger>small,
+.item-meta>small {
+  overflow:visible;
+  white-space:normal;
+  text-overflow:clip;
+  overflow-wrap:anywhere;
+}
+.make-personal-button,.also-bring-button>small { white-space:normal; }
+.shared-owner-action,.claim-button,.personal-pill { margin-left:auto; }
+
+.action-bar {
+  height:auto;
+  min-height:5.125rem;
+  align-items:stretch;
+  padding-bottom:max(1rem,env(safe-area-inset-bottom));
+}
+.primary-action { height:auto; }
+
+.sheet-card {
+  max-height:92%;
+  overflow-y:auto;
+}
+.chat-card { height:min(46rem,92%); overflow:hidden; }
+.chat-header { align-items:flex-start; gap:.75rem; }
+.chat-header>div { min-width:0; flex:1; }
+.chat-header p,.message-row p { overflow-wrap:anywhere; white-space:normal; }
+.message-row>div { min-width:0; max-width:min(78%,28rem); }
+.chat-composer { align-items:stretch; }
+.chat-composer input { min-width:0; height:auto; }
+
+.toast {
+  width:max-content;
+  max-width:calc(100% - 2rem);
+  white-space:normal;
+  text-align:center;
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:32.5rem){
+  .phase-tabs,.list-filters { grid-template-columns:1fr 1fr; }
+  .presence-panel { justify-items:start; }
+  .action-bar { gap:.5rem; }
+  .add-item,.team-chat-action { flex:0 0 3rem; }
+}

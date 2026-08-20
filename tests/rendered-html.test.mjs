@@ -73,6 +73,28 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
   await access(new URL("../public/watercolor-seoul-collage.png", import.meta.url));
 });
 
+test("uses one semantic rem-based typography system without undersized readable text", async () => {
+  const [typography, css, layout] = await Promise.all([
+    readFile(new URL("../app/typography.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+  ]);
+
+  for (const token of ["display", "h1", "h2", "h3", "body", "secondary", "caption"]) {
+    assert.match(typography, new RegExp(`--type-${token}-size:`));
+    assert.match(typography, new RegExp(`--type-${token}-line:`));
+  }
+  assert.match(typography, /--type-display-size:2rem/);
+  assert.match(typography, /--type-body-size:1rem/);
+  assert.match(typography, /--type-caption-size:\.75rem/);
+  assert.match(typography, /font-size:var\(--type-button-primary-size\)/);
+  assert.match(typography, /font-size:var\(--type-input-size\)/);
+  assert.match(typography, /Text scaling resilience/);
+  assert.match(layout, /import "\.\/typography\.css"/);
+  assert.doesNotMatch(`${typography}\n${css}`, /font-size\s*:\s*[0-9.]+px/);
+  assert.doesNotMatch(`${typography}\n${css}`, /font-weight\s*:\s*(?:[1-9][0-9]{2})/);
+});
+
 test("category headers stay concise without explanatory subtitles", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(page, /category\.note/);
