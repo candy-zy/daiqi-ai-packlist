@@ -271,16 +271,16 @@ body {
 }
 .scroll-area { height:calc(100% - 62px); padding:0 20px 96px; }
 .brand-mark {
-  width:24px;
-  height:24px;
-  padding:4px;
-  border:0;
-  border-radius:1px;
-  background:var(--editorial-red);
-  box-shadow:none;
-  transform:none;
+  width:32px;
+  height:32px;
+  padding:0;
+  border:2px solid var(--ink);
+  border-radius:10px;
+  object-fit:cover;
+  background:var(--lime);
+  box-shadow:2px 2px 0 var(--ink);
+  transform:rotate(-2deg);
 }
-.brand-mark span { background:var(--paper); border-radius:0; }
 .brand-name {
   margin-left:10px;
   font-family:Georgia,"Songti SC","STSong",serif;

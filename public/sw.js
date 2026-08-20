@@ -1,10 +1,10 @@
-const CACHE_NAME = "daiqi-app-v1";
+const CACHE_NAME = "daiqi-app-v2";
 const CORE_ASSETS = [
   "/",
   "/manifest.webmanifest",
-  "/app-icon-192.png",
-  "/app-icon-512.png",
-  "/apple-touch-icon.png",
+  "/app-icon-192.png?v=2",
+  "/app-icon-512.png?v=2",
+  "/apple-touch-icon.png?v=2",
   "/team-characters.png",
   "/departure-team-v2.webp"
 ];

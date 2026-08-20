@@ -613,7 +613,7 @@ export default function Home() {
       <main className="app-shell setup-shell">
         <section className="phone-frame setup-frame" aria-label="创建旅行队伍">
           <header className="topbar setup-topbar">
-            <div className="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+            <Image className="brand-mark" src="/app-icon-192.png?v=2" alt="" width={32} height={32} priority />
             <div className="brand-name">带齐</div>
             {!isInstalled && <button className="install-app-button" onClick={installApp}><Download aria-hidden="true" />安装</button>}
           </header>

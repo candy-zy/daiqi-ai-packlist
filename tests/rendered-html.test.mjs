@@ -52,11 +52,15 @@ test("ships as an installable mobile PWA with local trip continuity", async () =
   assert.match(page, /navigator\.serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(page, /localStorage\.setItem\(localStateKey/);
   assert.match(page, /添加到主屏幕/);
-  assert.match(serviceWorker, /CACHE_NAME = "daiqi-app-v1"/);
+  assert.match(serviceWorker, /CACHE_NAME = "daiqi-app-v2"/);
+  assert.match(manifest, /app-icon-192\.png\?v=2/);
+  assert.match(manifest, /app-icon-512\.png\?v=2/);
+  assert.match(page, /className="brand-mark" src="\/app-icon-192\.png\?v=2"/);
   assert.match(serviceWorker, /request\.mode === "navigate"/);
   await Promise.all([
     access(new URL("../public/app-icon-192.png", import.meta.url)),
     access(new URL("../public/app-icon-512.png", import.meta.url)),
+    access(new URL("../public/app-icon-master-v2.png", import.meta.url)),
     access(new URL("../public/apple-touch-icon.png", import.meta.url)),
   ]);
 });
