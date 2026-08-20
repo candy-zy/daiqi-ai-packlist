@@ -740,8 +740,8 @@ export default function Home() {
               <footer className="item-note-actions">
                 <button className="note-delete-action" onClick={() => removeItem(activeItem, true)}><span><Trash2 aria-hidden="true" /></span><small>删除</small></button>
                 {!isPersonalItem(activeItem) && <>
-                  <button className={`note-bring-action ${activeItem.owners.includes("我") ? "is-selected" : ""}`} aria-pressed={activeItem.owners.includes("我")} onClick={() => claim(activeItem.id)}><span aria-hidden="true">＋</span><small>我来带</small></button>
-                  <button className={`note-release-action ${activeItem.owners.includes("我") ? "" : "is-selected"}`} aria-pressed={!activeItem.owners.includes("我")} onClick={() => release(activeItem.id)}><span aria-hidden="true">−</span><small>我不带</small></button>
+                  <button className={`note-bring-action ${activeItem.owners.includes("我") ? "is-selected" : ""}`} aria-pressed={activeItem.owners.includes("我")} onClick={() => { claim(activeItem.id); setActiveItemId(null); }}><span aria-hidden="true">＋</span><small>我来带</small></button>
+                  <button className={`note-release-action ${activeItem.owners.includes("我") ? "" : "is-selected"}`} aria-pressed={!activeItem.owners.includes("我")} onClick={() => { release(activeItem.id); setActiveItemId(null); }}><span aria-hidden="true">−</span><small>我不带</small></button>
                 </>}
                 <button className="note-close-action" onClick={() => setActiveItemId(null)}><span aria-hidden="true">×</span><small>关闭</small></button>
               </footer>

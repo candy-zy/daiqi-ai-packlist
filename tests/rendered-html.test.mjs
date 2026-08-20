@@ -271,6 +271,8 @@ test("item notes stay separate from team chat and keep chronological context", a
   assert.match(page, /aria-pressed=\{activeItem\.owners\.includes\("我"\)\}/);
   assert.match(page, /<small>我来带<\/small>/);
   assert.match(page, /<small>我不带<\/small>/);
+  assert.match(page, /claim\(activeItem\.id\); setActiveItemId\(null\);/);
+  assert.match(page, /release\(activeItem\.id\); setActiveItemId\(null\);/);
   assert.match(page, /className="note-close-action"/);
   assert.match(page, /removeItem\(activeItem, true\)/);
   assert.match(css, /unread-dot/);
