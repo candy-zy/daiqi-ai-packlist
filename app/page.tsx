@@ -536,6 +536,7 @@ export default function Home() {
               </div>
               {phase === "verify" && <small>点头像查看队友</small>}
             </div>
+            <div className="editorial-motif" aria-hidden="true"><span /><span /><span /><span /></div>
           </section>
 
           <div className="phase-tabs" role="tablist" aria-label="准备阶段">
