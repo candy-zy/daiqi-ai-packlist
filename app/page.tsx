@@ -612,7 +612,7 @@ export default function Home() {
             <button className="sheet-backdrop" aria-label="关闭" onClick={() => { setShowChat(false); setActiveItemId(null); }} />
             <section className="sheet-card chat-card">
               <span className="sheet-handle" />
-              <header className="chat-header"><div><h2>团队讨论</h2><p>{activeItem ? `正在查看与「${activeItem.name}」有关的消息` : "AI 只建议，确认后才会修改清单"}</p></div><button onClick={() => { setShowChat(false); setActiveItemId(null); }}>×</button></header>
+              <header className="chat-header"><div><h2>团队讨论</h2>{activeItem && <p>{`正在查看与「${activeItem.name}」有关的消息`}</p>}</div><button onClick={() => { setShowChat(false); setActiveItemId(null); }}>×</button></header>
               <div className="chat-messages">
                 {activeItem && <button className="chat-filter-clear" onClick={() => setActiveItemId(null)}>查看全部消息</button>}
                 {activeChatMessages.length ? activeChatMessages.map((message) => {
