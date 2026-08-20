@@ -242,6 +242,15 @@ test("item discussions reuse team chat and unread replies show a red dot", async
   assert.match(css, /chat-filter-clear/);
 });
 
+test("verification is check-only and lets me return claimed team items", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /phase === "verify" \? <div className="verify-item-name">/);
+  assert.match(page, /phase === "verify" && viewedMember === "我" && !personal && currentWillBring/);
+  assert.match(page, /className="verify-release-button" onClick=\{\(\) => release\(item\.id\)\}/);
+  assert.match(page, />我不带了<\/button>/);
+  assert.doesNotMatch(page, /phase === "verify"[^\n]*openItemChat/);
+});
+
 test("chat assignments require the named traveler to confirm before changing the list", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

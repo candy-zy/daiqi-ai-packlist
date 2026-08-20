@@ -522,13 +522,16 @@ export default function Home() {
           <button className={`pack-check ${packed ? "checked" : ""}`} onClick={() => togglePacked(item)} disabled={!canCheck} aria-label={`${packed ? "取消" : "确认"}${item.name}已装包`}>{packed ? "✓" : ""}</button>
         ) : <span className={`item-icon item-group-${categories.findIndex((category) => category.name === item.group)}`}><ItemGraphic item={item} /></span>}
         <div className="item-copy">
-          <button className="item-chat-trigger" onClick={() => openItemChat(item.id)} disabled={editMode} aria-label={`打开${item.name}的讨论`}>
+          {phase === "verify" ? <div className="verify-item-name">
+            <span className="item-title-row"><b>{item.name}</b></span>
+          </div> : <button className="item-chat-trigger" onClick={() => openItemChat(item.id)} disabled={editMode} aria-label={`打开${item.name}的讨论`}>
             <span className="item-title-row"><b>{item.name}</b>{hasUnreadDiscussion && <i className="unread-dot" aria-label="有未读消息" />}</span>
             {(hasUnreadDiscussion || discussionCount > 0) && <small>{hasUnreadDiscussion ? "有新消息" : `${discussionCount} 条讨论`}</small>}
-          </button>
+          </button>}
           {phase === "prepare" && !editMode && canChoosePersonal(item) && <button className={`make-personal-button ${item.personal ? "active" : ""}`} onClick={() => togglePersonal(item)} aria-pressed={Boolean(item.personal)}>{item.personal ? "✓ 各带各的" : "各带各的"}</button>}
           {phase === "prepare" && editMode && <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`} title="删除"><Trash2 aria-hidden="true" /></button>}
         </div>
+        {phase === "verify" && viewedMember === "我" && !personal && currentWillBring && <button className="verify-release-button" onClick={() => release(item.id)} aria-label={`不再携带${item.name}`}>我不带了</button>}
         {phase === "prepare" && editMode && <button
           className="drag-handle"
           onPointerDown={(event) => startDragging(event, item.id)}

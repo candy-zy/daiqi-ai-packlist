@@ -903,6 +903,22 @@ body {
 .item-group-0{background:#d9e6e0}.item-group-1{background:#b9dadd}.item-group-2{background:#ead3cd}.item-group-3{background:#d5dfc7}.item-group-4{background:#c6ddd4}.item-group-5{background:#efdfbd}.item-group-6{background:#e8c9b4}
 .pack-check { border:1px solid rgba(38,63,67,.34); background:#fffaf0; }
 .pack-check.checked { border-color:transparent; color:#fffaf0; background:var(--water-teal); }
+.verify-item-name {
+  min-width:0;
+  flex:1;
+  display:flex;
+  align-items:center;
+  padding:3px 0;
+}
+.verify-release-button {
+  flex:none;
+  padding:7px 10px;
+  border:1px solid rgba(207,111,95,.42);
+  border-radius:99px;
+  color:#a85347;
+  background:rgba(255,253,247,.72);
+  box-shadow:none;
+}
 .claim-button {
   border:0;
   border-radius:99px;

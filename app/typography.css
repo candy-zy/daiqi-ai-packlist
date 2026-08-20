@@ -221,6 +221,7 @@ button {
 .make-personal-button,
 .select-all-button,
 .remind-button,
+.verify-release-button,
 .list-toolbar>button,
 .list-head-actions>button,
 .chat-filter-clear,
@@ -317,6 +318,7 @@ label {
 .make-personal-button,
 .select-all-button,
 .remind-button,
+.verify-release-button,
 .category-picker button,
 .proposal-actions button {
   min-height:2.75rem;
