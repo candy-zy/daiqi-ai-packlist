@@ -5,7 +5,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
-  Banknote, BookOpenCheck, Bug, Cable, CupSoda, GlassWater, MemoryStick,
+  Banknote, BookOpenCheck, Bug, CupSoda, GlassWater, MemoryStick,
   Menu, MessageCircle, MoonStar, Package, Sparkles, Trash2,
 } from "lucide-react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
@@ -103,7 +103,7 @@ const phosphorItemIcons: Record<string, PhosphorIcon> = {
 
 const lucideItemIcons: Record<string, LucideIcon> = {
   "护照 / 签证": BookOpenCheck, "现金": Banknote,
-  "充电线": Cable, "SD 卡": MemoryStick, "睡衣": MoonStar,
+  "SD 卡": MemoryStick, "睡衣": MoonStar,
   "驱蚊液": Bug, "水杯": GlassWater, "饮料": CupSoda,
 };
 
@@ -133,7 +133,6 @@ const seedItems: PackItem[] = [
 
   { id: 7, name: "充电器", icon: "▰", group: "电子数码类", owners: [], checked: {} },
   { id: 8, name: "充电宝", icon: "▮", group: "电子数码类", owners: ["我"], checked: {}, aiReason: "你登记了大容量充电宝" },
-  { id: 9, name: "充电线", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
   { id: 10, name: "耳机", icon: "◉", group: "电子数码类", owners: ["小雨"], checked: {} },
   { id: 11, name: "转换插头", icon: "⌁", group: "电子数码类", owners: [], checked: {} },
   { id: 12, name: "相机", icon: "📷", group: "电子数码类", owners: ["阿哲"], checked: {}, aiReason: "阿哲登记了相机" },
@@ -186,8 +185,8 @@ const seedSuggestions: Suggestion[] = [
 
 const seedMessages: ChatMessage[] = [
   { id: 1, author: "小雨", text: "流量卡要不要提前一起买？" },
-  { id: 2, author: "阿哲", text: "充电线你来带吧，我带相机。" },
-  { id: 3, author: "我", text: "好。", itemId: 9 },
+  { id: 2, author: "阿哲", text: "转换插头你来带吧，我带相机。" },
+  { id: 3, author: "我", text: "好。", itemId: 11 },
   { id: 1101, author: "阿哲", text: "韩国插座和国内一样吗？这个还要不要带？", itemId: 11 },
   { id: 1301, author: "我", text: "自拍杆谁能带？首尔街拍和合照可能会用。", itemId: 13 },
   { id: 1302, author: "小雨", text: "我那个太短了，看看阿哲有没有长一点的。", itemId: 13 },
@@ -210,7 +209,7 @@ export default function Home() {
   const [newItem, setNewItem] = useState("");
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
-  const [assignmentProposal, setAssignmentProposal] = useState<AssignmentProposal | null>({ itemId: 9, requester: "阿哲", target: "我", afterMessageId: 3 });
+  const [assignmentProposal, setAssignmentProposal] = useState<AssignmentProposal | null>({ itemId: 11, requester: "阿哲", target: "我", afterMessageId: 3 });
   const [activeItemId, setActiveItemId] = useState<number | null>(null);
   const [unreadItemIds, setUnreadItemIds] = useState<Set<number>>(() => new Set([11, 13, 41]));
   const [expandedCategories, setExpandedCategories] = useState<Set<Category>>(() => new Set(["电子数码类"]));
@@ -236,7 +235,7 @@ export default function Home() {
   const myRemaining = items.filter((item) => (isPersonalItem(item) || item.owners.includes("我")) && !item.checked["我"]).length;
   const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
   const activeChatMessages = activeItem
-    ? messages.filter((message) => message.system || message.itemId === activeItem.id || message.text.includes(activeItem.name) || (activeItem.name === "充电线" && message.text.includes("数据线")))
+    ? messages.filter((message) => message.system || message.itemId === activeItem.id || message.text.includes(activeItem.name))
     : messages;
   const proposalItem = assignmentProposal ? items.find((item) => item.id === assignmentProposal.itemId) ?? null : null;
 
@@ -432,7 +431,7 @@ export default function Home() {
     }
     const agrees = /^(好|好的|可以|行|没问题|ok|okay)[。！!,.， ]*$/i.test(text);
     const request = [...messages].reverse().find((message) => message.author !== "我" && message.author !== "带齐助手" && /(你来带|你带|交给你)/.test(message.text));
-    const requestedItem = request ? items.find((item) => !isPersonalItem(item) && (request.text.includes(item.name) || (item.name === "充电线" && request.text.includes("数据线")))) : null;
+    const requestedItem = request ? items.find((item) => !isPersonalItem(item) && request.text.includes(item.name)) : null;
     if (agrees && request && requestedItem) {
       additions[0] = { ...additions[0], itemId: requestedItem.id };
       setAssignmentProposal({ itemId: requestedItem.id, requester: request.author as Member, target: "我", afterMessageId: messageId });
