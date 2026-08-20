@@ -8,7 +8,7 @@ import {
   BadgeCheck, Banknote, Bath, BatteryCharging, BookOpenCheck, Bug, Cable,
   Camera, Car, CircleDotDashed, Cookie, Cpu, CreditCard, CupSoda, Droplets,
   Ear, FileText, Footprints, Glasses, GlassWater, Headphones, HeartPulse,
-  Layers3, Menu, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
+  Layers3, Menu, MessageCircle, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
   ShieldCheck, Shirt, Sparkles, Sun, Toilet, TowelRack, Trash2, Umbrella,
   Unplug, Waves, Wifi,
 } from "lucide-react";
@@ -58,14 +58,14 @@ const members: { name: Member; short: string; profile: string; className: string
   { name: "小雨", short: "雨", profile: "有水杯", className: "member-yu", online: false },
 ];
 
-const categories: { name: Category; icon: string }[] = [
-  { name: "证件与钱财类", icon: "💳" },
-  { name: "电子数码类", icon: "🔌" },
-  { name: "衣物鞋帽类", icon: "👕" },
-  { name: "洗护化妆类", icon: "🧴" },
-  { name: "医药健康类", icon: "💊" },
-  { name: "日用杂物类", icon: "☂️" },
-  { name: "零食饮料类", icon: "🍪" },
+const categories: { name: Category }[] = [
+  { name: "证件与钱财类" },
+  { name: "电子数码类" },
+  { name: "衣物鞋帽类" },
+  { name: "洗护化妆类" },
+  { name: "医药健康类" },
+  { name: "日用杂物类" },
+  { name: "零食饮料类" },
 ];
 
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
@@ -84,16 +84,6 @@ const itemIcons: Record<string, LucideIcon> = {
   "一次性马桶垫": Toilet, "零食": Cookie, "饮料": CupSoda, "T-money 交通卡": CreditCard, "流量卡": Cpu,
 };
 
-const categoryIcons: Record<Category, string> = {
-  "证件与钱财类": "💳",
-  "电子数码类": "🔌",
-  "衣物鞋帽类": "👕",
-  "洗护化妆类": "🧴",
-  "医药健康类": "💊",
-  "日用杂物类": "☂️",
-  "零食饮料类": "🍪",
-};
-
 const avatarVariant: Record<Member, string> = { "我": "avatar-me", "阿哲": "avatar-zhe", "小雨": "avatar-yu" };
 
 function CharacterAvatar({ member, className = "" }: { member: Member; className?: string }) {
@@ -103,10 +93,6 @@ function CharacterAvatar({ member, className = "" }: { member: Member; className
 function ItemGraphic({ item }: { item: Pick<PackItem, "name" | "group"> }) {
   const Icon = itemIcons[item.name] ?? Package;
   return <Icon aria-hidden="true" strokeWidth={2.35} />;
-}
-
-function CategoryGraphic({ category }: { category: Category }) {
-  return <span className="category-sticker-emoji" aria-hidden="true">{categoryIcons[category]}</span>;
 }
 
 function isPersonalItem(item: PackItem) {
@@ -564,13 +550,6 @@ export default function Home() {
             <button className={phase === "verify" ? "active" : ""} onClick={() => { setEditMode(false); setPhase("verify"); }}><span>2</span>出发核对</button>
           </div>
 
-          {phase === "prepare" && <button className="team-chat-entry" onClick={() => { setActiveItemId(null); setShowChat(true); }}>
-            <span className="team-chat-avatars"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></span>
-            <span><b>团队讨论</b><small>{assignmentProposal ? "有 1 项分工等你确认" : "直接聊，AI 帮你同步分工"}</small></span>
-            {assignmentProposal && <i>1</i>}
-            <strong>›</strong>
-          </button>}
-
           {phase === "prepare" && <section className="ai-section">
             <header>
               <div className="ai-title"><span>{suggestionStatus === "loading" ? <Wifi aria-hidden="true" /> : "✦"}</span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : "AI 帮你补充了 2 件容易漏带的物品"}</h2></div>
@@ -594,12 +573,12 @@ export default function Home() {
 
           {phase === "prepare" ? <section className="filtered-list-section">
             <header className="list-toolbar"><span>{editMode ? "拖动排序，也可以改分类或删除" : listFilter === "pending" ? "先确认重要物品和新消息" : ""}</span>{listFilter === "all" && <button className={editMode ? "active" : ""} onClick={toggleEditMode}>{editMode ? "✓ 完成" : "✎ 编辑"}</button>}</header>
-            {prepareItems.length ? listFilter !== "all" ? <div className="focus-list"><div className="item-list">{prepareItems.map(renderItem)}</div></div> : <div className="category-sections">{categories.filter((category) => !personalCategories.includes(category.name)).map((category, index) => {
+            {prepareItems.length ? listFilter !== "all" ? <div className="focus-list"><div className="item-list">{prepareItems.map(renderItem)}</div></div> : <div className="category-sections">{categories.filter((category) => !personalCategories.includes(category.name)).map((category) => {
               const categoryItems = teamPrepareItems.filter((item) => item.group === category.name);
               if (!categoryItems.length) return null;
               return <section className="list-section category-section" key={category.name}>
                 <button className="section-head section-toggle" onClick={() => toggleCategory(category.name)} aria-expanded={expandedCategories.has(category.name)}>
-                  <div><span className={`scope-icon category-icon category-${index}`}><CategoryGraphic category={category.name} /></span><div><h2>{category.name}</h2></div></div>
+                  <h2>{category.name}</h2>
                   <span>{categoryItems.length} 件 <i>{expandedCategories.has(category.name) ? "⌃" : "⌄"}</i></span>
                 </button>
                 {expandedCategories.has(category.name) && <div className="item-list">{categoryItems.map(renderItem)}</div>}
@@ -607,7 +586,7 @@ export default function Home() {
             })}
               {personalPrepareItems.length > 0 && <section className="personal-zone">
                 <button className="personal-zone-head personal-toggle" onClick={() => setPersonalExpanded((current) => !current)} aria-expanded={personalExpanded}>
-                  <div><span><span className="category-sticker-emoji" aria-hidden="true">🎒</span></span><div><h2>个人自备物品</h2></div></div>
+                  <h2>个人自备物品</h2>
                   <small>{personalPrepareItems.length} 件 <i>{personalExpanded ? "⌃" : "⌄"}</i></small>
                 </button>
                 {personalExpanded && <div className="item-list">{personalPrepareItems.map(renderItem)}</div>}
@@ -624,6 +603,7 @@ export default function Home() {
 
         <footer className="action-bar">
           {phase === "prepare" && <button className="add-item" onClick={() => setShowAdd(true)} aria-label="添加物品">＋</button>}
+          {phase === "prepare" && <button className="team-chat-action" onClick={() => { setActiveItemId(null); setShowChat(true); }} aria-label={assignmentProposal ? "团队讨论，有一项分工待确认" : "团队讨论"} title="团队讨论"><MessageCircle aria-hidden="true" />{assignmentProposal && <i>1</i>}</button>}
           {phase === "prepare" ? (
             <button className="primary-action" onClick={() => { setEditMode(false); setPhase("verify"); }}>进入出发核对 <span>→</span></button>
           ) : viewedMember !== "我" ? (

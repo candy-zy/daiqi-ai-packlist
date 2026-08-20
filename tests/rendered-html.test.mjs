@@ -54,7 +54,7 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
   assert.doesNotMatch(page, /className="item-sticker-emoji"/);
   assert.match(page, /function CharacterAvatar/);
   assert.match(css, /team-characters\.png/);
-  assert.match(css, /Apple Color Emoji/);
+  assert.doesNotMatch(css, /Apple Color Emoji/);
   assert.doesNotMatch(css, /item-sticker-emoji/);
   assert.match(css, /item-icon svg/);
   assert.match(css, /Hand-drawn travel journal theme/);
@@ -65,6 +65,7 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
 test("category headers stay concise without explanatory subtitles", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(page, /category\.note/);
+  assert.doesNotMatch(page, /CategoryGraphic|categoryIcons/);
   assert.doesNotMatch(page, /充电、存储与拍摄设备|证件、票务、订单与支付|常用药物与健康防护/);
   assert.match(page, /<h2>{category\.name}<\/h2>/);
 });
@@ -119,8 +120,8 @@ test("preparation defaults to a calm pending view and keeps the full list collap
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /className="team-chat-entry"/);
-  assert.match(page, /AI 帮你同步分工/);
+  assert.match(page, /className="team-chat-action"/);
+  assert.match(page, /<MessageCircle aria-hidden="true"/);
   assert.match(page, /className="list-toolbar"/);
   assert.match(page, /useState<ListFilter>\("pending"\)/);
   assert.match(page, />待处理 /);
@@ -131,7 +132,7 @@ test("preparation defaults to a calm pending view and keeps the full list collap
   assert.match(page, /phase === "verify" \? <button/);
   assert.match(page, /author: "我"/);
   assert.doesNotMatch(page, /setCurrentMember|prototype-note|context-tags/);
-  assert.match(css, /team-chat-entry/);
+  assert.match(css, /team-chat-action/);
   assert.match(css, /list-toolbar/);
   assert.match(css, /section-toggle/);
 });
