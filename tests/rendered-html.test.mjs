@@ -171,6 +171,7 @@ test("preparation defaults to the full list, includes unassigned view, and stays
   assert.doesNotMatch(page, /setCurrentMember|prototype-note|context-tags/);
   assert.match(css, /team-chat-action/);
   assert.match(css, /list-controls/);
+  assert.match(css, /\.list-controls \{[\s\S]*position:sticky;[\s\S]*top:0;[\s\S]*z-index:8/);
   assert.match(css, /section-toggle/);
 });
 

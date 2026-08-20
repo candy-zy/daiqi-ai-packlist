@@ -723,10 +723,17 @@ h1,.setup-content h1,.departure-page h1 {
 }
 
 .list-controls {
+  position:sticky;
+  top:0;
+  z-index:8;
   display:flex;
   align-items:center;
   gap:10px;
-  margin-bottom:20px;
+  margin:0 -6px 20px;
+  padding:10px 6px 9px;
+  background:rgba(255,253,250,.94);
+  border-bottom:1px solid rgba(27,31,36,.08);
+  backdrop-filter:blur(12px);
 }
 .list-controls .list-filters {
   min-width:0;
