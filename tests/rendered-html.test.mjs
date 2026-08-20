@@ -66,11 +66,9 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
   assert.match(css, /item-icon svg/);
   assert.match(css, /Hand-drawn travel journal theme/);
   assert.match(css, /\.make-personal-button \{[\s\S]*border-radius:999px/);
-  assert.match(css, /Watercolor collage trial/);
-  assert.match(css, /watercolor-seoul-collage\.png/);
+  assert.doesNotMatch(css, /Watercolor collage trial|watercolor-seoul-collage/);
   assert.match(layout, /title: "带齐｜朋友一起收拾行李"/);
   await access(new URL("../public/team-characters.png", import.meta.url));
-  await access(new URL("../public/watercolor-seoul-collage.png", import.meta.url));
 });
 
 test("uses one semantic rem-based typography system without undersized readable text", async () => {
