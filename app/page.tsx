@@ -6,7 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
   Banknote, BookOpenCheck, Bug, CupSoda, GlassWater, MemoryStick,
-  Menu, MessageCircle, MoonStar, Package, Sparkles, Trash2,
+  Check, Menu, MessageCircle, MoonStar, Package, Sparkles, Trash2, X,
 } from "lucide-react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -22,6 +22,21 @@ type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify" | "departed";
 type ListFilter = "all" | "mine" | "unassigned";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
+type HabitPreference = "photo" | "makeup" | "skincare" | "motion" | "allergy" | "snacks";
+type GearPreference = "camera" | "instant-camera" | "selfie-stick" | "power-bank" | "adapter";
+
+type TravelProfile = {
+  displayName: string;
+  habits: HabitPreference[];
+  gear: GearPreference[];
+};
+
+type PreferenceOption<T extends string> = {
+  id: T;
+  label: string;
+  impact: string;
+  items: string[];
+};
 
 type PackItem = {
   id: number;
@@ -90,8 +105,35 @@ const categories: { name: Category }[] = [
   { name: "零食饮料类" },
 ];
 
+const habitOptions: PreferenceOption<HabitPreference>[] = [
+  { id: "photo", label: "喜欢拍照", impact: "提醒拍摄和存储配件", items: ["自拍杆", "SD 卡"] },
+  { id: "makeup", label: "会化妆", impact: "补充卸妆和防晒用品", items: ["卸妆油", "防晒霜"] },
+  { id: "skincare", label: "重视护肤", impact: "关注水乳、面霜与面膜", items: ["水乳", "面霜", "面膜"] },
+  { id: "motion", label: "容易晕车", impact: "将晕车药列入个人提醒", items: ["晕车药"] },
+  { id: "allergy", label: "容易过敏", impact: "将过敏药列入个人提醒", items: ["过敏药"] },
+  { id: "snacks", label: "习惯带零食", impact: "保留零食和饮料提醒", items: ["零食", "饮料"] },
+];
+
+const gearOptions: PreferenceOption<GearPreference>[] = [
+  { id: "camera", label: "有相机", impact: "可推荐你负责相机", items: ["相机", "SD 卡"] },
+  { id: "instant-camera", label: "有拍立得", impact: "补充拍立得与相纸提醒", items: ["拍立得", "拍立得相纸"] },
+  { id: "selfie-stick", label: "有自拍杆", impact: "可推荐你负责自拍杆", items: ["自拍杆"] },
+  { id: "power-bank", label: "有充电宝", impact: "可推荐你负责充电宝", items: ["充电宝"] },
+  { id: "adapter", label: "有转换插头", impact: "可推荐你负责转换插头", items: ["转换插头"] },
+];
+
+const defaultProfile: TravelProfile = {
+  displayName: "小林",
+  habits: ["photo", "skincare"],
+  gear: ["camera", "power-bank"],
+};
+
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
-const personalItemNames = new Set(["牙刷", "毛巾", "流量卡"]);
+const personalItemNames = new Set([
+  "牙刷", "毛巾", "流量卡",
+  "卸妆油", "防晒霜", "水乳", "面霜", "面膜",
+  "个人慢性病药物", "晕车药", "过敏药",
+]);
 const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
 const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
 const departureImageSrc = "/departure-team-v2.webp";
@@ -227,6 +269,9 @@ export default function Home() {
   const [viewedMember, setViewedMember] = useState<Member>("我");
   const [showChat, setShowChat] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [profile, setProfile] = useState<TravelProfile>(defaultProfile);
+  const [profileDraft, setProfileDraft] = useState<TravelProfile>(defaultProfile);
   const [addCategory, setAddCategory] = useState<Category>("日用杂物类");
   const [newItem, setNewItem] = useState("");
   const [draft, setDraft] = useState("");
@@ -262,6 +307,13 @@ export default function Home() {
   const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
   const activeItemNotes = activeItem ? itemNotes.filter((note) => note.itemId === activeItem.id) : [];
   const proposalItem = assignmentProposal ? items.find((item) => item.id === assignmentProposal.itemId) ?? null : null;
+  const profileImpactItems = useMemo(() => {
+    const selected = [
+      ...habitOptions.filter((option) => profileDraft.habits.includes(option.id)),
+      ...gearOptions.filter((option) => profileDraft.gear.includes(option.id)),
+    ];
+    return [...new Set(selected.flatMap((option) => option.items))];
+  }, [profileDraft]);
 
   useEffect(() => {
     if (!teamReady || phase !== "verify") return;
@@ -279,7 +331,14 @@ export default function Home() {
       const response = await fetch("/api/suggestions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ destination: destination.trim(), existingItems: items.map((item) => item.name) }),
+        body: JSON.stringify({
+          destination: destination.trim(),
+          existingItems: items.map((item) => item.name),
+          preferences: [
+            ...habitOptions.filter((option) => profile.habits.includes(option.id)).map((option) => option.label),
+            ...gearOptions.filter((option) => profile.gear.includes(option.id)).map((option) => option.label),
+          ],
+        }),
       });
       if (!response.ok) throw new Error("AI suggestions request failed");
 
@@ -298,6 +357,93 @@ export default function Home() {
     }
   }
 
+  function openProfile() {
+    setProfileDraft({ ...profile, habits: [...profile.habits], gear: [...profile.gear] });
+    setShowProfile(true);
+  }
+
+  function toggleHabit(id: HabitPreference) {
+    setProfileDraft((current) => ({
+      ...current,
+      habits: current.habits.includes(id) ? current.habits.filter((entry) => entry !== id) : [...current.habits, id],
+    }));
+  }
+
+  function toggleGear(id: GearPreference) {
+    setProfileDraft((current) => ({
+      ...current,
+      gear: current.gear.includes(id) ? current.gear.filter((entry) => entry !== id) : [...current.gear, id],
+    }));
+  }
+
+  function saveProfile() {
+    const nextProfile = { ...profileDraft, displayName: profileDraft.displayName.trim() || "我" };
+    const selectedOptions = [
+      ...habitOptions.filter((option) => nextProfile.habits.includes(option.id)),
+      ...gearOptions.filter((option) => nextProfile.gear.includes(option.id)),
+    ];
+    const itemSignals = new Map<string, string>();
+    selectedOptions.forEach((option) => option.items.forEach((name) => {
+      if (!itemSignals.has(name)) itemSignals.set(name, option.impact);
+    }));
+
+    setItems((current) => {
+      const next = current.map((item) => itemSignals.has(item.name) ? { ...item, aiReason: itemSignals.get(item.name) } : item);
+      const existingNames = new Set(next.map((item) => item.name));
+      const categoryByName: Partial<Record<string, Category>> = {
+        "拍立得": "电子数码类",
+        "拍立得相纸": "电子数码类",
+      };
+      [...itemSignals.entries()].forEach(([name, aiReason], index) => {
+        if (existingNames.has(name) || !categoryByName[name]) return;
+        next.push({ id: Date.now() + index, name, icon: "◇", group: categoryByName[name]!, owners: [], checked: {}, aiReason });
+        existingNames.add(name);
+      });
+      return next;
+    });
+    setProfile(nextProfile);
+    setShowProfile(false);
+  }
+
+  function renderProfileCenter() {
+    if (!showProfile) return null;
+    return <div className="profile-modal" role="dialog" aria-modal="true" aria-label="个人中心">
+      <button className="sheet-backdrop" aria-label="关闭个人中心" onClick={() => setShowProfile(false)} />
+      <section className="profile-card">
+        <header className="profile-header">
+          <div className="profile-identity"><CharacterAvatar member="我" /><div><small>个人中心</small><h2>{profileDraft.displayName.trim() || "我"}的出行偏好</h2></div></div>
+          <button className="profile-close" onClick={() => setShowProfile(false)} aria-label="关闭"><X aria-hidden="true" /></button>
+        </header>
+        <div className="profile-scroll">
+          <label className="profile-name-field"><span>昵称</span><input value={profileDraft.displayName} onChange={(event) => setProfileDraft((current) => ({ ...current, displayName: event.target.value.slice(0, 12) }))} placeholder="朋友会看到这个名字" /></label>
+
+          <section className="profile-section">
+            <div className="profile-section-head"><div><h3>我会怎么出行</h3><p>可多选，用来决定个人提醒和 AI 推荐。</p></div><span>{profileDraft.habits.length} 项</span></div>
+            <div className="preference-grid">{habitOptions.map((option) => {
+              const selected = profileDraft.habits.includes(option.id);
+              return <button key={option.id} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => toggleHabit(option.id)}><span>{selected && <Check aria-hidden="true" />}</span><div><b>{option.label}</b><small>{option.impact}</small></div></button>;
+            })}</div>
+          </section>
+
+          <section className="profile-section">
+            <div className="profile-section-head"><div><h3>我有这些设备</h3><p>队友可以看到，系统只推荐分工，不会替你认领。</p></div><span>{profileDraft.gear.length} 项</span></div>
+            <div className="preference-grid">{gearOptions.map((option) => {
+              const selected = profileDraft.gear.includes(option.id);
+              return <button key={option.id} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => toggleGear(option.id)}><span>{selected && <Check aria-hidden="true" />}</span><div><b>{option.label}</b><small>{option.impact}</small></div></button>;
+            })}</div>
+          </section>
+
+          <aside className="profile-impact">
+            <span><Sparkles aria-hidden="true" /></span>
+            <div><b>将重点关注 {profileImpactItems.length} 件物品</b><p>{profileImpactItems.length ? profileImpactItems.slice(0, 6).join("、") : "暂不增加个性化提醒"}{profileImpactItems.length > 6 ? "等" : ""}</p></div>
+          </aside>
+          <p className="profile-privacy">健康相关偏好仅用于你的个人清单；设备信息可用于团队分工建议。</p>
+        </div>
+        <footer className="profile-footer"><button onClick={saveProfile}>保存并更新清单 <span>→</span></button></footer>
+      </section>
+    </div>;
+  }
+
   if (!teamReady) {
     return (
       <main className="app-shell setup-shell">
@@ -310,9 +456,15 @@ export default function Home() {
             <div className="setup-illustration"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div>
             <h1>和朋友一起，<br />把行李带齐。</h1>
             <p className="setup-intro">输入目的地，马上生成一份可以共同认领的清单。</p>
+            <button className="setup-profile-entry" onClick={openProfile}>
+              <CharacterAvatar member="我" />
+              <span><b>我的出行偏好</b><small>已设置 {profile.habits.length + profile.gear.length} 项，点击调整</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
             <label className="setup-field"><span>这次去哪儿？</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：韩国 · 首尔" /></label>
             <button className="setup-submit" onClick={createTeam}>生成清单 <span>→</span></button>
           </div>
+          {renderProfileCenter()}
         </section>
       </main>
     );
@@ -634,7 +786,7 @@ export default function Home() {
             <h1>{phase === "prepare" ? "这次带什么？" : "出发前逐件确认"}</h1>
             <div className="presence-panel">
               <div className={`member-switch ${phase === "verify" ? "switchable" : ""}`} aria-label={phase === "verify" ? "切换查看成员清单" : "成员在线状态"}>
-                {members.map((member) => phase === "verify" ? <button key={member.name} className={viewedMember === member.name ? "selected" : ""} onClick={() => setViewedMember(member.name)} title={`查看${member.name}的清单`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></button> : <span className="member-presence" key={member.name} title={`${member.name}${member.online ? "在线" : "离线"}`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></span>)}
+                {members.map((member) => phase === "verify" ? <button key={member.name} className={viewedMember === member.name ? "selected" : ""} onClick={() => setViewedMember(member.name)} title={`查看${member.name}的清单`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></button> : member.name === "我" ? <button className="profile-avatar-button" key={member.name} onClick={openProfile} aria-label="打开我的出行偏好" title="我的出行偏好"><CharacterAvatar member={member.name} /><i className="online" /></button> : <span className="member-presence" key={member.name} title={`${member.name}${member.online ? "在线" : "离线"}`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></span>)}
               </div>
             </div>
           </section>
@@ -770,6 +922,8 @@ export default function Home() {
             </section>
           </div>
         )}
+
+        {renderProfileCenter()}
 
         {toast && <div className="toast" role="status"><span>{toast.message}</span>{toast.canUndo && <button onClick={undoDelete}>撤回</button>}</div>}
       </section>

@@ -74,9 +74,9 @@ function validateSuggestions(value: unknown, existingItems: string[]): AiSuggest
 }
 
 export async function POST(request: Request) {
-  let body: { destination?: unknown; existingItems?: unknown };
+  let body: { destination?: unknown; existingItems?: unknown; preferences?: unknown };
   try {
-    body = await request.json() as { destination?: unknown; existingItems?: unknown };
+    body = await request.json() as { destination?: unknown; existingItems?: unknown; preferences?: unknown };
   } catch {
     return Response.json({ error: "请求格式不正确" }, { status: 400 });
   }
@@ -84,6 +84,9 @@ export async function POST(request: Request) {
   const destination = typeof body.destination === "string" ? body.destination.trim().slice(0, 80) : "";
   const existingItems = Array.isArray(body.existingItems)
     ? body.existingItems.filter((item): item is string => typeof item === "string").slice(0, 120).map((item) => item.slice(0, 60))
+    : [];
+  const preferences = Array.isArray(body.preferences)
+    ? body.preferences.filter((item): item is string => typeof item === "string").slice(0, 20).map((item) => item.trim().slice(0, 30)).filter(Boolean)
     : [];
   if (!destination) return Response.json({ error: "请先填写目的地" }, { status: 400 });
 
@@ -104,7 +107,7 @@ export async function POST(request: Request) {
           },
           {
             role: "user",
-            content: `去${destination}旅游，你建议我带什么，是我比较容易没想到的东西？当前清单已有：${existingItems.join("、") || "暂无"}。只给2个，不能与清单重复。`,
+            content: `去${destination}旅游，你建议我带什么，是我比较容易没想到的东西？当前清单已有：${existingItems.join("、") || "暂无"}。我的偏好和已有设备：${preferences.join("、") || "未填写"}。只给2个，不能与清单重复；偏好只用于提高相关性，不要重复推荐用户已经拥有且清单已包含的设备。`,
           },
         ],
         text: {

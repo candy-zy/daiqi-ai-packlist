@@ -89,6 +89,7 @@ flowchart LR
 
 - [产品案例与 PRD](docs/PRODUCT_CASE_STUDY.md)
 - [AI、后端与数据库方案](docs/AI_AND_BACKEND_DESIGN.md)
+- [个人中心与个性化清单策略 PRD](docs/PERSONAL_CENTER_PRD.md)
 
 ## 技术栈
 
@@ -131,6 +132,7 @@ db/
 docs/
   PRODUCT_CASE_STUDY.md      # 产品定位、用户流程与指标
   AI_AND_BACKEND_DESIGN.md   # AI 链路、数据库和生产架构
+  PERSONAL_CENTER_PRD.md     # 个人中心、个性化规则、接口与验收标准
   assets/                    # GitHub Demo 截图
 tests/
   rendered-html.test.mjs     # 构建与关键产品规则回归测试

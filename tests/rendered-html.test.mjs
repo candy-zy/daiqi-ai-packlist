@@ -135,6 +135,30 @@ test("AI suggestions endpoint returns exactly two unseen Seoul items without a k
   assert.deepEqual(result.suggestions.map((item) => item.name), ["T-money 交通卡", "流量卡"]);
 });
 
+test("personal center exposes explicit preferences without auto-assigning owned gear", async () => {
+  const [page, css, route, prd] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/suggestions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../docs/PERSONAL_CENTER_PRD.md", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /我的出行偏好/);
+  assert.match(page, /我会怎么出行/);
+  assert.match(page, /我有这些设备/);
+  assert.match(page, /喜欢拍照/);
+  assert.match(page, /有相机/);
+  assert.match(page, /系统只推荐分工，不会替你认领/);
+  assert.match(page, /preferences:/);
+  assert.match(css, /\.profile-modal/);
+  assert.match(css, /\.preference-grid>button\.selected/);
+  assert.match(route, /body\.preferences/);
+  assert.match(route, /我的偏好和已有设备/);
+  assert.match(prd, /拥有不等于携带/);
+  assert.match(prd, /GET \| `\/api\/me\/profile`/);
+  assert.match(prd, /设备拥有不会自动生成已认领状态/);
+});
+
 test("onboarding avatars stay consistent and verification keeps one compact progress row", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
