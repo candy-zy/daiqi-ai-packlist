@@ -66,7 +66,7 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
   assert.doesNotMatch(css, /item-sticker-emoji/);
   assert.match(css, /item-icon svg/);
   assert.match(css, /Hand-drawn travel journal theme/);
-  assert.match(css, /\.make-personal-button \{[\s\S]*border-radius:999px/);
+  assert.doesNotMatch(css, /\.make-personal-button/);
   assert.doesNotMatch(css, /Watercolor collage trial|watercolor-seoul-collage/);
   assert.match(layout, /title: "带齐｜朋友一起收拾行李"/);
   await access(new URL("../public/team-characters.png", import.meta.url));
@@ -154,7 +154,8 @@ test("preparation defaults to the full list, includes unassigned view, and stays
   ]);
   assert.match(page, /className="team-chat-action"/);
   assert.match(page, /<MessageCircle aria-hidden="true"/);
-  assert.match(page, /className="list-toolbar"/);
+  assert.match(page, /className="list-controls"/);
+  assert.match(page, /className={`edit-list-button/);
   assert.match(page, /useState<ListFilter>\("all"\)/);
   assert.match(page, /type ListFilter = "all" \| "mine" \| "unassigned"/);
   assert.match(page, />全部 <span>/);
@@ -169,7 +170,7 @@ test("preparation defaults to the full list, includes unassigned view, and stays
   assert.match(page, /author: "我"/);
   assert.doesNotMatch(page, /setCurrentMember|prototype-note|context-tags/);
   assert.match(css, /team-chat-action/);
-  assert.match(css, /list-toolbar/);
+  assert.match(css, /list-controls/);
   assert.match(css, /section-toggle/);
 });
 
@@ -201,7 +202,7 @@ test("preset items are managed through a dedicated preparation edit mode", async
   assert.match(page, /function dragItem/);
   assert.doesNotMatch(page, /function changeItemCategory|<select|修改\$\{item\.name\}的分类/);
   assert.doesNotMatch(page, /改分类/);
-  assert.match(page, /✎ 编辑/);
+  assert.match(page, /editMode \? "完成" : "编辑"/);
   assert.match(page, /className="drag-handle"/);
   assert.match(page, /<Menu aria-hidden="true"/);
   assert.ok(page.indexOf('className="edit-delete-button"') < page.indexOf('className="drag-handle"'));
@@ -230,9 +231,8 @@ test("item discussions reuse team chat and unread replies show a red dot", async
   assert.match(page, /release\(activeItem\.id\)/);
   assert.match(page, /className="item-copy"/);
   assert.match(page, /className="item-chat-trigger"/);
-  assert.match(page, /function togglePersonal/);
-  assert.match(page, /make-personal-button/);
-  assert.match(page, /各带各的/);
+  assert.doesNotMatch(page, /function togglePersonal|make-personal-button|各带各的/);
+  assert.match(page, /personal \? <span className="personal-pill">每人自备<\/span>/);
   assert.match(page, /className="unread-dot"/);
   assert.match(page, /有新消息/);
   assert.match(page, /setShowChat\(true\)/);
@@ -282,6 +282,6 @@ test("claim actions stay quiet and AI suggestions use two compact fixed cards", 
   assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /scroll-snap-type:none/);
   assert.match(css, /suggestion-card>button\s*\{[\s\S]*margin-top:auto/);
-  assert.match(css, /list-filters \{ grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css, /list-controls \.list-filters \{[\s\S]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css, /grid-template-columns:43px minmax\(0,1fr\) auto/);
 });

@@ -164,7 +164,6 @@ body {
 .proposal-main small,
 .chat-header p,
 .item-chat-trigger>small,
-.list-toolbar>span,
 .presence-panel>small {
   font-size:var(--type-secondary-size);
   line-height:var(--type-secondary-line);
@@ -218,11 +217,9 @@ button {
 }
 
 .claim-button,
-.make-personal-button,
 .select-all-button,
 .remind-button,
 .verify-release-button,
-.list-toolbar>button,
 .list-head-actions>button,
 .chat-filter-clear,
 .chat-suggestions button,
@@ -315,7 +312,6 @@ label {
 .setup-submit,
 .suggestion-card>button,
 .claim-button,
-.make-personal-button,
 .select-all-button,
 .remind-button,
 .verify-release-button,
@@ -358,7 +354,7 @@ label {
   text-overflow:clip;
   overflow-wrap:anywhere;
 }
-.make-personal-button,.also-bring-button>small { white-space:nowrap; }
+.also-bring-button>small { white-space:nowrap; }
 .shared-owner-action,.claim-button,.personal-pill { margin-left:0; }
 
 .action-bar {
@@ -398,9 +394,12 @@ label {
 }
 
 @media(max-width:23rem){
+  .list-controls { flex-wrap:wrap; }
+  .list-controls .list-filters { flex-basis:100%; }
+  .edit-list-button { margin-left:auto; }
   .list-item { grid-template-columns:2.5rem minmax(0,1fr); }
   .item-copy { grid-column:2; flex-wrap:wrap; }
-  .make-personal-button,.also-bring-button>small { white-space:normal; }
+  .also-bring-button>small { white-space:normal; }
   .list-item>.shared-owner-action,
   .list-item>.claim-button,
   .list-item>.personal-pill,
