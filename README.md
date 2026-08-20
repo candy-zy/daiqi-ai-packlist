@@ -57,13 +57,13 @@
 
 > 当前 Demo 使用关键词与上下文规则复现交互闭环；生产方案计划接入大模型结构化抽取、置信度分层和幂等写入。详见 [AI / 后端方案](docs/AI_AND_BACKEND_DESIGN.md)。
 
-### 03｜同一份清单，服务「一起准备」和「自己核对」两个阶段
+### 03｜一眼看清团队分工，临出发只核对自己
 
-准备阶段看团队全貌：认领、多人重复携带、物品留言、编辑与待分工；临出发时界面只保留“我需要带的东西”，支持逐件打勾、一键全选，以及把临时带不了的团队物品退回待分工池。
+准备阶段不是普通的个人清单，而是一张团队协作状态表：每件物品都能直接看出**无人认领、只有我认领、只有队友认领、我和队友共同携带**四种状态。临出发时界面再收敛为“我需要带的东西”，支持逐件打勾、一键全选，以及把临时带不了的团队物品退回待分工池。
 
 <table>
   <tr>
-    <td align="center" width="50%"><img src="docs/assets/demo-03-prepare-list.jpg" width="340" alt="团队准备清单"/><br/><sub>团队视图：全部 / 我的 / 待分工</sub></td>
+    <td align="center" width="50%"><img src="docs/assets/demo-06-team-collaboration.jpg" width="340" alt="多人协作物品清单中的四种认领状态"/><br/><sub>团队视图：待分工 / 我已带 / 队友已带 / 多人同带</sub></td>
     <td align="center" width="50%"><img src="docs/assets/demo-05-checklist.jpg" width="340" alt="个人出发核对清单"/><br/><sub>个人视图：只核对自己真正要带的物品</sub></td>
   </tr>
 </table>
