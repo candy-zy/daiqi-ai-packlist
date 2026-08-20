@@ -390,6 +390,10 @@ test("chat assignments require the named traveler to confirm before changing the
   assert.match(page, /afterMessageId: number/);
   assert.match(page, /afterMessageId: messageId/);
   assert.match(page, /assignmentProposal\?\.afterMessageId === message\.id/);
+  assert.match(page, /text: "转换插头你来带吧。"/);
+  assert.match(page, /text: "好。"/);
+  assert.match(page, /afterMessageId: 2/);
+  assert.doesNotMatch(page, /流量卡要不要提前一起买？[\s\S]*转换插头你来带吧/);
   assert.match(page, /AI 识别到一项分工/);
   assert.match(page, /你刚刚回复了“好”/);
   assert.match(page, /我不带/);

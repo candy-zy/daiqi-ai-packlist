@@ -301,15 +301,17 @@ const seedSuggestions: Suggestion[] = [
 ];
 
 const seedMessages: ChatMessage[] = [
-  { id: 1, author: "小雨", text: "流量卡要不要提前一起买？" },
-  { id: 2, author: "阿哲", text: "转换插头你来带吧，我带相机。" },
-  { id: 3, author: "我", text: "好。" },
+  { id: 1, author: "阿哲", text: "转换插头你来带吧。" },
+  { id: 2, author: "我", text: "好。" },
+  { id: 3, author: "小雨", text: "流量卡要不要提前一起买？" },
+  { id: 4, author: "阿哲", text: "可以，落地前买好更方便。" },
 ];
 
 const domesticSeedMessages: ChatMessage[] = [
-  { id: 1, author: "小雨", text: "雨伞要不要多带一把？" },
-  { id: 2, author: "阿哲", text: "充电器你来带吧，我带相机。" },
-  { id: 3, author: "我", text: "好。" },
+  { id: 1, author: "阿哲", text: "充电器你来带吧。" },
+  { id: 2, author: "我", text: "好。" },
+  { id: 3, author: "小雨", text: "雨伞要不要多带一把？" },
+  { id: 4, author: "阿哲", text: "看天气再决定。" },
 ];
 
 const seedItemNotes: ItemNote[] = [
@@ -342,7 +344,7 @@ export default function Home() {
   const [noteDraft, setNoteDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
   const [itemNotes, setItemNotes] = useState<ItemNote[]>(seedItemNotes);
-  const [assignmentProposal, setAssignmentProposal] = useState<AssignmentProposal | null>({ itemId: 11, requester: "阿哲", target: "我", afterMessageId: 3 });
+  const [assignmentProposal, setAssignmentProposal] = useState<AssignmentProposal | null>({ itemId: 11, requester: "阿哲", target: "我", afterMessageId: 2 });
   const [activeItemId, setActiveItemId] = useState<number | null>(null);
   const [unreadItemIds, setUnreadItemIds] = useState<Set<number>>(() => new Set([11, 13, 41]));
   const [expandedCategories, setExpandedCategories] = useState<Set<Category>>(() => new Set(["电子数码类"]));
@@ -497,7 +499,7 @@ export default function Home() {
     const international = isInternationalDestination(cleanDestination);
     setItems(preparedItems);
     setMessages(international ? seedMessages : domesticSeedMessages);
-    setAssignmentProposal({ itemId: international ? 11 : 7, requester: "阿哲", target: "我", afterMessageId: 3 });
+    setAssignmentProposal({ itemId: international ? 11 : 7, requester: "阿哲", target: "我", afterMessageId: 2 });
     const visibleNotes = seedItemNotes.filter((note) => preparedItems.some((item) => item.id === note.itemId));
     setItemNotes(visibleNotes);
     setUnreadItemIds(new Set(visibleNotes.map((note) => note.itemId)));
