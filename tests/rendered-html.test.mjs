@@ -270,6 +270,9 @@ test("chat assignments require the named traveler to confirm before changing the
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(page, /type AssignmentProposal/);
+  assert.match(page, /afterMessageId: number/);
+  assert.match(page, /afterMessageId: messageId/);
+  assert.match(page, /assignmentProposal\?\.afterMessageId === message\.id/);
   assert.match(page, /AI 识别到一项分工/);
   assert.match(page, /你刚刚回复了“好”/);
   assert.match(page, /我不带/);

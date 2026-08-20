@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
@@ -55,6 +55,7 @@ type AssignmentProposal = {
   itemId: number;
   requester: Member;
   target: Member;
+  afterMessageId: number;
 };
 
 const members: { name: Member; short: string; profile: string; className: string; online: boolean }[] = [
@@ -186,7 +187,7 @@ const seedSuggestions: Suggestion[] = [
 const seedMessages: ChatMessage[] = [
   { id: 1, author: "小雨", text: "流量卡要不要提前一起买？" },
   { id: 2, author: "阿哲", text: "充电线你来带吧，我带相机。" },
-  { id: 3, author: "我", text: "好。" },
+  { id: 3, author: "我", text: "好。", itemId: 9 },
   { id: 1101, author: "阿哲", text: "韩国插座和国内一样吗？这个还要不要带？", itemId: 11 },
   { id: 1301, author: "我", text: "自拍杆谁能带？首尔街拍和合照可能会用。", itemId: 13 },
   { id: 1302, author: "小雨", text: "我那个太短了，看看阿哲有没有长一点的。", itemId: 13 },
@@ -210,7 +211,7 @@ export default function Home() {
   const [newItem, setNewItem] = useState("");
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
-  const [assignmentProposal, setAssignmentProposal] = useState<AssignmentProposal | null>({ itemId: 9, requester: "阿哲", target: "我" });
+  const [assignmentProposal, setAssignmentProposal] = useState<AssignmentProposal | null>({ itemId: 9, requester: "阿哲", target: "我", afterMessageId: 3 });
   const [activeItemId, setActiveItemId] = useState<number | null>(null);
   const [unreadItemIds, setUnreadItemIds] = useState<Set<number>>(() => new Set([11, 13, 41]));
   const [expandedCategories, setExpandedCategories] = useState<Set<Category>>(() => new Set(["电子数码类"]));
@@ -421,7 +422,8 @@ export default function Home() {
   function sendMessage() {
     const text = draft.trim();
     if (!text) return;
-    const additions: ChatMessage[] = [{ id: Date.now(), author: "我", text }];
+    const messageId = Date.now();
+    const additions: ChatMessage[] = [{ id: messageId, author: "我", text }];
     const mentionedItem = (item: PackItem) => text.includes(item.name) || text.includes(item.name.slice(0, 2));
     const releasedItem = items.find((item) => !isPersonalItem(item) && item.owners.includes("我") && mentionedItem(item));
     const claimedItem = items.find((item) => !isPersonalItem(item) && !item.owners.includes("我") && mentionedItem(item));
@@ -436,7 +438,8 @@ export default function Home() {
     const request = [...messages].reverse().find((message) => message.author !== "我" && message.author !== "带齐助手" && /(你来带|你带|交给你)/.test(message.text));
     const requestedItem = request ? items.find((item) => !isPersonalItem(item) && (request.text.includes(item.name) || (item.name === "充电线" && request.text.includes("数据线")))) : null;
     if (agrees && request && requestedItem) {
-      setAssignmentProposal({ itemId: requestedItem.id, requester: request.author as Member, target: "我" });
+      additions[0] = { ...additions[0], itemId: requestedItem.id };
+      setAssignmentProposal({ itemId: requestedItem.id, requester: request.author as Member, target: "我", afterMessageId: messageId });
     }
     setMessages((current) => [...current, ...additions]);
     setDraft("");
@@ -454,6 +457,15 @@ export default function Home() {
       system: true,
     }]);
     setAssignmentProposal(null);
+  }
+
+  function renderAssignmentProposal() {
+    if (!assignmentProposal || !proposalItem) return null;
+    return <article className="assignment-proposal">
+      <div className="proposal-label"><span>✦</span>AI 识别到一项分工</div>
+      <div className="proposal-main"><span className="proposal-icon"><ItemGraphic item={proposalItem} /></span><div><b>{assignmentProposal.requester}请你带「{proposalItem.name}」</b><small>你刚刚回复了“好”，要同步到清单吗？</small></div></div>
+      <div className="proposal-actions"><button onClick={() => resolveAssignmentProposal(false)}>我不带</button><button onClick={() => resolveAssignmentProposal(true)}>我来带</button></div>
+    </article>;
   }
 
   function openItemChat(itemId: number) {
@@ -657,13 +669,11 @@ export default function Home() {
                 {activeItem && <button className="chat-filter-clear" onClick={() => setActiveItemId(null)}>查看全部消息</button>}
                 {activeChatMessages.length ? activeChatMessages.map((message) => {
                   const meta = members.find((member) => member.name === message.author);
-                  return <div className={`message-row ${message.author === "我" ? "mine" : ""} ${message.system ? "system" : ""}`} key={message.id}>{meta ? <CharacterAvatar member={meta.name} className="message-avatar" /> : <span className="message-avatar assistant-avatar">✦</span>}<div><small>{message.author}</small><p>{message.text}</p></div></div>;
+                  return <Fragment key={message.id}>
+                    <div className={`message-row ${message.author === "我" ? "mine" : ""} ${message.system ? "system" : ""}`}>{meta ? <CharacterAvatar member={meta.name} className="message-avatar" /> : <span className="message-avatar assistant-avatar">✦</span>}<div><small>{message.author}</small><p>{message.text}</p></div></div>
+                    {assignmentProposal?.afterMessageId === message.id && (!activeItem || activeItem.id === assignmentProposal.itemId) && renderAssignmentProposal()}
+                  </Fragment>;
                 }) : <div className="item-discussion-empty"><span>•••</span><b>还没有相关消息</b><small>发第一条消息，问问谁带这件物品。</small></div>}
-                {assignmentProposal && proposalItem && (!activeItem || activeItem.id === proposalItem.id) && <article className="assignment-proposal">
-                  <div className="proposal-label"><span>✦</span>AI 识别到一项分工</div>
-                  <div className="proposal-main"><span className="proposal-icon"><ItemGraphic item={proposalItem} /></span><div><b>{assignmentProposal.requester}请你带「{proposalItem.name}」</b><small>你刚刚回复了“好”，要同步到清单吗？</small></div></div>
-                  <div className="proposal-actions"><button onClick={() => resolveAssignmentProposal(false)}>我不带</button><button onClick={() => resolveAssignmentProposal(true)}>我来带</button></div>
-                </article>}
               </div>
               <div className="chat-composer"><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && (activeItem ? sendItemMessage() : sendMessage())} placeholder={activeItem ? `聊聊${activeItem.name}…` : "聊聊谁带什么…"} /><button onClick={() => activeItem ? sendItemMessage() : sendMessage()} aria-label="发送消息">↑</button></div>
             </section>
