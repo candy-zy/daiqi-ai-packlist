@@ -147,6 +147,12 @@ test("onboarding avatars stay consistent and verification keeps one compact prog
   assert.match(css, /select-all-button/);
 });
 
+test("owner avatars and the also-bring control share one aligned circle row", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(css, /\.shared-owner-action \{ align-items:flex-start; justify-content:flex-end; \}/);
+  assert.match(css, /\.also-bring-button>span \{ width:34px; height:34px; \}/);
+});
+
 test("preparation defaults to the full list, includes unassigned view, and stays collapsible", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

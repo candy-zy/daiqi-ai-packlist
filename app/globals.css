@@ -820,7 +820,10 @@ h1,.setup-content h1,.departure-page h1 {
   justify-self:end;
   margin-left:0;
 }
-.shared-owner-action { justify-content:flex-end; }
+.shared-owner-action { align-items:flex-start; justify-content:flex-end; }
+.owner-avatars { min-height:34px; align-items:flex-start; }
+.also-bring-button { width:42px; grid-template-rows:34px 16px; align-items:start; }
+.also-bring-button>span { width:34px; height:34px; }
 .claim-button,.personal-pill,.verify-release-button { white-space:nowrap; }
 .list-item.editing .item-copy { min-width:0; }
 .list-item.editing .item-chat-trigger { flex:1 1 auto; }
@@ -833,5 +836,7 @@ h1,.setup-content h1,.departure-page h1 {
   }
   .owner-avatars { gap:1px; }
   .owner-avatar { width:30px; height:30px; }
-  .also-bring-button { width:34px; }
+  .owner-avatars { min-height:30px; }
+  .also-bring-button { width:38px; grid-template-rows:30px 16px; }
+  .also-bring-button>span { width:30px; height:30px; }
 }
