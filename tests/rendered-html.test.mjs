@@ -57,6 +57,7 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
   assert.match(page, /"裤子": Pants/);
   assert.match(page, /"袜子": Sock/);
   assert.match(page, /"流量卡": SimCard/);
+  assert.doesNotMatch(page, /"驾驶证"|"鞋子"|"墨镜"/);
   assert.match(page, /weight="duotone"/);
   assert.doesNotMatch(page, /className="item-sticker-emoji"/);
   assert.match(page, /function CharacterAvatar/);

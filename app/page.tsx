@@ -12,10 +12,10 @@ import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
   BaseballCap, BatteryCharging, Camera, Cards, CircleNotch, CreditCard,
   DeviceMobileCamera, Drop, Ear, Eyedropper, FaceMask, FirstAid, Footprints,
-  HandSoap, HandSwipeRight, Headphones, Hoodie, IdentificationBadge,
-  IdentificationCard, Jar, MaskHappy, Pants, Pill, PlugsConnected, PlugCharging,
-  Popcorn, Prescription, ShirtFolded, Shower, SimCard, Sneaker, Sock, SprayBottle,
-  Sun, Sunglasses, TestTube, Toilet, ToiletPaper, Tooth, Towel, TShirt, Umbrella,
+  HandSoap, HandSwipeRight, Headphones, Hoodie, IdentificationCard, Jar,
+  MaskHappy, Pants, Pill, PlugsConnected, PlugCharging, Popcorn, Prescription,
+  ShirtFolded, Shower, SimCard, Sock, SprayBottle, Sun, TestTube, Toilet,
+  ToiletPaper, Tooth, Towel, TShirt, Umbrella,
 } from "@phosphor-icons/react";
 
 type Member = "我" | "阿哲" | "小雨";
@@ -88,11 +88,11 @@ function hasClaimIntent(text: string) {
 }
 
 const phosphorItemIcons: Record<string, PhosphorIcon> = {
-  "身份证": IdentificationCard, "银行卡": CreditCard, "驾驶证": IdentificationBadge,
+  "身份证": IdentificationCard, "银行卡": CreditCard,
   "充电器": PlugCharging, "充电宝": BatteryCharging, "耳机": Headphones, "转换插头": PlugsConnected,
   "相机": Camera, "自拍杆": DeviceMobileCamera,
   "上衣": TShirt, "裤子": Pants, "外套": Hoodie, "内衣": ShirtFolded, "袜子": Sock,
-  "拖鞋": Footprints, "鞋子": Sneaker, "墨镜": Sunglasses, "帽子": BaseballCap,
+  "拖鞋": Footprints, "帽子": BaseballCap,
   "牙刷": Tooth, "牙膏": TestTube, "毛巾": Towel, "洗面奶": HandSoap, "卸妆油": Eyedropper,
   "防晒霜": Sun, "洗发水": SprayBottle, "沐浴露": Shower, "水乳": Drop, "面霜": Jar,
   "面膜": MaskHappy, "皮筋": CircleNotch,
@@ -134,7 +134,6 @@ const seedItems: PackItem[] = [
   { id: 2, name: "护照 / 签证", icon: "▦", group: "证件与钱财类", owners: ["我", "阿哲", "小雨"], checked: {} },
   { id: 3, name: "银行卡", icon: "▰", group: "证件与钱财类", owners: [], checked: {} },
   { id: 4, name: "现金", icon: "¥", group: "证件与钱财类", owners: [], checked: {} },
-  { id: 5, name: "驾驶证", icon: "□", group: "证件与钱财类", owners: [], checked: {} },
 
   { id: 7, name: "充电器", icon: "▰", group: "电子数码类", owners: [], checked: {} },
   { id: 8, name: "充电宝", icon: "▮", group: "电子数码类", owners: ["我"], checked: {}, aiReason: "你登记了大容量充电宝" },
@@ -152,8 +151,6 @@ const seedItems: PackItem[] = [
   { id: 19, name: "袜子", icon: "▤", group: "衣物鞋帽类", owners: [], checked: {} },
   { id: 20, name: "睡衣", icon: "○", group: "衣物鞋帽类", owners: [], checked: {} },
   { id: 21, name: "拖鞋", icon: "◇", group: "衣物鞋帽类", owners: [], checked: {} },
-  { id: 22, name: "鞋子", icon: "◇", group: "衣物鞋帽类", owners: [], checked: {} },
-  { id: 23, name: "墨镜", icon: "●", group: "衣物鞋帽类", owners: [], checked: {} },
   { id: 24, name: "帽子", icon: "▰", group: "衣物鞋帽类", owners: ["小雨"], checked: {} },
 
   { id: 25, name: "牙刷", icon: "⌁", group: "洗护化妆类", owners: [], checked: {} },
