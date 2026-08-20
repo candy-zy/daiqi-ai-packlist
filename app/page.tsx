@@ -76,6 +76,16 @@ const categories: { name: Category }[] = [
 
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
 const personalItemNames = new Set(["牙刷", "毛巾", "流量卡"]);
+const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
+const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
+
+function hasReleaseIntent(text: string) {
+  return releaseIntentPattern.test(text);
+}
+
+function hasClaimIntent(text: string) {
+  return !hasReleaseIntent(text) && claimIntentPattern.test(text);
+}
 
 const phosphorItemIcons: Record<string, PhosphorIcon> = {
   "身份证": IdentificationCard, "银行卡": CreditCard, "驾驶证": IdentificationBadge,
@@ -423,11 +433,15 @@ export default function Home() {
     const text = draft.trim();
     if (!text) return;
     const additions: ChatMessage[] = [{ id: Date.now(), author: "我", text }];
-    const wantsToClaim = /(我来带|我带|我有|交给我|算我的)/.test(text);
-    const matched = items.find((item) => !isPersonalItem(item) && !item.owners.includes("我") && (text.includes(item.name) || text.includes(item.name.slice(0, 2))));
-    if (wantsToClaim && matched) {
-      setItems((current) => current.map((item) => item.id === matched.id ? { ...item, owners: [...item.owners, "我"] } : item));
-      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我会带${matched.name}`, system: true });
+    const mentionedItem = (item: PackItem) => text.includes(item.name) || text.includes(item.name.slice(0, 2));
+    const releasedItem = items.find((item) => !isPersonalItem(item) && item.owners.includes("我") && mentionedItem(item));
+    const claimedItem = items.find((item) => !isPersonalItem(item) && !item.owners.includes("我") && mentionedItem(item));
+    if (hasReleaseIntent(text) && releasedItem) {
+      release(releasedItem.id);
+      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我不再带${releasedItem.name}`, system: true });
+    } else if (hasClaimIntent(text) && claimedItem) {
+      claim(claimedItem.id);
+      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我会带${claimedItem.name}`, system: true });
     }
     const agrees = /^(好|好的|可以|行|没问题|ok|okay)[。！!,.， ]*$/i.test(text);
     const request = [...messages].reverse().find((message) => message.author !== "我" && message.author !== "带齐助手" && /(你来带|你带|交给你)/.test(message.text));
@@ -468,7 +482,10 @@ export default function Home() {
     const text = draft.trim();
     if (!text || !activeItem) return;
     const additions: ChatMessage[] = [{ id: Date.now(), author: "我", text, itemId: activeItem.id }];
-    if (!isPersonalItem(activeItem) && !activeItem.owners.includes("我") && /(我来带|我带|我有|交给我|算我的)/.test(text)) {
+    if (!isPersonalItem(activeItem) && activeItem.owners.includes("我") && hasReleaseIntent(text)) {
+      release(activeItem.id);
+      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我不再带${activeItem.name}`, system: true, itemId: activeItem.id });
+    } else if (!isPersonalItem(activeItem) && !activeItem.owners.includes("我") && hasClaimIntent(text)) {
       claim(activeItem.id);
       additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我会带${activeItem.name}`, system: true, itemId: activeItem.id });
     }

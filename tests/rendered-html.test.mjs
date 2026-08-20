@@ -197,6 +197,11 @@ test("item discussions reuse team chat and unread replies show a red dot", async
   assert.match(page, /unreadItemIds/);
   assert.match(page, /function openItemChat/);
   assert.match(page, /function sendItemMessage/);
+  assert.match(page, /const releaseIntentPattern/);
+  assert.match(page, /function hasReleaseIntent/);
+  assert.match(page, /activeItem\.owners\.includes\("我"\) && hasReleaseIntent\(text\)/);
+  assert.match(page, /已同步：我不再带\$\{activeItem\.name\}/);
+  assert.match(page, /release\(activeItem\.id\)/);
   assert.match(page, /className="item-copy"/);
   assert.match(page, /className="item-chat-trigger"/);
   assert.match(page, /function togglePersonal/);
