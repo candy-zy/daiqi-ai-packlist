@@ -32,6 +32,35 @@ test("server-renders a focused destination-first onboarding experience", async (
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/);
 });
 
+test("ships as an installable mobile PWA with local trip continuity", async () => {
+  const [page, layout, manifest, serviceWorker] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+  ]);
+  const parsedManifest = JSON.parse(manifest);
+
+  assert.equal(parsedManifest.display, "standalone");
+  assert.equal(parsedManifest.orientation, "portrait-primary");
+  assert.equal(parsedManifest.start_url, "/");
+  assert.ok(parsedManifest.icons.some((icon) => icon.sizes === "512x512" && icon.purpose === "maskable"));
+  assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
+  assert.match(layout, /appleWebApp/);
+  assert.match(layout, /viewportFit: "cover"/);
+  assert.match(page, /beforeinstallprompt/);
+  assert.match(page, /navigator\.serviceWorker\.register\("\/sw\.js"\)/);
+  assert.match(page, /localStorage\.setItem\(localStateKey/);
+  assert.match(page, /添加到主屏幕/);
+  assert.match(serviceWorker, /CACHE_NAME = "daiqi-app-v1"/);
+  assert.match(serviceWorker, /request\.mode === "navigate"/);
+  await Promise.all([
+    access(new URL("../public/app-icon-192.png", import.meta.url)),
+    access(new URL("../public/app-icon-512.png", import.meta.url)),
+    access(new URL("../public/apple-touch-icon.png", import.meta.url)),
+  ]);
+});
+
 test("onboarding and the main header avoid repeated trip metadata", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(page, /队伍名称|队伍成员|先把朋友聚到一起|创建队伍并生成清单/);

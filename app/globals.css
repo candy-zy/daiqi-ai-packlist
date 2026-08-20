@@ -1125,3 +1125,67 @@ h1,.setup-content h1,.departure-page h1 {
   .profile-scroll { padding-inline:13px; }
   .preference-grid { grid-template-columns:1fr; }
 }
+
+/* Installable mobile app */
+.install-app-button {
+  min-height:36px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  margin-left:auto;
+  padding:6px 11px;
+  border:2px solid var(--ink);
+  border-radius:99px;
+  background:var(--lime);
+  box-shadow:2px 2px 0 var(--ink);
+  cursor:pointer;
+  font-size:var(--type-caption-size);
+  line-height:var(--type-caption-line);
+  font-weight:var(--font-semibold);
+}
+.install-app-button svg { width:16px; height:16px; stroke-width:2.5; }
+.install-app-button:active,.install-guide-done:active { transform:translate(1px,1px); box-shadow:1px 1px 0 var(--ink); }
+
+.install-guide-modal {
+  position:absolute;
+  z-index:90;
+  inset:0;
+  display:grid;
+  place-items:center;
+  padding:22px;
+}
+.install-guide-card {
+  z-index:2;
+  width:min(360px,100%);
+  padding:17px;
+  border:3px solid var(--ink);
+  border-radius:22px;
+  background:var(--paper);
+  box-shadow:7px 8px 0 var(--ink),0 22px 70px rgba(0,0,0,.25);
+  animation:notePop .18s ease-out;
+}
+.install-guide-card>header { display:grid; grid-template-columns:44px minmax(0,1fr) 36px; align-items:center; gap:10px; margin-bottom:17px; }
+.install-guide-card>header>span { width:44px; height:44px; display:grid; place-items:center; border:2px solid var(--ink); border-radius:14px; background:var(--lime); box-shadow:2px 2px 0 var(--ink); }
+.install-guide-card>header>span svg { width:22px; height:22px; }
+.install-guide-card>header small { display:block; color:#747169; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.install-guide-card>header h2 { margin:1px 0 0; font-size:var(--type-h3-size); line-height:var(--type-h3-line); }
+.install-guide-card>header>button { width:36px; height:36px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:#efede6; cursor:pointer; }
+.install-guide-card>header>button svg { width:18px; height:18px; }
+.install-guide-step { margin-bottom:9px; padding:11px 12px; border:1.5px solid #cfcbc1; border-radius:13px; background:#fff; }
+.install-guide-step b { font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.install-guide-step p { margin:3px 0 0; color:#62635d; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.install-guide-step p svg { width:17px; height:17px; vertical-align:-3px; }
+.install-guide-note { margin:12px 2px 14px; color:#77756d; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.install-guide-done { width:100%; min-height:46px; border:2.5px solid var(--ink); border-radius:14px; background:var(--lime); box-shadow:3px 3px 0 var(--ink); cursor:pointer; font-size:var(--type-body-size); line-height:var(--type-body-line); font-weight:var(--font-semibold); }
+
+@supports (padding: max(0px)) {
+  @media(max-width:520px){
+    .setup-topbar { height:calc(68px + env(safe-area-inset-top)); padding-top:env(safe-area-inset-top); }
+    .setup-content { height:calc(100% - 68px - env(safe-area-inset-top)); }
+    .compact-trip-hero { padding-top:calc(18px + env(safe-area-inset-top)); }
+    .scroll-area { padding-bottom:calc(108px + env(safe-area-inset-bottom)); }
+    .action-bar { height:calc(88px + env(safe-area-inset-bottom)); padding-bottom:max(16px,env(safe-area-inset-bottom)); }
+    .departure-back { top:calc(22px + env(safe-area-inset-top)); }
+    .departure-page { padding-top:calc(70px + env(safe-area-inset-top)); padding-bottom:calc(38px + env(safe-area-inset-bottom)); }
+  }
+}

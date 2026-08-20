@@ -6,7 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
   Banknote, BookOpenCheck, Bug, CupSoda, GlassWater, MemoryStick,
-  Check, Menu, MessageCircle, MoonStar, Package, Sparkles, Trash2, X,
+  Check, Download, Menu, MessageCircle, MoonStar, Package, Share2, Sparkles, Trash2, X,
 } from "lucide-react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -89,6 +89,28 @@ type DeletedItemSnapshot = {
   suggestionStates: { id: number; added: boolean }[];
 };
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
+
+type PersistedAppState = {
+  teamReady: boolean;
+  destination: string;
+  items: PackItem[];
+  suggestions: Suggestion[];
+  phase: Phase;
+  listFilter: ListFilter;
+  viewedMember: Member;
+  profile: TravelProfile;
+  messages: ChatMessage[];
+  itemNotes: ItemNote[];
+  assignmentProposal: AssignmentProposal | null;
+  unreadItemIds: number[];
+  expandedCategories: Category[];
+  personalExpanded: boolean;
+};
+
 const members: { name: Member; short: string; profile: string; className: string; online: boolean }[] = [
   { name: "我", short: "我", profile: "有充电宝", className: "member-me", online: true },
   { name: "阿哲", short: "哲", profile: "有相机", className: "member-zhe", online: true },
@@ -137,6 +159,7 @@ const personalItemNames = new Set([
 const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
 const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
 const departureImageSrc = "/departure-team-v2.webp";
+const localStateKey = "daiqi-app-state-v1";
 
 function hasReleaseIntent(text: string) {
   return releaseIntentPattern.test(text);
@@ -285,6 +308,10 @@ export default function Home() {
   const [personalExpanded, setPersonalExpanded] = useState(false);
   const [draggingItemId, setDraggingItemId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ message: string; canUndo: boolean } | null>(null);
+  const [storageReady, setStorageReady] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
   const draggingItemRef = useRef<number | null>(null);
   const deletedItemRef = useRef<DeletedItemSnapshot | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -316,11 +343,111 @@ export default function Home() {
   }, [profileDraft]);
 
   useEffect(() => {
+    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+    setIsInstalled(window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true);
+
+    if ("serviceWorker" in navigator && window.location.protocol === "https:") {
+      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    }
+
+    const handleInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const handleInstalled = () => {
+      setDeferredInstallPrompt(null);
+      setShowInstallGuide(false);
+      setIsInstalled(true);
+    };
+    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
+    window.addEventListener("appinstalled", handleInstalled);
+
+    try {
+      const raw = window.localStorage.getItem(localStateKey);
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<PersistedAppState>;
+        if (typeof saved.destination === "string") setDestination(saved.destination);
+        if (typeof saved.teamReady === "boolean") setTeamReady(saved.teamReady);
+        if (Array.isArray(saved.items)) setItems(saved.items);
+        if (Array.isArray(saved.suggestions)) setSuggestions(saved.suggestions);
+        if (saved.phase === "prepare" || saved.phase === "verify" || saved.phase === "departed") setPhase(saved.phase);
+        if (saved.listFilter === "all" || saved.listFilter === "mine" || saved.listFilter === "unassigned") setListFilter(saved.listFilter);
+        if (saved.viewedMember === "我" || saved.viewedMember === "阿哲" || saved.viewedMember === "小雨") setViewedMember(saved.viewedMember);
+        if (saved.profile) {
+          setProfile(saved.profile);
+          setProfileDraft(saved.profile);
+        }
+        if (Array.isArray(saved.messages)) setMessages(saved.messages);
+        if (Array.isArray(saved.itemNotes)) setItemNotes(saved.itemNotes);
+        if (saved.assignmentProposal === null || saved.assignmentProposal) setAssignmentProposal(saved.assignmentProposal ?? null);
+        if (Array.isArray(saved.unreadItemIds)) setUnreadItemIds(new Set(saved.unreadItemIds));
+        if (Array.isArray(saved.expandedCategories)) setExpandedCategories(new Set(saved.expandedCategories));
+        if (typeof saved.personalExpanded === "boolean") setPersonalExpanded(saved.personalExpanded);
+      }
+    } catch {
+      window.localStorage.removeItem(localStateKey);
+    } finally {
+      setStorageReady(true);
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
+      window.removeEventListener("appinstalled", handleInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    const state: PersistedAppState = {
+      teamReady,
+      destination,
+      items,
+      suggestions,
+      phase,
+      listFilter,
+      viewedMember,
+      profile,
+      messages,
+      itemNotes,
+      assignmentProposal,
+      unreadItemIds: [...unreadItemIds],
+      expandedCategories: [...expandedCategories],
+      personalExpanded,
+    };
+    window.localStorage.setItem(localStateKey, JSON.stringify(state));
+  }, [assignmentProposal, destination, expandedCategories, itemNotes, items, listFilter, messages, personalExpanded, phase, profile, storageReady, suggestions, teamReady, unreadItemIds, viewedMember]);
+
+  useEffect(() => {
     if (!teamReady || phase !== "verify") return;
     const departureImage = new window.Image();
     departureImage.decoding = "async";
     departureImage.src = departureImageSrc;
   }, [phase, teamReady]);
+
+  async function installApp() {
+    if (!deferredInstallPrompt) {
+      setShowInstallGuide(true);
+      return;
+    }
+    await deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    if (choice.outcome === "accepted") setIsInstalled(true);
+    setDeferredInstallPrompt(null);
+  }
+
+  function renderInstallGuide() {
+    if (!showInstallGuide) return null;
+    return <div className="install-guide-modal" role="dialog" aria-modal="true" aria-label="安装带齐到手机">
+      <button className="sheet-backdrop" aria-label="关闭安装说明" onClick={() => setShowInstallGuide(false)} />
+      <section className="install-guide-card">
+        <header><span><Download aria-hidden="true" /></span><div><small>安装到手机</small><h2>把「带齐」放到桌面</h2></div><button onClick={() => setShowInstallGuide(false)} aria-label="关闭"><X aria-hidden="true" /></button></header>
+        <div className="install-guide-step"><b>iPhone · Safari</b><p>点击底部的 <Share2 aria-hidden="true" /> 分享，再选择“添加到主屏幕”。</p></div>
+        <div className="install-guide-step"><b>Android · Chrome</b><p>点击右上角菜单，再选择“安装应用”或“添加到主屏幕”。</p></div>
+        <p className="install-guide-note">安装后会独立全屏打开；当前设备上的清单和偏好也会自动保留。</p>
+        <button className="install-guide-done" onClick={() => setShowInstallGuide(false)}>知道了</button>
+      </section>
+    </div>;
+  }
 
   async function createTeam() {
     if (!destination.trim()) return;
@@ -451,6 +578,7 @@ export default function Home() {
           <header className="topbar setup-topbar">
             <div className="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
             <div className="brand-name">带齐</div>
+            {!isInstalled && <button className="install-app-button" onClick={installApp}><Download aria-hidden="true" />安装</button>}
           </header>
           <div className="setup-content">
             <div className="setup-illustration"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div>
@@ -465,6 +593,7 @@ export default function Home() {
             <button className="setup-submit" onClick={createTeam}>生成清单 <span>→</span></button>
           </div>
           {renderProfileCenter()}
+          {renderInstallGuide()}
         </section>
       </main>
     );
@@ -481,6 +610,7 @@ export default function Home() {
             </div>
             <h1>带上好心情，出发！</h1>
           </section>
+          {renderInstallGuide()}
         </section>
       </main>
     );
@@ -924,6 +1054,8 @@ export default function Home() {
         )}
 
         {renderProfileCenter()}
+
+        {renderInstallGuide()}
 
         {toast && <div className="toast" role="status"><span>{toast.message}</span>{toast.canUndo && <button onClick={undoDelete}>撤回</button>}</div>}
       </section>
