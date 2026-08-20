@@ -163,7 +163,7 @@ body {
 .chat-context small,
 .proposal-main small,
 .chat-header p,
-.item-chat-trigger>small,
+.item-note-trigger>small,
 .presence-panel>small {
   font-size:var(--type-secondary-size);
   line-height:var(--type-secondary-line);
@@ -221,7 +221,7 @@ button {
 .remind-button,
 .verify-release-button,
 .list-head-actions>button,
-.chat-filter-clear,
+.chat-empty,
 .chat-suggestions button,
 .category-picker button,
 .proposal-actions button {
@@ -344,10 +344,10 @@ label {
   align-items:center;
 }
 .item-copy { min-width:0; flex-wrap:nowrap; align-items:center; }
-.item-chat-trigger { min-width:0; }
+.item-note-trigger { min-width:0; }
 .item-title-row { align-items:center; }
 .item-title-row>b,
-.item-chat-trigger>small,
+.item-note-trigger>small,
 .item-meta>small {
   overflow:visible;
   white-space:normal;

@@ -48,7 +48,14 @@ type ChatMessage = {
   author: Member | "带齐助手";
   text: string;
   system?: boolean;
-  itemId?: number;
+};
+
+type ItemNote = {
+  id: number;
+  itemId: number;
+  author: Member;
+  text: string;
+  time: string;
 };
 
 type AssignmentProposal = {
@@ -186,11 +193,16 @@ const seedSuggestions: Suggestion[] = [
 const seedMessages: ChatMessage[] = [
   { id: 1, author: "小雨", text: "流量卡要不要提前一起买？" },
   { id: 2, author: "阿哲", text: "转换插头你来带吧，我带相机。" },
-  { id: 3, author: "我", text: "好。", itemId: 11 },
-  { id: 1101, author: "阿哲", text: "韩国插座和国内一样吗？这个还要不要带？", itemId: 11 },
-  { id: 1301, author: "我", text: "自拍杆谁能带？首尔街拍和合照可能会用。", itemId: 13 },
-  { id: 1302, author: "小雨", text: "我那个太短了，看看阿哲有没有长一点的。", itemId: 13 },
-  { id: 4101, author: "小雨", text: "天气预报有雨，要不要带两把伞？", itemId: 41 },
+  { id: 3, author: "我", text: "好。" },
+];
+
+const seedItemNotes: ItemNote[] = [
+  { id: 1101, itemId: 11, author: "阿哲", text: "韩国插座和国内一样吗？这个还要不要带？", time: "10:00" },
+  { id: 1102, itemId: 11, author: "小雨", text: "酒店可以借，但带一个更放心。", time: "10:05" },
+  { id: 1103, itemId: 11, author: "我", text: "那我放进随身包。", time: "10:06" },
+  { id: 1301, itemId: 13, author: "我", text: "首尔街拍和合照可能会用，谁有长一点的？", time: "10:12" },
+  { id: 1302, itemId: 13, author: "小雨", text: "我那个太短了，看看阿哲有没有。", time: "10:15" },
+  { id: 4101, itemId: 41, author: "小雨", text: "天气预报有雨，要不要带两把伞？", time: "10:20" },
 ];
 
 export default function Home() {
@@ -208,7 +220,9 @@ export default function Home() {
   const [addCategory, setAddCategory] = useState<Category>("日用杂物类");
   const [newItem, setNewItem] = useState("");
   const [draft, setDraft] = useState("");
+  const [noteDraft, setNoteDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
+  const [itemNotes, setItemNotes] = useState<ItemNote[]>(seedItemNotes);
   const [assignmentProposal, setAssignmentProposal] = useState<AssignmentProposal | null>({ itemId: 11, requester: "阿哲", target: "我", afterMessageId: 3 });
   const [activeItemId, setActiveItemId] = useState<number | null>(null);
   const [unreadItemIds, setUnreadItemIds] = useState<Set<number>>(() => new Set([11, 13, 41]));
@@ -234,9 +248,7 @@ export default function Home() {
   const verifiedCount = verifyItems.length - status.total;
   const myRemaining = items.filter((item) => (isPersonalItem(item) || item.owners.includes("我")) && !item.checked["我"]).length;
   const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
-  const activeChatMessages = activeItem
-    ? messages.filter((message) => message.system || message.itemId === activeItem.id || message.text.includes(activeItem.name))
-    : messages;
+  const activeItemNotes = activeItem ? itemNotes.filter((note) => note.itemId === activeItem.id) : [];
   const proposalItem = assignmentProposal ? items.find((item) => item.id === assignmentProposal.itemId) ?? null : null;
 
   async function createTeam() {
@@ -350,16 +362,21 @@ export default function Home() {
     notify(`已加入「${suggestion.group}」`);
   }
 
-  function removeItem(item: PackItem) {
-    if (!editMode) return;
+  function removeItem(item: PackItem, fromNotes = false) {
+    if (!editMode && !fromNotes) return;
     setItems((current) => current.filter((entry) => entry.id !== item.id));
     setSuggestions((current) => current.map((suggestion) => suggestion.name === item.name ? { ...suggestion, added: false } : suggestion));
-    setMessages((current) => current.filter((message) => message.itemId !== item.id));
+    setItemNotes((current) => current.filter((note) => note.itemId !== item.id));
     setUnreadItemIds((current) => {
       const next = new Set(current);
       next.delete(item.id);
       return next;
     });
+    if (assignmentProposal?.itemId === item.id) setAssignmentProposal(null);
+    if (fromNotes) {
+      setActiveItemId(null);
+      notify(`已删除「${item.name}」`);
+    }
   }
 
   function swapItems(id: number, targetId: number) {
@@ -433,7 +450,6 @@ export default function Home() {
     const request = [...messages].reverse().find((message) => message.author !== "我" && message.author !== "带齐助手" && /(你来带|你带|交给你)/.test(message.text));
     const requestedItem = request ? items.find((item) => !isPersonalItem(item) && request.text.includes(item.name)) : null;
     if (agrees && request && requestedItem) {
-      additions[0] = { ...additions[0], itemId: requestedItem.id };
       setAssignmentProposal({ itemId: requestedItem.id, requester: request.author as Member, target: "我", afterMessageId: messageId });
     }
     setMessages((current) => [...current, ...additions]);
@@ -463,10 +479,9 @@ export default function Home() {
     </article>;
   }
 
-  function openItemChat(itemId: number) {
+  function openItemNotes(itemId: number) {
     if (editMode) return;
     setActiveItemId(itemId);
-    setShowChat(true);
     setUnreadItemIds((current) => {
       const next = new Set(current);
       next.delete(itemId);
@@ -474,19 +489,13 @@ export default function Home() {
     });
   }
 
-  function sendItemMessage() {
-    const text = draft.trim();
+  function addItemNote() {
+    const text = noteDraft.trim();
     if (!text || !activeItem) return;
-    const additions: ChatMessage[] = [{ id: Date.now(), author: "我", text, itemId: activeItem.id }];
-    if (!isPersonalItem(activeItem) && activeItem.owners.includes("我") && hasReleaseIntent(text)) {
-      release(activeItem.id);
-      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我不再带${activeItem.name}`, system: true, itemId: activeItem.id });
-    } else if (!isPersonalItem(activeItem) && !activeItem.owners.includes("我") && hasClaimIntent(text)) {
-      claim(activeItem.id);
-      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我会带${activeItem.name}`, system: true, itemId: activeItem.id });
-    }
-    setMessages((current) => [...current, ...additions]);
-    setDraft("");
+    const now = new Date();
+    const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    setItemNotes((current) => [...current, { id: Date.now(), itemId: activeItem.id, author: "我", text, time }]);
+    setNoteDraft("");
   }
 
   function addCustomItem() {
@@ -508,20 +517,20 @@ export default function Home() {
     const canCheck = viewedMember === "我" && (personal || currentWillBring);
     const visiblePeerIds = (personal ? personalPrepareItems : prepareItems.filter((entry) => entry.group === item.group)).map((entry) => entry.id);
     const peerPosition = visiblePeerIds.indexOf(item.id);
-    const discussionCount = messages.filter((message) => message.itemId === item.id).length;
+    const noteCount = itemNotes.filter((note) => note.itemId === item.id).length;
     const hasUnreadDiscussion = unreadItemIds.has(item.id);
 
     return (
       <article className={`list-item ${packed ? "packed" : ""} ${editMode && phase === "prepare" ? "editing" : ""} ${draggingItemId === item.id ? "dragging" : ""}`} data-sort-item-id={item.id} data-unchecked={phase === "verify" && canCheck && !packed ? "true" : undefined} key={item.id}>
         {phase === "verify" ? (
           <button className={`pack-check ${packed ? "checked" : ""}`} onClick={() => togglePacked(item)} disabled={!canCheck} aria-label={`${packed ? "取消" : "确认"}${item.name}已装包`}>{packed ? "✓" : ""}</button>
-        ) : <span className={`item-icon item-group-${categories.findIndex((category) => category.name === item.group)}`}><ItemGraphic item={item} /></span>}
+        ) : <button className={`item-icon item-icon-button item-group-${categories.findIndex((category) => category.name === item.group)}`} onClick={() => openItemNotes(item.id)} disabled={editMode} aria-label={`打开${item.name}的留言`}><ItemGraphic item={item} /></button>}
         <div className="item-copy">
           {phase === "verify" ? <div className="verify-item-name">
             <span className="item-title-row"><b>{item.name}</b></span>
-          </div> : <button className="item-chat-trigger" onClick={() => openItemChat(item.id)} disabled={editMode} aria-label={`打开${item.name}的讨论`}>
+          </div> : <button className="item-note-trigger" onClick={() => openItemNotes(item.id)} disabled={editMode} aria-label={`打开${item.name}的留言`}>
             <span className="item-title-row"><b>{item.name}</b>{hasUnreadDiscussion && <i className="unread-dot" aria-label="有未读消息" />}</span>
-            {(hasUnreadDiscussion || discussionCount > 0) && <small>{hasUnreadDiscussion ? "有新消息" : `${discussionCount} 条讨论`}</small>}
+            {(hasUnreadDiscussion || noteCount > 0) && <small>{hasUnreadDiscussion ? "有新留言" : "有留言"}</small>}
           </button>}
           {phase === "prepare" && editMode && <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`} title="删除"><Trash2 aria-hidden="true" /></button>}
         </div>
@@ -634,7 +643,7 @@ export default function Home() {
 
         <footer className="action-bar">
           {phase === "prepare" && <button className="add-item" onClick={() => setShowAdd(true)} aria-label="添加物品">＋</button>}
-          {phase === "prepare" && <button className="team-chat-action" onClick={() => { setActiveItemId(null); setShowChat(true); }} aria-label={assignmentProposal ? "团队讨论，有一项分工待确认" : "团队讨论"} title="团队讨论"><MessageCircle aria-hidden="true" />{assignmentProposal && <i>1</i>}</button>}
+          {phase === "prepare" && <button className="team-chat-action" onClick={() => setShowChat(true)} aria-label={assignmentProposal ? "团队聊天，有一项分工待确认" : "团队聊天"} title="团队聊天"><MessageCircle aria-hidden="true" />{assignmentProposal && <i>1</i>}</button>}
           {phase === "prepare" ? (
             <button className="primary-action" onClick={() => { setEditMode(false); setPhase("verify"); }}>进入出发核对 <span>→</span></button>
           ) : viewedMember !== "我" ? (
@@ -645,22 +654,47 @@ export default function Home() {
         </footer>
 
         {showChat && (
-          <div className="bottom-sheet" role="dialog" aria-modal="true" aria-label="团队讨论">
-            <button className="sheet-backdrop" aria-label="关闭" onClick={() => { setShowChat(false); setActiveItemId(null); }} />
+          <div className="bottom-sheet" role="dialog" aria-modal="true" aria-label="团队聊天">
+            <button className="sheet-backdrop" aria-label="关闭" onClick={() => setShowChat(false)} />
             <section className="sheet-card chat-card">
               <span className="sheet-handle" />
-              <header className="chat-header"><div><h2>团队讨论</h2>{activeItem && <p>{`正在查看与「${activeItem.name}」有关的消息`}</p>}</div><button onClick={() => { setShowChat(false); setActiveItemId(null); }}>×</button></header>
+              <header className="chat-header"><div><h2>团队聊天</h2></div><button onClick={() => setShowChat(false)}>×</button></header>
               <div className="chat-messages">
-                {activeItem && <button className="chat-filter-clear" onClick={() => setActiveItemId(null)}>查看全部消息</button>}
-                {activeChatMessages.length ? activeChatMessages.map((message) => {
+                {messages.length ? messages.map((message) => {
                   const meta = members.find((member) => member.name === message.author);
                   return <Fragment key={message.id}>
                     <div className={`message-row ${message.author === "我" ? "mine" : ""} ${message.system ? "system" : ""}`}>{meta ? <CharacterAvatar member={meta.name} className="message-avatar" /> : <span className="message-avatar assistant-avatar">✦</span>}<div><small>{message.author}</small><p>{message.text}</p></div></div>
-                    {assignmentProposal?.afterMessageId === message.id && (!activeItem || activeItem.id === assignmentProposal.itemId) && renderAssignmentProposal()}
+                    {assignmentProposal?.afterMessageId === message.id && renderAssignmentProposal()}
                   </Fragment>;
-                }) : <div className="item-discussion-empty"><span>•••</span><b>还没有相关消息</b><small>发第一条消息，问问谁带这件物品。</small></div>}
+                }) : <div className="chat-empty"><span>•••</span><b>还没有消息</b><small>和朋友聊聊谁带什么。</small></div>}
               </div>
-              <div className="chat-composer"><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && (activeItem ? sendItemMessage() : sendMessage())} placeholder={activeItem ? `聊聊${activeItem.name}…` : "聊聊谁带什么…"} /><button onClick={() => activeItem ? sendItemMessage() : sendMessage()} aria-label="发送消息">↑</button></div>
+              <div className="chat-composer"><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendMessage()} placeholder="聊聊谁带什么…" /><button onClick={sendMessage} aria-label="发送消息">↑</button></div>
+            </section>
+          </div>
+        )}
+
+        {activeItem && phase === "prepare" && (
+          <div className="bottom-sheet" role="dialog" aria-modal="true" aria-label={`${activeItem.name}的留言`}>
+            <button className="sheet-backdrop" aria-label="关闭" onClick={() => setActiveItemId(null)} />
+            <section className="sheet-card item-notes-card">
+              <span className="sheet-handle" />
+              <header className="item-notes-header">
+                <span className={`item-icon item-group-${categories.findIndex((category) => category.name === activeItem.group)}`}><ItemGraphic item={activeItem} /></span>
+                <div><small>物品留言</small><h2>{activeItem.name}</h2></div>
+                <button onClick={() => setActiveItemId(null)} aria-label="关闭留言">×</button>
+              </header>
+              <div className="item-note-list">
+                {activeItemNotes.length ? activeItemNotes.map((note) => <article className="item-note-row" key={note.id}>
+                  <CharacterAvatar member={note.author} className="item-note-avatar" />
+                  <div><header><b>{note.author}</b><time>{note.time}</time></header><p>{note.text}</p></div>
+                </article>) : <div className="item-note-empty"><span>＋</span><b>还没有留言</b><small>写下第一条，朋友打开这件物品就能看到。</small></div>}
+              </div>
+              <div className="item-note-composer"><input value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addItemNote()} placeholder="写一条留言…" /><button onClick={addItemNote} aria-label="发布留言">↑</button></div>
+              <footer className="item-note-actions">
+                <button className="note-delete-action" onClick={() => removeItem(activeItem, true)}><Trash2 aria-hidden="true" /><span>删除</span></button>
+                {!isPersonalItem(activeItem) && (activeItem.owners.includes("我") ? <button className="note-bring-action" onClick={() => release(activeItem.id)}>我不带</button> : <button className="note-bring-action primary" onClick={() => claim(activeItem.id)}>我来带</button>)}
+                <button className="note-close-action" onClick={() => setActiveItemId(null)}><span aria-hidden="true">×</span>关闭</button>
+              </footer>
             </section>
           </div>
         )}

@@ -168,7 +168,7 @@ POST /api/chat-intents
 | 他人指派但无回复 | “小雨你带雨伞吧” | 不写分工；给小雨生成待确认提醒 |
 | 明确拒绝 | “我不带”“我带不了” | 若当前已认领则释放；否则关闭待确认 |
 | 反悔或纠正 | “算了我不带，你带吧” | 识别最后有效意图；先释放自己，再向目标人发确认 |
-| 询问而非分工 | “转换插头谁带？” | 只标记讨论，不修改清单 |
+| 询问而非分工 | “转换插头谁带？” | 保留为普通聊天，不修改清单 |
 | 指代词 | “那个你带吧” | 结合回复对象和最近物品上下文；低置信度时追问 |
 | 多物品 | “转换插头和自拍杆你带” | 拆成两个可独立确认的候选项 |
 | 多负责人 | “你们每人带一把伞” | 给每位成员分别生成确认，不批量替人决定 |
@@ -270,11 +270,21 @@ erDiagram
 - `is_packed`
 - `packed_at`
 
+#### `item_notes`
+
+- `id`
+- `trip_id`
+- `item_id`
+- `author_user_id`
+- `content`
+- `created_at`
+
+物品留言由用户从物品入口创建，天然绑定 `item_id`，不经过 AI 归类。
+
 #### `messages`
 
 - `id`
 - `trip_id`
-- `item_id`（团队讨论为空，物品讨论有值）
 - `author_user_id`
 - `content`
 - `reply_to_message_id`
@@ -315,7 +325,8 @@ erDiagram
 | POST | `/api/items/:id/assignments` | 认领或请求成员携带 |
 | DELETE | `/api/items/:id/assignments/me` | 释放自己的团队物品 |
 | PUT | `/api/items/:id/checks/me` | 更新自己的装包状态 |
-| POST | `/api/trips/:id/messages` | 发送团队或物品消息 |
+| POST | `/api/items/:id/notes` | 为指定物品添加留言 |
+| POST | `/api/trips/:id/messages` | 发送团队聊天消息 |
 | POST | `/api/suggestions` | 获取目的地 AI 推荐（已存在） |
 | POST | `/api/chat-intents` | 识别聊天候选动作（待建设） |
 | POST | `/api/ai-actions/:id/resolve` | 接受或拒绝 AI 候选动作 |

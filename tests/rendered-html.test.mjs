@@ -229,33 +229,40 @@ test("preset items are managed through a dedicated preparation edit mode", async
   assert.match(css, /edit-delete-button/);
 });
 
-test("item discussions reuse team chat and unread replies show a red dot", async () => {
+test("item notes stay separate from team chat and keep chronological context", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /itemId\?: number/);
-  assert.doesNotMatch(page, /seedItemMessages|setItemMessages/);
+  assert.match(page, /type ItemNote/);
+  assert.match(page, /const seedItemNotes/);
+  assert.match(page, /const \[itemNotes, setItemNotes\]/);
+  assert.match(page, /time: "10:00"/);
   assert.match(page, /unreadItemIds/);
-  assert.match(page, /function openItemChat/);
-  assert.match(page, /function sendItemMessage/);
-  assert.match(page, /const releaseIntentPattern/);
-  assert.match(page, /function hasReleaseIntent/);
-  assert.match(page, /activeItem\.owners\.includes\("我"\) && hasReleaseIntent\(text\)/);
-  assert.match(page, /已同步：我不再带\$\{activeItem\.name\}/);
-  assert.match(page, /release\(activeItem\.id\)/);
+  assert.match(page, /function openItemNotes/);
+  assert.match(page, /function addItemNote/);
+  assert.match(page, /className="sheet-card item-notes-card"/);
+  assert.match(page, /className="item-note-row"/);
+  assert.match(page, /<time>\{note\.time\}<\/time>/);
   assert.match(page, /className="item-copy"/);
-  assert.match(page, /className="item-chat-trigger"/);
+  assert.match(page, /className="item-note-trigger"/);
+  assert.match(page, /className={`item-icon item-icon-button/);
+  assert.match(page, /onClick=\{\(\) => openItemNotes\(item\.id\)\}/);
   assert.doesNotMatch(page, /function togglePersonal|make-personal-button|各带各的/);
   assert.match(page, /personal \? <span className="personal-pill">每人自备<\/span>/);
   assert.match(page, /className="unread-dot"/);
-  assert.match(page, /有新消息/);
+  assert.match(page, /有新留言/);
+  assert.match(page, /"有留言"/);
   assert.match(page, /setShowChat\(true\)/);
-  assert.match(page, /activeChatMessages/);
-  assert.match(page, /查看全部消息/);
-  assert.doesNotMatch(page, /item-chat-card/);
+  assert.match(page, /<h2>团队聊天<\/h2>/);
+  assert.doesNotMatch(page, /activeChatMessages|查看全部消息|function sendItemMessage/);
+  assert.match(page, /className="note-delete-action"/);
+  assert.match(page, /className="note-bring-action/);
+  assert.match(page, /className="note-close-action"/);
+  assert.match(page, /removeItem\(activeItem, true\)/);
   assert.match(css, /unread-dot/);
-  assert.match(css, /chat-filter-clear/);
+  assert.match(css, /item-notes-card/);
+  assert.match(css, /item-note-actions/);
 });
 
 test("verification is check-only and lets me return claimed team items", async () => {
@@ -264,7 +271,7 @@ test("verification is check-only and lets me return claimed team items", async (
   assert.match(page, /phase === "verify" && viewedMember === "我" && !personal && currentWillBring/);
   assert.match(page, /className="verify-release-button" onClick=\{\(\) => release\(item\.id\)\}/);
   assert.match(page, />我不带了<\/button>/);
-  assert.doesNotMatch(page, /phase === "verify"[^\n]*openItemChat/);
+  assert.doesNotMatch(page, /phase === "verify"[^\n]*openItemNotes/);
 });
 
 test("chat assignments require the named traveler to confirm before changing the list", async () => {
