@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
@@ -94,6 +94,7 @@ const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"]
 const personalItemNames = new Set(["牙刷", "毛巾", "流量卡"]);
 const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
 const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
+const departureImageSrc = "/departure-team-v2.webp";
 
 function hasReleaseIntent(text: string) {
   return releaseIntentPattern.test(text);
@@ -262,6 +263,13 @@ export default function Home() {
   const activeItemNotes = activeItem ? itemNotes.filter((note) => note.itemId === activeItem.id) : [];
   const proposalItem = assignmentProposal ? items.find((item) => item.id === assignmentProposal.itemId) ?? null : null;
 
+  useEffect(() => {
+    if (!teamReady || phase !== "verify") return;
+    const departureImage = new window.Image();
+    departureImage.decoding = "async";
+    departureImage.src = departureImageSrc;
+  }, [phase, teamReady]);
+
   async function createTeam() {
     if (!destination.trim()) return;
     setTeamReady(true);
@@ -316,7 +324,9 @@ export default function Home() {
         <section className="phone-frame departure-frame" aria-label="旅行准备完成">
           <button className="departure-back" onClick={() => setPhase("verify")} aria-label="返回核对清单">←</button>
           <section className="departure-page">
-            <Image className="departure-illustration" src="/departure-team-v2.png" alt="三位朋友带着行李一起出发" width={1254} height={1254} priority />
+            <div className="departure-illustration-shell">
+              <Image className="departure-illustration" src={departureImageSrc} alt="三位朋友带着行李一起出发" width={700} height={700} sizes="(max-width: 520px) calc(100vw - 48px), 360px" priority />
+            </div>
             <h1>带上好心情，出发！</h1>
           </section>
         </section>

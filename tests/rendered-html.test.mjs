@@ -197,11 +197,16 @@ test("completed checklist opens a dedicated illustrated departure page", async (
   assert.match(page, /"prepare" \| "verify" \| "departed"/);
   assert.match(page, /setPhase\("departed"\)/);
   assert.match(page, /带上好心情，出发！/);
-  assert.match(page, /departure-team-v2\.png/);
+  assert.match(page, /departure-team-v2\.webp/);
+  assert.match(page, /phase !== "verify"/);
+  assert.match(page, /const departureImage = new window\.Image\(\)/);
+  assert.match(page, /departureImage\.src = departureImageSrc/);
+  assert.match(page, /className="departure-illustration-shell"/);
   assert.match(css, /departure-page/);
+  assert.match(css, /\.departure-illustration-shell \{[\s\S]*background:#f8efe6/);
   assert.doesNotMatch(page, /件全部确认|READY TO GO|首尔逛拍小队已就绪|GO!/);
   assert.doesNotMatch(page, /departure-route/);
-  await access(new URL("../public/departure-team-v2.png", import.meta.url));
+  await access(new URL("../public/departure-team-v2.webp", import.meta.url));
 });
 
 test("preset items are managed through a dedicated preparation edit mode", async () => {
