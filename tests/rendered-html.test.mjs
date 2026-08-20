@@ -32,12 +32,15 @@ test("server-renders a focused destination-first onboarding experience", async (
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/);
 });
 
-test("onboarding removes repeated team fields and derives the team name", async () => {
+test("onboarding and the main header avoid repeated trip metadata", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-  assert.match(page, /setTeamName\(`\$\{place\}逛拍小队`\)/);
   assert.doesNotMatch(page, /队伍名称|队伍成员|先把朋友聚到一起|创建队伍并生成清单/);
+  assert.doesNotMatch(page, /teamName|destinationLabel|className="trip-chip"/);
   assert.doesNotMatch(page, /<i>＋<\/i>/);
   assert.match(page, /这次去哪儿/);
+  assert.match(page, /className="trip-hero compact-trip-hero"/);
+  assert.match(page, /"这次带什么？"/);
+  assert.match(page, /className="presence-panel"/);
 });
 
 test("ships hand-drawn characters and consistent line item icons", async () => {

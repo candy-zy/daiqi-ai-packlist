@@ -196,7 +196,6 @@ const seedMessages: ChatMessage[] = [
 
 export default function Home() {
   const [teamReady, setTeamReady] = useState(false);
-  const [teamName, setTeamName] = useState("首尔逛拍小队");
   const [destination, setDestination] = useState("韩国 · 首尔");
   const [items, setItems] = useState(seedItems);
   const [suggestions, setSuggestions] = useState(seedSuggestions);
@@ -235,7 +234,6 @@ export default function Home() {
   }, [viewedMember, items]);
   const verifiedCount = verifyItems.length - status.total;
   const myRemaining = items.filter((item) => (isPersonalItem(item) || item.owners.includes("我")) && !item.checked["我"]).length;
-  const destinationLabel = destination.trim().split(/[·,，]/).pop()?.trim() || "目的地";
   const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
   const activeChatMessages = activeItem
     ? messages.filter((message) => message.system || message.itemId === activeItem.id || message.text.includes(activeItem.name) || (activeItem.name === "充电线" && message.text.includes("数据线")))
@@ -244,8 +242,6 @@ export default function Home() {
 
   async function createTeam() {
     if (!destination.trim()) return;
-    const place = destination.trim().split(/[·,，]/).pop()?.trim() || "旅行";
-    setTeamName(`${place}逛拍小队`);
     setTeamReady(true);
     setSuggestionStatus("loading");
 
@@ -568,25 +564,15 @@ export default function Home() {
   return (
     <main className="app-shell">
       <section className="phone-frame" aria-label="带齐旅行物品清单原型">
-        <header className="topbar">
-          <div className="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-          <div className="brand-name">带齐</div>
-          <span className="trip-chip">{destinationLabel} · 5天</span>
-        </header>
-
-        <div className="scroll-area">
-          <section className="trip-hero">
-            <div>
-              <p className="eyebrow">{teamName} · 3 人</p>
-              <h1>{phase === "prepare" ? "这次，带什么？" : "出发前，逐件确认"}</h1>
-            </div>
+        <div className="scroll-area main-scroll-area">
+          <section className="trip-hero compact-trip-hero">
+            <h1>{phase === "prepare" ? "这次带什么？" : "出发前逐件确认"}</h1>
             <div className="presence-panel">
               <div className={`member-switch ${phase === "verify" ? "switchable" : ""}`} aria-label={phase === "verify" ? "切换查看成员清单" : "成员在线状态"}>
                 {members.map((member) => phase === "verify" ? <button key={member.name} className={viewedMember === member.name ? "selected" : ""} onClick={() => setViewedMember(member.name)} title={`查看${member.name}的清单`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></button> : <span className="member-presence" key={member.name} title={`${member.name}${member.online ? "在线" : "离线"}`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></span>)}
               </div>
               {phase === "verify" && <small>点头像查看队友</small>}
             </div>
-            <div className="editorial-motif" aria-hidden="true"><span /><span /><span /><span /></div>
           </section>
 
           <div className="phase-tabs" role="tablist" aria-label="准备阶段">
