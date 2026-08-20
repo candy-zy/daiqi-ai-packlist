@@ -48,9 +48,15 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
   ]);
 
   assert.match(page, /from "lucide-react"/);
+  assert.match(page, /from "@phosphor-icons\/react"/);
   assert.match(page, /function ItemGraphic/);
-  assert.match(page, /const itemIcons: Record<string, LucideIcon>/);
-  assert.match(page, /const Icon = itemIcons\[item\.name\] \?\? Package/);
+  assert.match(page, /const phosphorItemIcons: Record<string, PhosphorIcon>/);
+  assert.match(page, /const lucideItemIcons: Record<string, LucideIcon>/);
+  assert.match(page, /phosphorItemIcons\[item\.name\]/);
+  assert.match(page, /lucideItemIcons\[item\.name\] \?\? Package/);
+  assert.match(page, /"裤子": Pants/);
+  assert.match(page, /"袜子": Sock/);
+  assert.match(page, /"流量卡": SimCard/);
   assert.doesNotMatch(page, /className="item-sticker-emoji"/);
   assert.match(page, /function CharacterAvatar/);
   assert.match(css, /team-characters\.png/);

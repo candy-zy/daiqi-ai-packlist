@@ -5,13 +5,18 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
-  BadgeCheck, Banknote, Bath, BatteryCharging, BookOpenCheck, Bug, Cable,
-  Camera, Car, CircleDotDashed, Cookie, Cpu, CreditCard, CupSoda, Droplets,
-  Ear, FileText, Footprints, Glasses, GlassWater, Headphones, HeartPulse,
-  Layers3, Menu, MessageCircle, MoonStar, Package, Paintbrush, Pill, Plug, ScanLine,
-  ShieldCheck, Shirt, Sparkles, Sun, Toilet, TowelRack, Trash2, Umbrella,
-  Unplug, Waves, Wifi,
+  Banknote, BookOpenCheck, Bug, Cable, CupSoda, GlassWater, MemoryStick,
+  Menu, MessageCircle, MoonStar, Package, Trash2, Wifi,
 } from "lucide-react";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import {
+  BaseballCap, BatteryCharging, Camera, Cards, CircleNotch, CreditCard,
+  DeviceMobileCamera, Drop, Ear, Eyedropper, FaceMask, FirstAid, Footprints,
+  HandSoap, HandSwipeRight, Headphones, Hoodie, IdentificationBadge,
+  IdentificationCard, Jar, MaskHappy, Pants, Pill, PlugsConnected, PlugCharging,
+  Popcorn, Prescription, ShirtFolded, Shower, SimCard, Sneaker, Sock, SprayBottle,
+  Sun, Sunglasses, TestTube, Toilet, ToiletPaper, Tooth, Towel, TShirt, Umbrella,
+} from "@phosphor-icons/react";
 
 type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify" | "departed";
@@ -72,17 +77,24 @@ const categories: { name: Category }[] = [
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
 const personalItemNames = new Set(["牙刷", "毛巾", "流量卡"]);
 
-const itemIcons: Record<string, LucideIcon> = {
-  "身份证": BadgeCheck, "护照 / 签证": BookOpenCheck, "银行卡": CreditCard, "现金": Banknote, "驾驶证": Car,
-  "充电器": Plug, "充电宝": BatteryCharging, "充电线": Cable, "耳机": Headphones, "转换插头": Unplug,
-  "相机": Camera, "自拍杆": ScanLine, "SD 卡": Cpu,
-  "上衣": Shirt, "裤子": Layers3, "外套": Shirt, "内衣": ShieldCheck, "袜子": Footprints, "睡衣": MoonStar,
-  "拖鞋": Footprints, "鞋子": Footprints, "墨镜": Glasses, "帽子": CircleDotDashed,
-  "牙刷": Paintbrush, "牙膏": Droplets, "毛巾": TowelRack, "洗面奶": Droplets, "卸妆油": Droplets,
-  "防晒霜": Sun, "洗发水": Waves, "沐浴露": Bath, "水乳": Droplets, "面霜": Sparkles, "面膜": ShieldCheck,
-  "皮筋": CircleDotDashed, "个人慢性病药物": HeartPulse, "驱蚊液": Bug, "晕车药": Pill, "过敏药": Pill,
-  "雨伞": Umbrella, "纸巾": FileText, "湿巾": FileText, "水杯": GlassWater, "口罩": ShieldCheck, "耳塞": Ear,
-  "一次性马桶垫": Toilet, "零食": Cookie, "饮料": CupSoda, "T-money 交通卡": CreditCard, "流量卡": Cpu,
+const phosphorItemIcons: Record<string, PhosphorIcon> = {
+  "身份证": IdentificationCard, "银行卡": CreditCard, "驾驶证": IdentificationBadge,
+  "充电器": PlugCharging, "充电宝": BatteryCharging, "耳机": Headphones, "转换插头": PlugsConnected,
+  "相机": Camera, "自拍杆": DeviceMobileCamera,
+  "上衣": TShirt, "裤子": Pants, "外套": Hoodie, "内衣": ShirtFolded, "袜子": Sock,
+  "拖鞋": Footprints, "鞋子": Sneaker, "墨镜": Sunglasses, "帽子": BaseballCap,
+  "牙刷": Tooth, "牙膏": TestTube, "毛巾": Towel, "洗面奶": HandSoap, "卸妆油": Eyedropper,
+  "防晒霜": Sun, "洗发水": SprayBottle, "沐浴露": Shower, "水乳": Drop, "面霜": Jar,
+  "面膜": MaskHappy, "皮筋": CircleNotch,
+  "个人慢性病药物": Prescription, "晕车药": Pill, "过敏药": FirstAid,
+  "雨伞": Umbrella, "纸巾": ToiletPaper, "湿巾": HandSwipeRight, "口罩": FaceMask, "耳塞": Ear,
+  "一次性马桶垫": Toilet, "零食": Popcorn, "T-money 交通卡": Cards, "流量卡": SimCard,
+};
+
+const lucideItemIcons: Record<string, LucideIcon> = {
+  "护照 / 签证": BookOpenCheck, "现金": Banknote,
+  "充电线": Cable, "SD 卡": MemoryStick, "睡衣": MoonStar,
+  "驱蚊液": Bug, "水杯": GlassWater, "饮料": CupSoda,
 };
 
 const avatarVariant: Record<Member, string> = { "我": "avatar-me", "阿哲": "avatar-zhe", "小雨": "avatar-yu" };
@@ -92,8 +104,11 @@ function CharacterAvatar({ member, className = "" }: { member: Member; className
 }
 
 function ItemGraphic({ item }: { item: Pick<PackItem, "name" | "group"> }) {
-  const Icon = itemIcons[item.name] ?? Package;
-  return <Icon aria-hidden="true" strokeWidth={2.35} />;
+  const PhosphorItemIcon = phosphorItemIcons[item.name];
+  if (PhosphorItemIcon) return <PhosphorItemIcon aria-hidden="true" weight="regular" />;
+
+  const LucideItemIcon = lucideItemIcons[item.name] ?? Package;
+  return <LucideItemIcon aria-hidden="true" strokeWidth={2.15} />;
 }
 
 function isPersonalItem(item: PackItem) {
