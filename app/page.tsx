@@ -219,7 +219,10 @@ export default function Home() {
   const [toast, setToast] = useState("");
   const draggingItemRef = useRef<number | null>(null);
 
-  const myItems = items.filter((item) => isPersonalItem(item) || item.owners.includes("我"));
+  const myItems = [
+    ...items.filter((item) => !isPersonalItem(item) && item.owners.includes("我")),
+    ...items.filter(isPersonalItem),
+  ];
   const unassignedItems = items.filter((item) => !isPersonalItem(item) && item.owners.length === 0);
   const verifyItems = items.filter((item) => isPersonalItem(item) || item.owners.includes(viewedMember));
   const prepareItems = listFilter === "mine" ? myItems : listFilter === "unassigned" ? unassignedItems : items;
