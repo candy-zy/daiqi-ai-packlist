@@ -161,7 +161,7 @@ test("preparation defaults to the full list, includes unassigned view, and stays
   assert.match(page, /type ListFilter = "all" \| "mine" \| "unassigned"/);
   assert.match(page, />全部 <span>/);
   assert.match(page, />我的 <span>/);
-  assert.match(page, />待分配 <span>/);
+  assert.match(page, />待分工 <span>/);
   assert.match(page, /const myItems = \[[\s\S]*!isPersonalItem\(item\) && item\.owners\.includes\("我"\)[\s\S]*items\.filter\(isPersonalItem\)/);
   assert.match(page, /const unassignedItems = items\.filter/);
   assert.match(page, /expandedCategories/);

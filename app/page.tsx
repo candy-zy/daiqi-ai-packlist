@@ -602,7 +602,7 @@ export default function Home() {
             <nav className="list-filters" aria-label="筛选准备清单">
               <button className={listFilter === "all" ? "active" : ""} onClick={() => setListFilter("all")}>全部 <span>{items.length}</span></button>
               <button className={listFilter === "mine" ? "active" : ""} onClick={() => { setEditMode(false); setListFilter("mine"); }}>我的 <span>{myItems.length}</span></button>
-              <button className={listFilter === "unassigned" ? "active" : ""} onClick={() => { setEditMode(false); setListFilter("unassigned"); }}>待分配 <span>{unassignedItems.length}</span></button>
+              <button className={listFilter === "unassigned" ? "active" : ""} onClick={() => { setEditMode(false); setListFilter("unassigned"); }}>待分工 <span>{unassignedItems.length}</span></button>
             </nav>
             <button className={`edit-list-button ${editMode ? "active" : ""}`} onClick={toggleEditMode}>{editMode ? "完成" : "编辑"}</button>
           </div>}
