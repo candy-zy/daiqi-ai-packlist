@@ -674,28 +674,28 @@ export default function Home() {
         )}
 
         {activeItem && phase === "prepare" && (
-          <div className="bottom-sheet" role="dialog" aria-modal="true" aria-label={`${activeItem.name}的留言`}>
+          <div className="item-note-modal" role="dialog" aria-modal="true" aria-label={`${activeItem.name}的留言`}>
             <button className="sheet-backdrop" aria-label="关闭" onClick={() => setActiveItemId(null)} />
-            <section className="sheet-card item-notes-card">
-              <span className="sheet-handle" />
-              <header className="item-notes-header">
-                <span className={`item-icon item-group-${categories.findIndex((category) => category.name === activeItem.group)}`}><ItemGraphic item={activeItem} /></span>
-                <div><small>物品留言</small><h2>{activeItem.name}</h2></div>
-                <button onClick={() => setActiveItemId(null)} aria-label="关闭留言">×</button>
-              </header>
-              <div className="item-note-list">
-                {activeItemNotes.length ? activeItemNotes.map((note) => <article className="item-note-row" key={note.id}>
-                  <CharacterAvatar member={note.author} className="item-note-avatar" />
-                  <div><header><b>{note.author}</b><time>{note.time}</time></header><p>{note.text}</p></div>
-                </article>) : <div className="item-note-empty"><span>＋</span><b>还没有留言</b><small>写下第一条，朋友打开这件物品就能看到。</small></div>}
-              </div>
-              <div className="item-note-composer"><input value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addItemNote()} placeholder="写一条留言…" /><button onClick={addItemNote} aria-label="发布留言">↑</button></div>
+            <div className="item-note-dialog-stack">
+              <section className="item-notes-card">
+                <header className="item-notes-header">
+                  <span className={`item-icon item-group-${categories.findIndex((category) => category.name === activeItem.group)}`}><ItemGraphic item={activeItem} /></span>
+                  <div><small>物品留言</small><h2>{activeItem.name}</h2></div>
+                </header>
+                <div className="item-note-list">
+                  {activeItemNotes.length ? activeItemNotes.map((note) => <article className="item-note-row" key={note.id}>
+                    <CharacterAvatar member={note.author} className="item-note-avatar" />
+                    <div><header><b>{note.author}</b><time>{note.time}</time></header><p>{note.text}</p></div>
+                  </article>) : <div className="item-note-empty"><span>＋</span><b>还没有留言</b><small>写下第一条，朋友打开这件物品就能看到。</small></div>}
+                </div>
+                <div className="item-note-composer"><input value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addItemNote()} placeholder="写一条留言…" /><button onClick={addItemNote} aria-label="发布留言">↑</button></div>
+              </section>
               <footer className="item-note-actions">
-                <button className="note-delete-action" onClick={() => removeItem(activeItem, true)}><Trash2 aria-hidden="true" /><span>删除</span></button>
-                {!isPersonalItem(activeItem) && (activeItem.owners.includes("我") ? <button className="note-bring-action" onClick={() => release(activeItem.id)}>我不带</button> : <button className="note-bring-action primary" onClick={() => claim(activeItem.id)}>我来带</button>)}
-                <button className="note-close-action" onClick={() => setActiveItemId(null)}><span aria-hidden="true">×</span>关闭</button>
+                <button className="note-delete-action" onClick={() => removeItem(activeItem, true)}><span><Trash2 aria-hidden="true" /></span><small>删除</small></button>
+                {!isPersonalItem(activeItem) && (activeItem.owners.includes("我") ? <button className="note-bring-action" onClick={() => release(activeItem.id)}><span aria-hidden="true">−</span><small>我不带</small></button> : <button className="note-bring-action primary" onClick={() => claim(activeItem.id)}><span aria-hidden="true">＋</span><small>我来带</small></button>)}
+                <button className="note-close-action" onClick={() => setActiveItemId(null)}><span aria-hidden="true">×</span><small>关闭</small></button>
               </footer>
-            </section>
+            </div>
           </div>
         )}
 

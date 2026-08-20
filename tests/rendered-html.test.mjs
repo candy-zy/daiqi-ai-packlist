@@ -41,6 +41,7 @@ test("onboarding and the main header avoid repeated trip metadata", async () => 
   assert.match(page, /className="trip-hero compact-trip-hero"/);
   assert.match(page, /"这次带什么？"/);
   assert.match(page, /className="presence-panel"/);
+  assert.equal(page.match(/className="topbar/g)?.length, 1, "only onboarding keeps a brand header");
 });
 
 test("ships hand-drawn characters and consistent line item icons", async () => {
@@ -241,7 +242,10 @@ test("item notes stay separate from team chat and keep chronological context", a
   assert.match(page, /unreadItemIds/);
   assert.match(page, /function openItemNotes/);
   assert.match(page, /function addItemNote/);
-  assert.match(page, /className="sheet-card item-notes-card"/);
+  assert.match(page, /className="item-note-modal"/);
+  assert.match(page, /className="item-note-dialog-stack"/);
+  assert.match(page, /className="item-notes-card"/);
+  assert.doesNotMatch(page, /className="sheet-card item-notes-card"|item-notes-card[\s\S]{0,80}sheet-handle/);
   assert.match(page, /className="item-note-row"/);
   assert.match(page, /<time>\{note\.time\}<\/time>/);
   assert.match(page, /className="item-copy"/);
@@ -261,8 +265,10 @@ test("item notes stay separate from team chat and keep chronological context", a
   assert.match(page, /className="note-close-action"/);
   assert.match(page, /removeItem\(activeItem, true\)/);
   assert.match(css, /unread-dot/);
+  assert.match(css, /\.item-note-modal \{[\s\S]*place-items:center/);
   assert.match(css, /item-notes-card/);
   assert.match(css, /item-note-actions/);
+  assert.match(css, /\.item-note-actions button>span \{[\s\S]*border-radius:50%/);
 });
 
 test("verification is check-only and lets me return claimed team items", async () => {
