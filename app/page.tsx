@@ -377,10 +377,6 @@ export default function Home() {
     setDraggingItemId(null);
   }
 
-  function changeItemCategory(id: number, group: Category) {
-    setItems((current) => current.map((item) => item.id === id ? { ...item, group } : item));
-  }
-
   function toggleCategory(category: Category) {
     setExpandedCategories((current) => {
       const next = new Set(current);
@@ -477,6 +473,14 @@ export default function Home() {
 
     return (
       <article className={`list-item ${packed ? "packed" : ""} ${editMode && phase === "prepare" ? "editing" : ""} ${draggingItemId === item.id ? "dragging" : ""}`} data-sort-item-id={item.id} data-unchecked={phase === "verify" && canCheck && !packed ? "true" : undefined} key={item.id}>
+        {phase === "verify" ? (
+          <button className={`pack-check ${packed ? "checked" : ""}`} onClick={() => togglePacked(item)} disabled={!canCheck} aria-label={`${packed ? "取消" : "确认"}${item.name}已装包`}>{packed ? "✓" : ""}</button>
+        ) : <span className={`item-icon item-group-${categories.findIndex((category) => category.name === item.group)}`}><ItemGraphic item={item} /></span>}
+        <button className="item-copy item-chat-trigger" onClick={() => openItemChat(item.id)} disabled={editMode} aria-label={`打开${item.name}的讨论`}>
+          <span className="item-title-row"><b>{item.name}</b>{hasUnreadDiscussion && <i className="unread-dot" aria-label="有未读消息" />}</span>
+          {(hasUnreadDiscussion || discussionCount > 0) && <small>{hasUnreadDiscussion ? "有新消息" : `${discussionCount} 条讨论`}</small>}
+        </button>
+        {phase === "prepare" && editMode && <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`} title="删除"><Trash2 aria-hidden="true" /></button>}
         {phase === "prepare" && editMode && <button
           className="drag-handle"
           onPointerDown={(event) => startDragging(event, item.id)}
@@ -490,13 +494,6 @@ export default function Home() {
           aria-label={`拖动调整${item.name}的顺序`}
           title="按住拖动排序"
         ><Menu aria-hidden="true" /></button>}
-        {phase === "verify" ? (
-          <button className={`pack-check ${packed ? "checked" : ""}`} onClick={() => togglePacked(item)} disabled={!canCheck} aria-label={`${packed ? "取消" : "确认"}${item.name}已装包`}>{packed ? "✓" : ""}</button>
-        ) : <span className={`item-icon item-group-${categories.findIndex((category) => category.name === item.group)}`}><ItemGraphic item={item} /></span>}
-        <button className="item-copy item-chat-trigger" onClick={() => openItemChat(item.id)} disabled={editMode} aria-label={`打开${item.name}的讨论`}>
-          <span className="item-title-row"><b>{item.name}</b>{hasUnreadDiscussion && <i className="unread-dot" aria-label="有未读消息" />}</span>
-          {(hasUnreadDiscussion || discussionCount > 0) && <small>{hasUnreadDiscussion ? "有新消息" : `${discussionCount} 条讨论`}</small>}
-        </button>
         {phase === "prepare" && !editMode && (personal ? <span className="personal-pill">每人自备</span> : item.owners.length ? (
             <div className="shared-owner-action">
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
@@ -514,10 +511,6 @@ export default function Home() {
               </button>
             </div>
           ) : <button className="claim-button" onClick={() => phase === "prepare" && claim(item.id)}>＋ 我来带</button>)}
-        {phase === "prepare" && editMode && <div className="item-edit-panel">
-          <label><span>分类</span><select value={item.group} onChange={(event) => changeItemCategory(item.id, event.target.value as Category)} aria-label={`修改${item.name}的分类`}>{categories.map((category) => <option key={category.name} value={category.name}>{category.name}</option>)}</select></label>
-          <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`}><Trash2 aria-hidden="true" /></button>
-        </div>}
       </article>
     );
   }
@@ -572,7 +565,7 @@ export default function Home() {
           </nav>}
 
           {phase === "prepare" ? <section className="filtered-list-section">
-            <header className="list-toolbar"><span>{editMode ? "拖动排序，也可以改分类或删除" : listFilter === "pending" ? "先确认重要物品和新消息" : ""}</span>{listFilter === "all" && <button className={editMode ? "active" : ""} onClick={toggleEditMode}>{editMode ? "✓ 完成" : "✎ 编辑"}</button>}</header>
+            <header className="list-toolbar"><span>{editMode ? "拖动排序，或删除不需要的物品" : listFilter === "pending" ? "先确认重要物品和新消息" : ""}</span>{listFilter === "all" && <button className={editMode ? "active" : ""} onClick={toggleEditMode}>{editMode ? "✓ 完成" : "✎ 编辑"}</button>}</header>
             {prepareItems.length ? listFilter !== "all" ? <div className="focus-list"><div className="item-list">{prepareItems.map(renderItem)}</div></div> : <div className="category-sections">{categories.filter((category) => !personalCategories.includes(category.name)).map((category) => {
               const categoryItems = teamPrepareItems.filter((item) => item.group === category.name);
               if (!categoryItems.length) return null;

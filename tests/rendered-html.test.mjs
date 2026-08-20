@@ -163,15 +163,17 @@ test("preset items are managed through a dedicated preparation edit mode", async
   assert.match(page, /function swapItems/);
   assert.match(page, /function startDragging/);
   assert.match(page, /function dragItem/);
-  assert.match(page, /function changeItemCategory/);
+  assert.doesNotMatch(page, /function changeItemCategory|<select|修改\$\{item\.name\}的分类/);
+  assert.doesNotMatch(page, /改分类/);
   assert.match(page, /✎ 编辑/);
   assert.match(page, /className="drag-handle"/);
   assert.match(page, /<Menu aria-hidden="true"/);
-  assert.match(page, /className="item-edit-panel"/);
+  assert.ok(page.indexOf('className="edit-delete-button"') < page.indexOf('className="drag-handle"'));
+  assert.doesNotMatch(page, /className="item-edit-panel"/);
   assert.doesNotMatch(page, /不需要，移除|remove-item-button|className="reorder-button"|aria-label={`上移|aria-label={`下移/);
   assert.match(css, /touch-action:none/);
   assert.match(css, /drag-handle/);
-  assert.match(css, /item-edit-panel/);
+  assert.doesNotMatch(css, /item-edit-panel/);
   assert.match(css, /edit-delete-button/);
 });
 
