@@ -202,6 +202,7 @@ test("preset items are managed through a dedicated preparation edit mode", async
   assert.match(page, /const \[editMode, setEditMode\]/);
   assert.match(page, /function removeItem/);
   assert.match(page, /current\.filter\(\(entry\) => entry\.id !== item\.id\)/);
+  assert.doesNotMatch(page, /function toggleEditMode\(\) \{[\s\S]{0,300}setListFilter\("all"\)/);
   assert.match(page, /function swapItems/);
   assert.match(page, /function startDragging/);
   assert.match(page, /function dragItem/);

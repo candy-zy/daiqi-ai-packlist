@@ -412,7 +412,6 @@ export default function Home() {
   function toggleEditMode() {
     setEditMode((current) => {
       if (!current) {
-        setListFilter("all");
         setExpandedCategories(new Set(categories.map((category) => category.name)));
       }
       return !current;
