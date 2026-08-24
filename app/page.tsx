@@ -450,14 +450,6 @@ export default function Home() {
   const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
   const activeItemNotes = activeItem ? itemNotes.filter((note) => note.itemId === activeItem.id) : [];
   const proposalItem = assignmentProposal ? items.find((item) => item.id === assignmentProposal.itemId) ?? null : null;
-  const profileImpactItems = useMemo(() => {
-    const selected = [
-      ...habitOptions.filter((option) => profileDraft.habits.includes(option.id)),
-      ...gearOptions.filter((option) => profileDraft.gear.includes(option.id)),
-    ];
-    return [...new Set(selected.flatMap((option) => option.items))];
-  }, [profileDraft]);
-
   useEffect(() => {
     const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
     setIsInstalled(window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true);
@@ -673,10 +665,6 @@ export default function Home() {
             })}</div>
           </section>
 
-          <aside className="profile-impact">
-            <span><Sparkles aria-hidden="true" /></span>
-            <div><b>将预设或重点关注 {profileImpactItems.length} 件物品</b><p>{profileImpactItems.length ? profileImpactItems.slice(0, 6).join("、") : "暂不增加个性化提醒"}{profileImpactItems.length > 6 ? "等" : ""}</p></div>
-          </aside>
           <p className="profile-privacy">健康相关偏好仅用于你的个人清单；设备信息只用于预设物品。</p>
         </div>
         <footer className="profile-footer"><button onClick={saveProfile}>保存并更新清单 <span>→</span></button></footer>

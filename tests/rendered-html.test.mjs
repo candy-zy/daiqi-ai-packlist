@@ -217,6 +217,10 @@ test("personal center uses preferences and gear only to preset unassigned items"
   assert.match(page, /preferences:/);
   assert.match(css, /\.profile-modal/);
   assert.match(css, /\.preference-grid>button\.selected/);
+  assert.doesNotMatch(page, /profileImpactItems|将预设或重点关注/);
+  assert.doesNotMatch(css, /\.profile-impact/);
+  assert.match(css, /\.preference-grid b \{[^}]*font-weight:var\(--font-regular\)/);
+  assert.match(css, /\.preference-grid>button\.selected b \{[^}]*font-weight:var\(--font-semibold\)/);
   assert.match(route, /body\.preferences/);
   assert.match(route, /我的出行偏好/);
   assert.match(prd, /拥有不等于携带/);

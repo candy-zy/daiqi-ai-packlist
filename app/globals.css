@@ -1123,12 +1123,8 @@ h1,.setup-content h1,.departure-page h1 {
 .preference-grid>button>span { width:23px; height:23px; display:grid; place-items:center; border:1.5px solid #aaa79e; border-radius:8px; background:#f4f2ec; }
 .preference-grid>button.selected>span { border-color:var(--ink); background:var(--lime); }
 .preference-grid>button>span svg { width:15px; height:15px; stroke-width:3; }
-.preference-grid b { display:block; min-width:0; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
-.profile-impact { display:grid; grid-template-columns:38px minmax(0,1fr); align-items:start; gap:10px; margin:0 0 10px; padding:12px; border:2px solid var(--ink); border-radius:15px; background:#e9e3ff; }
-.profile-impact>span { width:38px; height:38px; display:grid; place-items:center; border:2px solid var(--ink); border-radius:12px; background:var(--lime); }
-.profile-impact svg { width:20px; height:20px; }
-.profile-impact b { font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
-.profile-impact p { margin:3px 0 0; color:#5f5a72; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.preference-grid b { display:block; min-width:0; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); font-weight:var(--font-regular); }
+.preference-grid>button.selected b { font-weight:var(--font-semibold); }
 .profile-privacy { margin:0 0 6px; color:#7c7971; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
 .profile-footer { flex:none; padding:11px 17px 16px; border-top:1px solid #d8d5cc; background:var(--paper); }
 .profile-footer>button { width:100%; min-height:48px; border:3px solid var(--ink); border-radius:15px; background:var(--lime); box-shadow:3px 4px 0 var(--ink); cursor:pointer; font-size:var(--type-body-size); line-height:var(--type-body-line); font-weight:var(--font-semibold); }
