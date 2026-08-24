@@ -158,6 +158,9 @@ test("AI suggestions use a prompt-first ranked model response and a server-only 
   assert.match(route, /https:\/\/api\.deepseek\.com\/chat\/completions/);
   assert.match(route, /response_format: \{ type: "json_object" \}/);
   assert.match(route, /按推荐优先级从高到低排序，列出10件具体物品/);
+  assert.match(route, /我的旅行兴趣\/偏好是/);
+  assert.match(route, /preferences\.join\("、"\)/);
+  assert.match(route, /请结合目的地特点和我的兴趣偏好/);
   assert.match(route, /chooseUnseenSuggestions/);
   assert.match(route, /slice\(0, 2\)/);
   assert.match(route, /existingItems/);

@@ -105,6 +105,13 @@ export async function POST(request: Request) {
   const existingItems = Array.isArray(body.existingItems)
     ? body.existingItems.filter((item): item is string => typeof item === "string").slice(0, 120).map((item) => item.slice(0, 60))
     : [];
+  const preferences = Array.isArray(body.preferences)
+    ? body.preferences
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim().slice(0, 30))
+      .filter(Boolean)
+      .slice(0, 8)
+    : [];
   if (!destination) return Response.json({ error: "请先填写目的地" }, { status: 400 });
 
   const fallback = fallbackFor(destination, existingItems);
@@ -120,7 +127,7 @@ export async function POST(request: Request) {
         messages: [
           {
             role: "user",
-            content: `去${destination}旅游，你建议我带什么，是我比较容易没想到的东西？请按推荐优先级从高到低排序，列出10件具体物品。不要参考任何预设物品，不要刻意包含某个答案。只返回JSON：{"items":[{"rank":1,"name":"物品名","reason":"一句话理由"}]}`,
+            content: `去${destination}旅游。${preferences.length > 0 ? `我的旅行兴趣/偏好是：${preferences.join("、")}。` : "我没有提供特别的旅行兴趣或偏好。"}你建议我带什么，是我比较容易没想到的东西？请结合目的地特点和我的兴趣偏好，优先推荐轻便、实用、遗漏后影响较大的具体物品；不要推荐体积大、必要性低或酒店通常会提供的物品。请按推荐优先级从高到低排序，列出10件具体物品。不要参考任何预设物品，不要刻意包含某个答案。只返回JSON：{"items":[{"rank":1,"name":"物品名","reason":"一句话理由"}]}`,
           },
         ],
         response_format: { type: "json_object" },
