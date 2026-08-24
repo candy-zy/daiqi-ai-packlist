@@ -233,7 +233,7 @@ const healthOptions: PreferenceOption<HabitPreference>[] = [
   { id: "hypoglycemia", label: "容易低血糖", items: ["葡萄糖"] },
 ];
 // 健康相关物品不是通用模板：只有用户明确选择对应身体情况时才进入个人清单。
-// “个人慢性病药物”不再默认生成，用户如有需要可通过“添加物品”主动加入。
+// “个人慢性病药物”不再默认生成；健康药物是否出现由对应偏好统一控制。
 const healthPreferenceItemNames = new Set([
   ...healthOptions.flatMap((option) => option.items),
   "个人慢性病药物",
