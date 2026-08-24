@@ -1673,10 +1673,10 @@ export default function Home() {
                 {expandedCategories.has(category.name) && <div className="item-list">{categoryItems.map(renderItem)}</div>}
               </section>;
             })}
-              {personalPrepareItems.length > 0 && <section className="personal-zone">
-                <button className="personal-zone-head personal-toggle" onClick={() => setPersonalExpanded((current) => !current)} aria-expanded={personalExpanded}>
+              {personalPrepareItems.length > 0 && <section className="list-section category-section personal-section">
+                <button className="section-head section-toggle" onClick={() => setPersonalExpanded((current) => !current)} aria-expanded={personalExpanded}>
                   <h2>个人自备物品</h2>
-                  <small>{personalPrepareItems.length} 件 <i>{personalExpanded ? "⌃" : "⌄"}</i></small>
+                  <span>{personalPrepareItems.length} 件 <i>{personalExpanded ? "⌃" : "⌄"}</i></span>
                 </button>
                 {personalExpanded && <div className="item-list">{personalPrepareItems.map(renderItem)}</div>}
               </section>}

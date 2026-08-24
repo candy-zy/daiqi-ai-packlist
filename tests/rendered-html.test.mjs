@@ -329,6 +329,9 @@ test("preparation defaults to the full list, includes unassigned view, and stays
   assert.match(page, /expandedCategories/);
   assert.match(page, /className="section-head section-toggle"/);
   assert.match(page, /personalExpanded/);
+  assert.match(page, /className="list-section category-section personal-section"/);
+  assert.match(page, /className="section-head section-toggle" onClick=\{\(\) => setPersonalExpanded/);
+  assert.doesNotMatch(page, /className="personal-zone"/);
   assert.doesNotMatch(page, /const assignmentProgress|assignment-overview|只看待分配|团队物品在前，个人物品在底部|点击讨论/);
   assert.match(page, /phase === "verify" \? <button/);
   assert.match(page, /author: currentMember/);
