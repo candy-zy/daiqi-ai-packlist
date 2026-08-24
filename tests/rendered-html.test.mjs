@@ -485,8 +485,19 @@ test("ships authenticated cloud collaboration with invite codes and server-autho
   assert.match(state, /你不是该队伍成员/);
   assert.match(page, /\/api\/trips\/join/);
   assert.match(page, /setInterval\(\(\) => void poll\(\), 2500\)/);
-  assert.match(page, /朋友刚更新了清单，请重试刚才的操作/);
+  assert.match(page, /function hasPendingCloudChanges/);
+  assert.match(page, /rebasePendingMemberState\(result\.state, latestPending, currentMemberRef\.current\)/);
   assert.match(page, /邀请码已复制/);
+});
+
+test("rapid consecutive claims are not overwritten by stale polling responses", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const pollBlock = page.slice(page.indexOf("const poll = async"), page.indexOf("const timer = window.setInterval", page.indexOf("const poll = async")));
+  assert.match(pollBlock, /syncInFlightRef\.current \|\| syncTimerRef\.current !== null \|\| hasPendingCloudChanges\(\)/);
+  assert.ok(pollBlock.match(/hasPendingCloudChanges\(\)/g)?.length >= 2, "poll checks for local changes both before and after the request");
+  assert.match(page, /incomingVersion < tripVersionRef\.current/);
+  assert.match(page, /pendingSharedStateRef\.current = rebasedState/);
+  assert.match(page, /owners:?,?[\s\S]*remoteItem\.owners\.filter\(\(owner\) => owner !== member\)/);
 });
 
 test("AI APIs use a server-only DeepSeek key and return structured recommendation and assignment data", async () => {

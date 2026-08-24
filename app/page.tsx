@@ -117,6 +117,64 @@ type MemberRecord = { name: Member; short: string; profile: string; className: s
 type TripSummary = { id: string; name: string; destination: string; inviteCode: string; version: number; currentMember: Member; role: "owner" | "member" };
 type ServerTripPayload = { trip: TripSummary; state: { items: PackItem[]; suggestions: Suggestion[]; messages: ChatMessage[]; itemNotes: ItemNote[]; assignmentProposals: AssignmentProposal[] }; members: MemberRecord[]; version: number };
 
+function mergeUniqueByKey<T>(remote: T[], pending: T[], keyFor: (entry: T) => string) {
+  const merged = [...remote];
+  const keys = new Set(remote.map(keyFor));
+  for (const entry of pending) {
+    const key = keyFor(entry);
+    if (!keys.has(key)) {
+      keys.add(key);
+      merged.push(entry);
+    }
+  }
+  return merged;
+}
+
+function rebasePendingMemberState(
+  remote: ServerTripPayload["state"],
+  pending: ServerTripPayload["state"],
+  member: Member,
+): ServerTripPayload["state"] {
+  const pendingItems = new Map(pending.items.map((item) => [item.id, item]));
+  const remoteItemIds = new Set(remote.items.map((item) => item.id));
+  const items = remote.items.map((remoteItem) => {
+    const pendingItem = pendingItems.get(remoteItem.id);
+    if (!pendingItem) return remoteItem;
+    const owners = remoteItem.owners.filter((owner) => owner !== member);
+    if (pendingItem.owners.includes(member)) owners.push(member);
+    return {
+      ...remoteItem,
+      owners,
+      checked: { ...remoteItem.checked, [member]: pendingItem.checked[member] === true },
+    };
+  });
+  for (const pendingItem of pending.items) {
+    if (!remoteItemIds.has(pendingItem.id)) items.push(pendingItem);
+  }
+
+  const pendingSuggestions = new Map(pending.suggestions.map((suggestion) => [suggestion.id, suggestion]));
+  const suggestions = remote.suggestions.map((suggestion) => ({
+    ...suggestion,
+    added: pendingSuggestions.get(suggestion.id)?.added ?? suggestion.added,
+  }));
+  const remoteSuggestionIds = new Set(suggestions.map((suggestion) => suggestion.id));
+  for (const suggestion of pending.suggestions) {
+    if (!remoteSuggestionIds.has(suggestion.id)) suggestions.push(suggestion);
+  }
+
+  return {
+    items,
+    suggestions,
+    messages: mergeUniqueByKey(remote.messages, pending.messages, (message) => String(message.id)),
+    itemNotes: mergeUniqueByKey(remote.itemNotes, pending.itemNotes, (note) => String(note.id)),
+    assignmentProposals: mergeUniqueByKey(
+      remote.assignmentProposals,
+      pending.assignmentProposals,
+      (proposal) => proposal.id ?? `${proposal.itemId}:${proposal.requester}:${proposal.target}:${proposal.afterMessageId}`,
+    ),
+  };
+}
+
 const demoMembers: MemberRecord[] = [
   { name: "我", short: "我", profile: "想出片", className: "member-me", online: true },
   { name: "阿哲", short: "哲", profile: "有相机", className: "member-zhe", online: true },
@@ -615,14 +673,18 @@ export default function Home() {
   useEffect(() => {
     if (!activeTripId || !teamReady || !accountReady) return;
     const poll = async () => {
+      if (syncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
+      const requestedTripId = activeTripIdRef.current;
       try {
-        const response = await fetch(`/api/trips/${activeTripIdRef.current}/state?since=${tripVersionRef.current}`, { cache: "no-store" });
+        const response = await fetch(`/api/trips/${requestedTripId}/state?since=${tripVersionRef.current}`, { cache: "no-store" });
         if (!response.ok) return;
         const payload = await response.json() as ServerTripPayload & { unchanged?: boolean; currentMember?: Member };
+        if (requestedTripId !== activeTripIdRef.current) return;
         if (payload.unchanged) {
           if (Array.isArray(payload.members)) setMembers(payload.members);
           return;
         }
+        if (syncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
         applyCloudPayload(payload);
       } catch {
         setSyncStatus("offline");
@@ -639,8 +701,15 @@ export default function Home() {
     departureImage.src = departureImageSrc;
   }, [phase, teamReady]);
 
+  function hasPendingCloudChanges() {
+    const pending = pendingSharedStateRef.current;
+    return Boolean(pending && JSON.stringify(pending) !== lastSyncedStateRef.current);
+  }
+
   function applyCloudPayload(payload: ServerTripPayload) {
     if (!payload?.trip || !payload.state) return;
+    const incomingVersion = payload.version ?? payload.trip.version;
+    if (payload.trip.id === activeTripIdRef.current && incomingVersion < tripVersionRef.current) return;
     applyingRemoteRef.current = true;
     const serialized = JSON.stringify(payload.state);
     lastSyncedStateRef.current = serialized;
@@ -696,9 +765,19 @@ export default function Home() {
       });
       const result = await response.json().catch(() => ({})) as ServerTripPayload & { error?: string; ok?: boolean; state?: ServerTripPayload["state"] };
       if (response.status === 409 && result.trip && result.state) {
-        setSyncStatus("conflict");
-        applyCloudPayload(result as ServerTripPayload);
-        notify("朋友刚更新了清单，请重试刚才的操作", 3000);
+        const latestPending = pendingSharedStateRef.current ?? state;
+        const rebasedState = rebasePendingMemberState(result.state, latestPending, currentMemberRef.current);
+        lastSyncedStateRef.current = JSON.stringify(result.state);
+        pendingSharedStateRef.current = rebasedState;
+        setItems(rebasedState.items);
+        setSuggestions(rebasedState.suggestions);
+        setMessages(rebasedState.messages);
+        setItemNotes(rebasedState.itemNotes);
+        setAssignmentProposals(rebasedState.assignmentProposals);
+        if (Array.isArray(result.members)) setMembers(result.members);
+        setTripVersion(result.version);
+        tripVersionRef.current = result.version;
+        setSyncStatus("saving");
         return;
       }
       if (!response.ok) throw new Error(result.error || "保存失败");
