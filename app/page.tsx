@@ -232,6 +232,12 @@ const healthOptions: PreferenceOption<HabitPreference>[] = [
   { id: "allergy", label: "容易过敏", items: ["过敏药"] },
   { id: "hypoglycemia", label: "容易低血糖", items: ["葡萄糖"] },
 ];
+// 健康相关物品不是通用模板：只有用户明确选择对应身体情况时才进入个人清单。
+// “个人慢性病药物”不再默认生成，用户如有需要可通过“添加物品”主动加入。
+const healthPreferenceItemNames = new Set([
+  ...healthOptions.flatMap((option) => option.items),
+  "个人慢性病药物",
+]);
 
 const gearOptions: PreferenceOption<GearPreference>[] = [
   { id: "camera", label: "有相机", items: ["相机", "内存卡"] },
@@ -344,6 +350,8 @@ const presetItemCatalog: Record<string, Omit<PackItem, "owners" | "checked" | "a
   "望远镜": { id: 71, name: "望远镜", icon: "◉", group: "电子数码类" },
   "红光手电": { id: 72, name: "红光手电", icon: "✦", group: "电子数码类" },
   "保暖冲锋衣": { id: 73, name: "保暖冲锋衣", icon: "♨", group: "衣物鞋帽类" },
+  "晕车药": { id: 75, name: "晕车药", icon: "✚", group: "医药健康类" },
+  "过敏药": { id: 76, name: "过敏药", icon: "✚", group: "医药健康类" },
   "葡萄糖": { id: 74, name: "葡萄糖", icon: "✚", group: "医药健康类" },
   "运动服": { id: 80, name: "运动服", icon: "◫", group: "衣物鞋帽类" },
   "运动鞋": { id: 81, name: "运动鞋", icon: "◇", group: "衣物鞋帽类" },
@@ -408,6 +416,15 @@ function cleanupRemovedPreferenceItems(current: PackItem[]) {
   return current.filter((item) => !removedPetItemNames.has(item.name) && (!removedPreferenceItemNames.has(item.name) || !isManagedPresetItem(item)));
 }
 
+function cleanupHealthPreferenceItems(current: PackItem[], profile: TravelProfile) {
+  const selectedHealthItems = new Set(
+    healthOptions
+      .filter((option) => profile.habits.includes(option.id))
+      .flatMap((option) => option.items),
+  );
+  return current.filter((item) => !healthPreferenceItemNames.has(item.name) || selectedHealthItems.has(item.name));
+}
+
 function applyPresetItems(current: PackItem[], profile: TravelProfile, destination: string) {
   const reasons = new Map<string, string>();
   habitOptions
@@ -421,7 +438,7 @@ function applyPresetItems(current: PackItem[], profile: TravelProfile, destinati
     .forEach((option) => option.items.forEach((name) => reasons.set(name, "根据你的设备信息预设")));
   if (isInternationalDestination(destination)) reasons.set("转换插头", "境外目的地预设");
 
-  const next = cleanupRemovedPreferenceItems(current).filter((item) => {
+  const next = cleanupHealthPreferenceItems(cleanupRemovedPreferenceItems(current), profile).filter((item) => {
     return !isManagedPresetItem(item) || reasons.has(item.name);
   });
   const existingNames = new Set(next.map((item) => item.name));
@@ -465,10 +482,7 @@ const seedItems: PackItem[] = [
   { id: 35, name: "面膜", icon: "□", group: "洗护化妆类", owners: [], checked: {} },
   { id: 36, name: "皮筋", icon: "⌇", group: "洗护化妆类", owners: [], checked: {} },
 
-  { id: 37, name: "个人慢性病药物", icon: "✚", group: "医药健康类", owners: [], checked: {} },
   { id: 38, name: "驱蚊液", icon: "◉", group: "医药健康类", owners: [], checked: {} },
-  { id: 39, name: "晕车药", icon: "✚", group: "医药健康类", owners: ["阿哲"], checked: {} },
-  { id: 40, name: "过敏药", icon: "✚", group: "医药健康类", owners: [], checked: {} },
 
   { id: 41, name: "雨伞", icon: "☂", group: "日用杂物类", owners: [], checked: {} },
   { id: 42, name: "纸巾", icon: "▤", group: "日用杂物类", owners: ["小雨"], checked: {} },
@@ -578,6 +592,7 @@ export default function Home() {
   const activeTripIdRef = useRef<string | null>(null);
   const tripVersionRef = useRef(0);
   const currentMemberRef = useRef<Member>("我");
+  const profileRef = useRef<TravelProfile>(defaultProfile);
   const lastSyncedStateRef = useRef("");
   const applyingRemoteRef = useRef(false);
   const syncInFlightRef = useRef(false);
@@ -587,6 +602,7 @@ export default function Home() {
   const refreshedLegacySuggestionsRef = useRef(new Set<string>());
   const openCloudTripRef = useRef(openCloudTrip);
   const flushCloudStateRef = useRef(flushCloudState);
+  profileRef.current = profile;
 
   const myItems = [
     ...items.filter((item) => !isPersonalItem(item) && item.owners.includes(currentMember)),
@@ -633,13 +649,14 @@ export default function Home() {
           const saved = JSON.parse(raw) as Partial<PersistedAppState>;
           if (typeof saved.destination === "string") setDestination(saved.destination);
           if (typeof saved.teamReady === "boolean") setTeamReady(saved.teamReady);
-          if (Array.isArray(saved.items)) setItems(cleanupRemovedPreferenceItems(saved.items.map((item) => item.name === "SD 卡" ? { ...item, name: "内存卡" } : item)));
+          if (Array.isArray(saved.items)) setItems(cleanupHealthPreferenceItems(cleanupRemovedPreferenceItems(saved.items.map((item) => item.name === "SD 卡" ? { ...item, name: "内存卡" } : item)), saved.profile ? normalizeTravelProfile(saved.profile) : profileRef.current));
           if (Array.isArray(saved.suggestions)) setSuggestions(saved.suggestions);
           if (saved.phase === "prepare" || saved.phase === "verify" || saved.phase === "departed") setPhase(saved.phase);
           if (saved.listFilter === "all" || saved.listFilter === "mine" || saved.listFilter === "unassigned") setListFilter(saved.listFilter);
           if (saved.viewedMember === "我" || saved.viewedMember === "阿哲" || saved.viewedMember === "小雨" || saved.viewedMember === "小安") setViewedMember(saved.viewedMember);
           if (saved.profile) {
             const normalizedProfile = normalizeTravelProfile(saved.profile);
+            profileRef.current = normalizedProfile;
             setProfile(normalizedProfile);
             setProfileDraft(normalizedProfile);
           }
@@ -748,6 +765,7 @@ export default function Home() {
           const result = await profileResponse.json() as { profile?: Partial<TravelProfile> };
           if (result.profile) {
             const cloudProfile = normalizeTravelProfile(result.profile);
+            profileRef.current = cloudProfile;
             setProfile(cloudProfile);
             setProfileDraft(cloudProfile);
           }
@@ -859,7 +877,7 @@ export default function Home() {
     const incomingVersion = payload.version ?? payload.trip.version;
     if (payload.trip.id === activeTripIdRef.current && incomingVersion < tripVersionRef.current) return;
     applyingRemoteRef.current = true;
-    const cleanedItems = cleanupRemovedPreferenceItems(payload.state.items ?? []);
+    const cleanedItems = cleanupHealthPreferenceItems(cleanupRemovedPreferenceItems(payload.state.items ?? []), profileRef.current);
     const governedState = {
       ...payload.state,
       items: cleanedItems,
@@ -1157,6 +1175,7 @@ export default function Home() {
 
   async function saveProfile() {
     const nextProfile = { ...profileDraft, displayName: profileDraft.displayName.trim() || "我" };
+    profileRef.current = nextProfile;
     setItems((current) => applyPresetItems(current, nextProfile, destination));
     setProfile(nextProfile);
     setShowProfile(false);
