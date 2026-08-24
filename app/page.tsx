@@ -769,8 +769,16 @@ export default function Home() {
     document.querySelector<HTMLElement>('[data-unchecked="true"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  function addSuggestion(suggestion: Suggestion) {
-    if (suggestion.added) return;
+  function toggleSuggestion(suggestion: Suggestion) {
+    if (suggestion.added) {
+      const addedItem = items.find((item) => item.id === suggestion.id);
+      if (addedItem) {
+        removeItem(addedItem, true);
+      } else {
+        setSuggestions((current) => current.map((entry) => entry.id === suggestion.id ? { ...entry, added: false } : entry));
+      }
+      return;
+    }
     setItems((current) => [...current, {
       id: suggestion.id,
       name: suggestion.name,
@@ -1049,7 +1057,7 @@ export default function Home() {
                 <article className={`suggestion-card ${suggestion.added ? "added" : ""}`} key={suggestion.id}>
                   <div className="suggestion-main"><div className={`suggestion-icon suggestion-${suggestion.id}`}><ItemGraphic item={suggestion} /></div><h3>{suggestion.name}</h3></div>
                   <p title={suggestion.reason}>{suggestion.reason}</p>
-                  <button onClick={() => addSuggestion(suggestion)} disabled={suggestion.added}>{suggestion.added ? "✓ 已加入" : "＋ 加入清单"}</button>
+                  <button className={suggestion.added ? "remove-suggestion" : ""} onClick={() => toggleSuggestion(suggestion)} aria-label={suggestion.added ? `从清单移出${suggestion.name}` : `将${suggestion.name}加入清单`}>{suggestion.added ? "－ 移出清单" : "＋ 加入清单"}</button>
                 </article>
               ))}
             </div>

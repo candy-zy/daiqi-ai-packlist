@@ -443,9 +443,14 @@ test("claim actions stay quiet and AI suggestions use two compact fixed cards", 
   assert.match(page, /className="suggestion-main"/);
   assert.doesNotMatch(page, /className="signal"|className="category-decision"/);
   assert.match(page, /＋ 加入清单/);
+  assert.match(page, /－ 移出清单/);
+  assert.match(page, /function toggleSuggestion/);
+  assert.match(page, /items\.find\(\(item\) => item\.id === suggestion\.id\)/);
+  assert.doesNotMatch(page, /disabled=\{suggestion\.added\}/);
   assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /scroll-snap-type:none/);
   assert.match(css, /suggestion-card>button\s*\{[\s\S]*margin-top:auto/);
+  assert.match(css, /suggestion-card > button\.remove-suggestion/);
   assert.match(css, /list-controls \.list-filters \{[\s\S]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css, /grid-template-columns:43px minmax\(0,1fr\) auto/);
 });
