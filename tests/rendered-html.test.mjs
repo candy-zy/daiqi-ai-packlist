@@ -260,6 +260,13 @@ test("personal center uses preferences and gear only to preset unassigned items"
   assert.match(page, /items: \["自拍杆", "手机稳定器", "三脚架"\]/);
   assert.match(page, /items: \["水乳", "面霜", "面膜", "防晒霜"\]/);
   assert.doesNotMatch(page, /label: "(?:运动 \/ 健身|带娃出行|宠物出行|钓鱼|滑雪 \/ 冰雪活动|水上运动 \/ 潜水|温泉 \/ 泡汤|美食|手作 \/ 绘画|商务出行|音乐 \/ 演出|骑行|自驾游)"/);
+  assert.match(page, /const removedPreferenceItemNames = new Set\(\[/);
+  assert.match(page, /"宠物证件", "宠物粮", "水碗", "牵引绳", "宠物常用药"/);
+  assert.match(page, /const removedPetItemNames = new Set/);
+  assert.match(page, /function isManagedPresetItem/);
+  assert.match(page, /function cleanupRemovedPreferenceItems/);
+  assert.match(page, /items: cleanedItems/);
+  assert.match(page, /setItems\(cleanupRemovedPreferenceItems\(saved\.items/);
   assert.match(page, /items: \["葡萄糖"\]/);
   assert.doesNotMatch(page, /有转换插头/);
   assert.match(page, /function isInternationalDestination/);
