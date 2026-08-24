@@ -895,7 +895,8 @@ export default function Home() {
       suggestions: applySuggestionDisplayPolicy(cleanedItems, payload.state.suggestions ?? []),
     };
     const serialized = JSON.stringify(governedState);
-    lastSyncedStateRef.current = serialized;
+    const removedLegacyItems = cleanedItems.length !== (payload.state.items?.length ?? 0);
+    lastSyncedStateRef.current = removedLegacyItems ? JSON.stringify(payload.state) : serialized;
     pendingSharedStateRef.current = governedState;
     setItems(governedState.items ?? []);
     setSuggestions(governedState.suggestions);
