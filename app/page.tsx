@@ -436,6 +436,33 @@ const seedSuggestions: Suggestion[] = [
   { id: 102, name: "流量卡", icon: "⌁", group: "电子数码类", reason: "提前准备韩国流量卡，落地即可查地图、联系朋友和叫车。", signal: "容易漏带", added: false },
 ];
 
+const lowValueSuggestionPattern = /(便携加湿器|加湿器|折叠晾衣架|晾衣架|便携熨斗|熨斗|吹风机|烧水壶|热水壶)/;
+
+function normalizeSuggestionName(value: string) {
+  return value.toLowerCase().replace(/[\s·・—_\-/（）()]/g, "");
+}
+
+function applySuggestionDisplayPolicy(destination: string, items: PackItem[], currentSuggestions: Suggestion[]) {
+  if (!/(韩国|首尔|seoul|korea)/i.test(destination)) {
+    return currentSuggestions.filter((suggestion) => !lowValueSuggestionPattern.test(suggestion.name)).slice(0, 2);
+  }
+  const itemNames = items.map((item) => item.name);
+  const candidates: Suggestion[] = [];
+  for (const priority of seedSuggestions) {
+    const current = currentSuggestions.find((suggestion) => normalizeSuggestionName(suggestion.name) === normalizeSuggestionName(priority.name));
+    const alreadyInList = itemNames.some((name) => normalizeSuggestionName(name) === normalizeSuggestionName(priority.name));
+    if (!alreadyInList || current?.added) candidates.push({ ...priority, added: current?.added ?? false });
+  }
+  for (const suggestion of currentSuggestions) {
+    if (candidates.length === 2) break;
+    if (lowValueSuggestionPattern.test(suggestion.name)) continue;
+    if (candidates.some((candidate) => normalizeSuggestionName(candidate.name) === normalizeSuggestionName(suggestion.name))) continue;
+    const alreadyInList = itemNames.some((name) => normalizeSuggestionName(name) === normalizeSuggestionName(suggestion.name));
+    if (!alreadyInList || suggestion.added) candidates.push(suggestion);
+  }
+  return candidates.slice(0, 2);
+}
+
 const seedMessages: ChatMessage[] = [
   { id: 1, author: "阿哲", text: "转换插头你来带吧。" },
   { id: 2, author: "我", text: "好。" },
@@ -711,14 +738,18 @@ export default function Home() {
     const incomingVersion = payload.version ?? payload.trip.version;
     if (payload.trip.id === activeTripIdRef.current && incomingVersion < tripVersionRef.current) return;
     applyingRemoteRef.current = true;
-    const serialized = JSON.stringify(payload.state);
+    const governedState = {
+      ...payload.state,
+      suggestions: applySuggestionDisplayPolicy(payload.trip.destination, payload.state.items ?? [], payload.state.suggestions ?? []),
+    };
+    const serialized = JSON.stringify(governedState);
     lastSyncedStateRef.current = serialized;
-    pendingSharedStateRef.current = payload.state;
-    setItems(payload.state.items ?? []);
-    setSuggestions(payload.state.suggestions ?? []);
-    setMessages(payload.state.messages ?? []);
-    setItemNotes(payload.state.itemNotes ?? []);
-    setAssignmentProposals(payload.state.assignmentProposals ?? []);
+    pendingSharedStateRef.current = governedState;
+    setItems(governedState.items ?? []);
+    setSuggestions(governedState.suggestions);
+    setMessages(governedState.messages ?? []);
+    setItemNotes(governedState.itemNotes ?? []);
+    setAssignmentProposals(governedState.assignmentProposals ?? []);
     setMembers(Array.isArray(payload.members) && payload.members.length ? payload.members : demoMembers.slice(0, 1));
     setDestination(payload.trip.destination);
     setInviteCode(payload.trip.inviteCode);
@@ -888,7 +919,7 @@ export default function Home() {
       });
       if (!response.ok) throw new Error("AI suggestions request failed");
 
-      const result = await response.json() as { suggestions?: Omit<Suggestion, "id" | "icon" | "added">[]; source?: "model" | "fallback" };
+      const result = await response.json() as { suggestions?: Omit<Suggestion, "id" | "icon" | "added">[]; source?: "rules" | "hybrid" | "model" | "fallback" };
       const existingNames = new Set(cleanItems.map((item) => item.name.trim().toLowerCase()));
       const uniqueSuggestions = (result.suggestions ?? [])
         .filter((item, index, all) => !existingNames.has(item.name.trim().toLowerCase()) && all.findIndex((candidate) => candidate.name.trim().toLowerCase() === item.name.trim().toLowerCase()) === index)
@@ -896,7 +927,7 @@ export default function Home() {
         .map((item, index) => ({ ...item, id: 101 + index, icon: index === 0 ? "▣" : "⌁", added: false }));
 
       setSuggestions(uniqueSuggestions);
-      setSuggestionStatus(result.source === "model" ? "model" : "fallback");
+      setSuggestionStatus(result.source === "model" || result.source === "hybrid" || result.source === "rules" ? "model" : "fallback");
     } catch {
       setSuggestions(seedSuggestions);
       setSuggestionStatus("fallback");
