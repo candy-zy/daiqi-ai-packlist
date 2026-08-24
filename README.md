@@ -18,7 +18,7 @@
   <a href="docs/AI_AND_BACKEND_DESIGN.md">AI / 后端方案</a>
 </p>
 
-当前以「韩国 · 首尔，3 人同行」为演示场景。个人项目覆盖：**用户洞察、产品策略、交互原型、AI 能力设计、前端实现与技术方案**。
+当前以「韩国 · 首尔，3 人同行」为演示场景。项目已覆盖：**用户洞察、产品策略、移动端交互、AI 能力设计、前后端实现、数据库与多人协作**。
 
 ## 30 秒看懂产品
 
@@ -55,7 +55,7 @@
 
 **AI 产品判断：** 这是 Human-in-the-loop，而不是“AI 自动做主”。它保留群聊的自然表达，同时用一次确认解决模型误判、多人协作责任与结果可追溯问题。
 
-> 当前 Demo 使用关键词与上下文规则复现交互闭环；生产方案计划接入大模型结构化抽取、置信度分层和幂等写入。详见 [AI / 后端方案](docs/AI_AND_BACKEND_DESIGN.md)。
+> 当前版本已在服务端调用 DeepSeek 做结构化抽取，并保留确定性规则回退；模型输出经过成员、物品、置信度与重复校验。详见 [AI / 后端方案](docs/AI_AND_BACKEND_DESIGN.md)。
 
 ### 03｜一眼看清团队分工，临出发只核对自己
 
@@ -97,14 +97,13 @@ flowchart LR
 | 能力 | 状态 | 说明 |
 |---|---|---|
 | 手机安装与离线启动 | ✅ 已实现 | PWA，可添加到 iPhone / Android 主屏幕，支持独立全屏启动与本机清单续存 |
-| 手机端完整交互 Demo | ✅ 已实现 | 创建、偏好、认领、留言、聊天、编辑、核对、出发均可操作 |
-| AI 目的地物品推荐 | ✅ 已实现 | 服务端 API、结构化输出、去重、最多 2 条、失败回退；需配置 `OPENAI_API_KEY` 调用模型 |
+| 手机端完整业务流程 | ✅ 已实现 | 创建、偏好、邀请、认领、留言、聊天、编辑、核对、出发均可操作 |
+| AI 目的地物品推荐 | ✅ 已实现 | 服务端 DeepSeek API、结构化输出、去重、最多 2 条与失败回退 |
 | 个性化清单策略 | ✅ 已实现 | 偏好和已有设备补充预设物品，但不会自动分工 |
-| AI 聊天分工识别 | 🧪 交互原型 | 当前规则识别；生产版大模型抽取方案已完成 |
-| 数据库持久化 | 📝 已设计 | Drizzle / D1 脚手架存在，Schema 与迁移待接入 |
-| 账号、队伍邀请与实时同步 | 📝 已设计 | 当前头像与在线状态为演示数据，生产架构见技术方案 |
-
-我刻意保留这张完成度表：它区分了**可运行能力、交互原型和生产方案**，避免用高保真界面掩盖工程完成度。
+| AI 聊天分工识别 | ✅ 已实现 | 服务端结构化抽取物品、负责人、意图和置信度，用户确认后落库；模型异常时规则回退 |
+| 数据库持久化 | ✅ 已实现 | Cloudflare D1 + Drizzle，11 张表；清单、认领、留言、聊天、核对与 AI 候选均可恢复 |
+| 账号、队伍邀请与成员权限 | ✅ 已实现 | 托管账号身份、6 位邀请码、owner/member 权限与 2–4 人上限 |
+| 多人同步与冲突处理 | ✅ 已实现 | 450ms 合并保存、2.5 秒增量轮询、在线心跳、乐观锁和冲突提示 |
 
 ## 产品文档
 
@@ -117,8 +116,8 @@ flowchart LR
 - React 19 + TypeScript
 - vinext / Vite
 - Cloudflare Workers / Sites
-- OpenAI Responses API（AI 物品推荐）
-- Drizzle ORM + Cloudflare D1（已预留）
+- DeepSeek Chat Completions（两个 AI 功能，服务端调用）
+- Drizzle ORM + Cloudflare D1
 - Phosphor Icons + Lucide Icons
 - Node Test Runner
 
@@ -132,7 +131,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-打开 <http://localhost:3000/>。`OPENAI_API_KEY` 为可选配置；不配置时使用目的地安全回退建议，仍可完整体验产品流程。
+打开 <http://localhost:3000/>。将 `DEEPSEEK_API_KEY` 只配置在服务端环境变量中即可启用真实模型；不配置时使用安全回退规则，基础协作流程不受影响。
 
 ```bash
 npm run build
@@ -143,11 +142,18 @@ npm test
 
 ```text
 app/
-  page.tsx                    # 核心产品流程与交互原型
-  api/suggestions/route.ts   # AI 目的地物品推荐接口
+  page.tsx                    # 核心产品流程与多人同步客户端
+  api/session/               # 登录账号与队伍列表
+  api/profile/               # 个人偏好服务端持久化
+  api/trips/                 # 建队、邀请码、状态同步与分工识别
+  api/suggestions/route.ts   # DeepSeek 目的地物品推荐接口
   typography.css             # 语义化字体 Token
 db/
-  schema.ts                  # D1 / Drizzle 数据模型入口（待建设）
+  schema.ts                  # D1 / Drizzle 的 11 张业务表
+drizzle/
+  0000_stormy_darkhawk.sql   # 可部署数据库迁移
+lib/
+  chat-intent.ts             # 聊天分工规则回退与模型输出校验
 docs/
   PRODUCT_CASE_STUDY.md      # 产品定位、用户流程与指标
   AI_AND_BACKEND_DESIGN.md   # AI 链路、数据库和生产架构
@@ -159,4 +165,4 @@ tests/
 
 ---
 
-当前定位：**AI 产品经理作品集级高保真原型**。前端关键流程与第一个 AI 服务已可运行；真实多人协作需要继续完成数据库、鉴权、实时同步和消息通知。
+当前定位：**可安装、可登录、可邀请朋友协作的 AI 旅行准备 MVP**。AI 不替用户做主，而是把“清单补漏”和“聊天分工”嵌入可确认、可追踪的业务流程。

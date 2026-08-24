@@ -18,7 +18,7 @@ import {
   ToiletPaper, Tooth, Towel, TShirt, Umbrella,
 } from "@phosphor-icons/react";
 
-type Member = "我" | "阿哲" | "小雨";
+type Member = "我" | "阿哲" | "小雨" | "小安";
 type Phase = "prepare" | "verify" | "departed";
 type ListFilter = "all" | "mine" | "unassigned";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
@@ -73,10 +73,12 @@ type ItemNote = {
 };
 
 type AssignmentProposal = {
+  id?: string;
   itemId: number;
   requester: Member;
   target: Member;
   afterMessageId: number;
+  confidence?: number;
 };
 
 type DeletedItemSnapshot = {
@@ -84,7 +86,7 @@ type DeletedItemSnapshot = {
   index: number;
   notes: ItemNote[];
   wasUnread: boolean;
-  proposal: AssignmentProposal | null;
+  proposals: AssignmentProposal[];
   suggestionStates: { id: number; added: boolean }[];
 };
 
@@ -104,13 +106,18 @@ type PersistedAppState = {
   profile: TravelProfile;
   messages: ChatMessage[];
   itemNotes: ItemNote[];
-  assignmentProposal: AssignmentProposal | null;
+  assignmentProposals: AssignmentProposal[];
+  assignmentProposal?: AssignmentProposal | null;
   unreadItemIds: number[];
   expandedCategories: Category[];
   personalExpanded: boolean;
 };
 
-const members: { name: Member; short: string; profile: string; className: string; online: boolean }[] = [
+type MemberRecord = { name: Member; short: string; profile: string; className: string; online: boolean };
+type TripSummary = { id: string; name: string; destination: string; inviteCode: string; version: number; currentMember: Member; role: "owner" | "member" };
+type ServerTripPayload = { trip: TripSummary; state: { items: PackItem[]; suggestions: Suggestion[]; messages: ChatMessage[]; itemNotes: ItemNote[]; assignmentProposals: AssignmentProposal[] }; members: MemberRecord[]; version: number };
+
+const demoMembers: MemberRecord[] = [
   { name: "我", short: "我", profile: "有充电宝", className: "member-me", online: true },
   { name: "阿哲", short: "哲", profile: "有相机", className: "member-zhe", online: true },
   { name: "小雨", short: "雨", profile: "有水杯", className: "member-yu", online: false },
@@ -160,6 +167,7 @@ const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
 const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
 const departureImageSrc = "/departure-team-v2.webp?v=3";
 const localStateKey = "daiqi-app-state-v2";
+const cloudTripKey = "daiqi-active-trip-v1";
 
 function hasReleaseIntent(text: string) {
   return releaseIntentPattern.test(text);
@@ -199,7 +207,7 @@ const lucideItemIcons: Record<string, LucideIcon> = {
   "驱蚊液": Bug, "水杯": GlassWater, "饮料": CupSoda,
 };
 
-const avatarVariant: Record<Member, string> = { "我": "avatar-me", "阿哲": "avatar-zhe", "小雨": "avatar-yu" };
+const avatarVariant: Record<Member, string> = { "我": "avatar-me", "阿哲": "avatar-zhe", "小雨": "avatar-yu", "小安": "avatar-an" };
 
 function CharacterAvatar({ member, className = "" }: { member: Member; className?: string }) {
   return <span className={`character-avatar ${avatarVariant[member]} ${className}`} aria-hidden="true" />;
@@ -373,13 +381,6 @@ const seedMessages: ChatMessage[] = [
   { id: 4, author: "阿哲", text: "可以，落地前买好更方便。" },
 ];
 
-const domesticSeedMessages: ChatMessage[] = [
-  { id: 1, author: "阿哲", text: "充电器你来带吧。" },
-  { id: 2, author: "我", text: "好。" },
-  { id: 3, author: "小雨", text: "雨伞要不要多带一把？" },
-  { id: 4, author: "阿哲", text: "看天气再决定。" },
-];
-
 const seedItemNotes: ItemNote[] = [
   { id: 1101, itemId: 11, author: "阿哲", text: "韩国插座和国内一样吗？这个还要不要带？", time: "10:00" },
   { id: 1102, itemId: 11, author: "小雨", text: "酒店可以借，但带一个更放心。", time: "10:05" },
@@ -410,7 +411,20 @@ export default function Home() {
   const [noteDraft, setNoteDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
   const [itemNotes, setItemNotes] = useState<ItemNote[]>(seedItemNotes);
-  const [assignmentProposal, setAssignmentProposal] = useState<AssignmentProposal | null>({ itemId: 11, requester: "阿哲", target: "我", afterMessageId: 2 });
+  const [assignmentProposals, setAssignmentProposals] = useState<AssignmentProposal[]>([]);
+  const [members, setMembers] = useState<MemberRecord[]>(demoMembers);
+  const [currentMember, setCurrentMember] = useState<Member>("我");
+  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+  const [tripVersion, setTripVersion] = useState(0);
+  const [inviteCode, setInviteCode] = useState("");
+  const [showInvite, setShowInvite] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [showJoin, setShowJoin] = useState(false);
+  const [availableTrips, setAvailableTrips] = useState<TripSummary[]>([]);
+  const [accountReady, setAccountReady] = useState(false);
+  const [needsSignIn, setNeedsSignIn] = useState(false);
+  const [cloudError, setCloudError] = useState("");
+  const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "conflict" | "offline">("idle");
   const [activeItemId, setActiveItemId] = useState<number | null>(null);
   const [unreadItemIds, setUnreadItemIds] = useState<Set<number>>(() => new Set([11, 13, 41]));
   const [expandedCategories, setExpandedCategories] = useState<Set<Category>>(() => new Set(["电子数码类"]));
@@ -424,9 +438,19 @@ export default function Home() {
   const draggingItemRef = useRef<number | null>(null);
   const deletedItemRef = useRef<DeletedItemSnapshot | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+  const activeTripIdRef = useRef<string | null>(null);
+  const tripVersionRef = useRef(0);
+  const currentMemberRef = useRef<Member>("我");
+  const lastSyncedStateRef = useRef("");
+  const applyingRemoteRef = useRef(false);
+  const syncInFlightRef = useRef(false);
+  const syncTimerRef = useRef<number | null>(null);
+  const pendingSharedStateRef = useRef<ServerTripPayload["state"] | null>(null);
+  const openCloudTripRef = useRef(openCloudTrip);
+  const flushCloudStateRef = useRef(flushCloudState);
 
   const myItems = [
-    ...items.filter((item) => !isPersonalItem(item) && item.owners.includes("我")),
+    ...items.filter((item) => !isPersonalItem(item) && item.owners.includes(currentMember)),
     ...items.filter(isPersonalItem),
   ];
   const unassignedItems = items.filter((item) => !isPersonalItem(item) && item.owners.length === 0);
@@ -439,13 +463,12 @@ export default function Home() {
     return { total };
   }, [viewedMember, items]);
   const verifiedCount = verifyItems.length - status.total;
-  const myRemaining = items.filter((item) => (isPersonalItem(item) || item.owners.includes("我")) && !item.checked["我"]).length;
+  const myRemaining = items.filter((item) => (isPersonalItem(item) || item.owners.includes(currentMember)) && !item.checked[currentMember]).length;
   const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
   const activeItemNotes = activeItem ? itemNotes.filter((note) => note.itemId === activeItem.id) : [];
-  const proposalItem = assignmentProposal ? items.find((item) => item.id === assignmentProposal.itemId) ?? null : null;
   useEffect(() => {
     const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-    setIsInstalled(window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true);
+    const installedTimer = window.setTimeout(() => setIsInstalled(window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true), 0);
 
     if ("serviceWorker" in navigator && window.location.protocol === "https:") {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
@@ -463,36 +486,41 @@ export default function Home() {
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
     window.addEventListener("appinstalled", handleInstalled);
 
-    try {
-      const raw = window.localStorage.getItem(localStateKey);
-      if (raw) {
-        const saved = JSON.parse(raw) as Partial<PersistedAppState>;
-        if (typeof saved.destination === "string") setDestination(saved.destination);
-        if (typeof saved.teamReady === "boolean") setTeamReady(saved.teamReady);
-        if (Array.isArray(saved.items)) setItems(saved.items.map((item) => item.name === "SD 卡" ? { ...item, name: "内存卡" } : item));
-        if (Array.isArray(saved.suggestions)) setSuggestions(saved.suggestions);
-        if (saved.phase === "prepare" || saved.phase === "verify" || saved.phase === "departed") setPhase(saved.phase);
-        if (saved.listFilter === "all" || saved.listFilter === "mine" || saved.listFilter === "unassigned") setListFilter(saved.listFilter);
-        if (saved.viewedMember === "我" || saved.viewedMember === "阿哲" || saved.viewedMember === "小雨") setViewedMember(saved.viewedMember);
-        if (saved.profile) {
-          const normalizedProfile = normalizeTravelProfile(saved.profile);
-          setProfile(normalizedProfile);
-          setProfileDraft(normalizedProfile);
+    const restoreTimer = window.setTimeout(() => {
+      try {
+        const raw = window.localStorage.getItem(localStateKey);
+        if (raw) {
+          const saved = JSON.parse(raw) as Partial<PersistedAppState>;
+          if (typeof saved.destination === "string") setDestination(saved.destination);
+          if (typeof saved.teamReady === "boolean") setTeamReady(saved.teamReady);
+          if (Array.isArray(saved.items)) setItems(saved.items.map((item) => item.name === "SD 卡" ? { ...item, name: "内存卡" } : item));
+          if (Array.isArray(saved.suggestions)) setSuggestions(saved.suggestions);
+          if (saved.phase === "prepare" || saved.phase === "verify" || saved.phase === "departed") setPhase(saved.phase);
+          if (saved.listFilter === "all" || saved.listFilter === "mine" || saved.listFilter === "unassigned") setListFilter(saved.listFilter);
+          if (saved.viewedMember === "我" || saved.viewedMember === "阿哲" || saved.viewedMember === "小雨" || saved.viewedMember === "小安") setViewedMember(saved.viewedMember);
+          if (saved.profile) {
+            const normalizedProfile = normalizeTravelProfile(saved.profile);
+            setProfile(normalizedProfile);
+            setProfileDraft(normalizedProfile);
+          }
+          if (Array.isArray(saved.messages)) setMessages(saved.messages);
+          if (Array.isArray(saved.itemNotes)) setItemNotes(saved.itemNotes);
+          if (Array.isArray(saved.assignmentProposals)) setAssignmentProposals(saved.assignmentProposals);
+          else if (saved.assignmentProposal) setAssignmentProposals([saved.assignmentProposal]);
+          if (Array.isArray(saved.unreadItemIds)) setUnreadItemIds(new Set(saved.unreadItemIds));
+          if (Array.isArray(saved.expandedCategories)) setExpandedCategories(new Set(saved.expandedCategories));
+          if (typeof saved.personalExpanded === "boolean") setPersonalExpanded(saved.personalExpanded);
         }
-        if (Array.isArray(saved.messages)) setMessages(saved.messages);
-        if (Array.isArray(saved.itemNotes)) setItemNotes(saved.itemNotes);
-        if (saved.assignmentProposal === null || saved.assignmentProposal) setAssignmentProposal(saved.assignmentProposal ?? null);
-        if (Array.isArray(saved.unreadItemIds)) setUnreadItemIds(new Set(saved.unreadItemIds));
-        if (Array.isArray(saved.expandedCategories)) setExpandedCategories(new Set(saved.expandedCategories));
-        if (typeof saved.personalExpanded === "boolean") setPersonalExpanded(saved.personalExpanded);
+      } catch {
+        window.localStorage.removeItem(localStateKey);
+      } finally {
+        setStorageReady(true);
       }
-    } catch {
-      window.localStorage.removeItem(localStateKey);
-    } finally {
-      setStorageReady(true);
-    }
+    }, 0);
 
     return () => {
+      window.clearTimeout(installedTimer);
+      window.clearTimeout(restoreTimer);
       window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
       window.removeEventListener("appinstalled", handleInstalled);
     };
@@ -511,13 +539,94 @@ export default function Home() {
       profile,
       messages,
       itemNotes,
-      assignmentProposal,
+      assignmentProposals,
       unreadItemIds: [...unreadItemIds],
       expandedCategories: [...expandedCategories],
       personalExpanded,
     };
     window.localStorage.setItem(localStateKey, JSON.stringify(state));
-  }, [assignmentProposal, destination, expandedCategories, itemNotes, items, listFilter, messages, personalExpanded, phase, profile, storageReady, suggestions, teamReady, unreadItemIds, viewedMember]);
+  }, [assignmentProposals, destination, expandedCategories, itemNotes, items, listFilter, messages, personalExpanded, phase, profile, storageReady, suggestions, teamReady, unreadItemIds, viewedMember]);
+
+  useEffect(() => { activeTripIdRef.current = activeTripId; }, [activeTripId]);
+  useEffect(() => { tripVersionRef.current = tripVersion; }, [tripVersion]);
+  useEffect(() => { currentMemberRef.current = currentMember; }, [currentMember]);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    let cancelled = false;
+    async function bootAccount() {
+      try {
+        const sessionResponse = await fetch("/api/session", { cache: "no-store" });
+        if (sessionResponse.status === 401) {
+          if (!cancelled) { setNeedsSignIn(true); setTeamReady(false); setAccountReady(true); }
+          return;
+        }
+        if (!sessionResponse.ok) throw new Error("账号服务暂不可用");
+        const session = await sessionResponse.json() as { trips?: TripSummary[] };
+        if (cancelled) return;
+        const trips = Array.isArray(session.trips) ? session.trips : [];
+        setAvailableTrips(trips);
+        setNeedsSignIn(false);
+        const profileResponse = await fetch("/api/profile", { cache: "no-store" });
+        if (profileResponse.ok) {
+          const result = await profileResponse.json() as { profile?: Partial<TravelProfile> };
+          if (result.profile) {
+            const cloudProfile = normalizeTravelProfile(result.profile);
+            setProfile(cloudProfile);
+            setProfileDraft(cloudProfile);
+          }
+        }
+        const storedTripId = window.localStorage.getItem(cloudTripKey);
+        const tripToOpen = trips.find((trip) => trip.id === storedTripId) ?? null;
+        if (tripToOpen) await openCloudTripRef.current(tripToOpen.id);
+        else setTeamReady(false);
+      } catch (error) {
+        if (!cancelled) {
+          setCloudError(error instanceof Error ? error.message : "云端服务暂不可用");
+          setSyncStatus("offline");
+          setTeamReady(false);
+        }
+      } finally {
+        if (!cancelled) setAccountReady(true);
+      }
+    }
+    void bootAccount();
+    return () => { cancelled = true; };
+  }, [storageReady]);
+
+  useEffect(() => {
+    if (!activeTripId || !teamReady || !accountReady) return;
+    pendingSharedStateRef.current = { items, suggestions, messages, itemNotes, assignmentProposals };
+    const serialized = JSON.stringify(pendingSharedStateRef.current);
+    if (serialized === lastSyncedStateRef.current || syncInFlightRef.current || syncTimerRef.current !== null) return;
+    syncTimerRef.current = window.setTimeout(() => void flushCloudStateRef.current(), 450);
+    return () => {
+      if (syncTimerRef.current !== null && !syncInFlightRef.current) {
+        window.clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+    };
+  }, [accountReady, activeTripId, assignmentProposals, itemNotes, items, messages, suggestions, teamReady]);
+
+  useEffect(() => {
+    if (!activeTripId || !teamReady || !accountReady) return;
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/trips/${activeTripIdRef.current}/state?since=${tripVersionRef.current}`, { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json() as ServerTripPayload & { unchanged?: boolean; currentMember?: Member };
+        if (payload.unchanged) {
+          if (Array.isArray(payload.members)) setMembers(payload.members);
+          return;
+        }
+        applyCloudPayload(payload);
+      } catch {
+        setSyncStatus("offline");
+      }
+    };
+    const timer = window.setInterval(() => void poll(), 2500);
+    return () => window.clearInterval(timer);
+  }, [accountReady, activeTripId, teamReady]);
 
   useEffect(() => {
     if (!teamReady || phase !== "verify") return;
@@ -525,6 +634,108 @@ export default function Home() {
     departureImage.decoding = "async";
     departureImage.src = departureImageSrc;
   }, [phase, teamReady]);
+
+  function applyCloudPayload(payload: ServerTripPayload) {
+    if (!payload?.trip || !payload.state) return;
+    applyingRemoteRef.current = true;
+    const serialized = JSON.stringify(payload.state);
+    lastSyncedStateRef.current = serialized;
+    pendingSharedStateRef.current = payload.state;
+    setItems(payload.state.items ?? []);
+    setSuggestions(payload.state.suggestions ?? []);
+    setMessages(payload.state.messages ?? []);
+    setItemNotes(payload.state.itemNotes ?? []);
+    setAssignmentProposals(payload.state.assignmentProposals ?? []);
+    setMembers(Array.isArray(payload.members) && payload.members.length ? payload.members : demoMembers.slice(0, 1));
+    setDestination(payload.trip.destination);
+    setInviteCode(payload.trip.inviteCode);
+    setCurrentMember(payload.trip.currentMember);
+    setViewedMember(payload.trip.currentMember);
+    setActiveTripId(payload.trip.id);
+    activeTripIdRef.current = payload.trip.id;
+    setTripVersion(payload.version ?? payload.trip.version);
+    tripVersionRef.current = payload.version ?? payload.trip.version;
+    currentMemberRef.current = payload.trip.currentMember;
+    window.localStorage.setItem(cloudTripKey, payload.trip.id);
+    setTeamReady(true);
+    setCloudError("");
+    setSyncStatus("saved");
+    window.setTimeout(() => { applyingRemoteRef.current = false; }, 0);
+  }
+
+  async function openCloudTrip(tripId: string) {
+    const response = await fetch(`/api/trips/${tripId}/state`, { cache: "no-store" });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({})) as { error?: string };
+      throw new Error(body.error || "无法打开队伍");
+    }
+    applyCloudPayload(await response.json() as ServerTripPayload);
+  }
+
+  async function flushCloudState() {
+    if (syncTimerRef.current !== null) {
+      window.clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
+    const tripId = activeTripIdRef.current;
+    const state = pendingSharedStateRef.current;
+    if (!tripId || !state || syncInFlightRef.current) return;
+    const serialized = JSON.stringify(state);
+    if (serialized === lastSyncedStateRef.current) return;
+    syncInFlightRef.current = true;
+    setSyncStatus("saving");
+    try {
+      const response = await fetch(`/api/trips/${tripId}/state`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ expectedVersion: tripVersionRef.current, state }),
+      });
+      const result = await response.json().catch(() => ({})) as ServerTripPayload & { error?: string; ok?: boolean; state?: ServerTripPayload["state"] };
+      if (response.status === 409 && result.trip && result.state) {
+        setSyncStatus("conflict");
+        applyCloudPayload(result as ServerTripPayload);
+        notify("朋友刚更新了清单，请重试刚才的操作", 3000);
+        return;
+      }
+      if (!response.ok) throw new Error(result.error || "保存失败");
+      const savedState = result.state ?? state;
+      lastSyncedStateRef.current = JSON.stringify(savedState);
+      setTripVersion(result.version);
+      tripVersionRef.current = result.version;
+      setSyncStatus("saved");
+    } catch (error) {
+      setCloudError(error instanceof Error ? error.message : "保存失败");
+      setSyncStatus("offline");
+    } finally {
+      syncInFlightRef.current = false;
+      const pending = pendingSharedStateRef.current;
+      if (pending && JSON.stringify(pending) !== lastSyncedStateRef.current && activeTripIdRef.current) {
+        syncTimerRef.current = window.setTimeout(() => void flushCloudState(), 250);
+      }
+    }
+  }
+
+  async function joinTeam() {
+    const code = joinCode.trim().toUpperCase();
+    if (!code) return;
+    setCloudError("");
+    try {
+      const response = await fetch("/api/trips/join", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ inviteCode: code }) });
+      const result = await response.json().catch(() => ({})) as ServerTripPayload & { error?: string };
+      if (!response.ok) throw new Error(result.error || "加入队伍失败");
+      applyCloudPayload({ ...result, version: result.trip.version });
+      setShowJoin(false);
+      setJoinCode("");
+    } catch (error) {
+      setCloudError(error instanceof Error ? error.message : "加入队伍失败");
+    }
+  }
+
+  async function copyInviteCode() {
+    if (!inviteCode) return;
+    await navigator.clipboard?.writeText(inviteCode);
+    notify("邀请码已复制");
+  }
 
   async function installApp() {
     if (!deferredInstallPrompt) {
@@ -555,15 +766,30 @@ export default function Home() {
     const cleanDestination = destination.trim();
     if (!cleanDestination) return;
     const preparedItems = applyPresetItems(items, profile, cleanDestination);
-    const international = isInternationalDestination(cleanDestination);
-    setItems(preparedItems);
-    setMessages(international ? seedMessages : domesticSeedMessages);
-    setAssignmentProposal({ itemId: international ? 11 : 7, requester: "阿哲", target: "我", afterMessageId: 2 });
-    const visibleNotes = seedItemNotes.filter((note) => preparedItems.some((item) => item.id === note.itemId));
-    setItemNotes(visibleNotes);
-    setUnreadItemIds(new Set(visibleNotes.map((note) => note.itemId)));
-    setTeamReady(true);
+    const cleanItems = preparedItems.map((item) => ({ ...item, owners: item.owners.filter((owner) => owner === "我"), checked: {} }));
     setSuggestionStatus("loading");
+    setCloudError("");
+
+    try {
+      const createResponse = await fetch("/api/trips", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          destination: cleanDestination,
+          name: `${cleanDestination.replaceAll(" · ", "")}小队`,
+          state: { items: cleanItems, suggestions: seedSuggestions, messages: [], itemNotes: [], assignmentProposals: [] },
+        }),
+      });
+      const created = await createResponse.json().catch(() => ({})) as ServerTripPayload & { error?: string };
+      if (!createResponse.ok) throw new Error(created.error || "创建队伍失败");
+      applyCloudPayload(created);
+      setUnreadItemIds(new Set());
+      setAvailableTrips((current) => [created.trip, ...current.filter((trip) => trip.id !== created.trip.id)]);
+    } catch (error) {
+      setCloudError(error instanceof Error ? error.message : "创建队伍失败");
+      setSuggestionStatus("idle");
+      return;
+    }
 
     try {
       const response = await fetch("/api/suggestions", {
@@ -571,7 +797,7 @@ export default function Home() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           destination: cleanDestination,
-          existingItems: preparedItems.map((item) => item.name),
+          existingItems: cleanItems.map((item) => item.name),
           preferences: [
             ...habitOptions.filter((option) => profile.habits.includes(option.id)).map((option) => option.label),
           ],
@@ -580,13 +806,13 @@ export default function Home() {
       if (!response.ok) throw new Error("AI suggestions request failed");
 
       const result = await response.json() as { suggestions?: Omit<Suggestion, "id" | "icon" | "added">[]; source?: "model" | "fallback" };
-      const existingNames = new Set(preparedItems.map((item) => item.name.trim().toLowerCase()));
+      const existingNames = new Set(cleanItems.map((item) => item.name.trim().toLowerCase()));
       const uniqueSuggestions = (result.suggestions ?? [])
         .filter((item, index, all) => !existingNames.has(item.name.trim().toLowerCase()) && all.findIndex((candidate) => candidate.name.trim().toLowerCase() === item.name.trim().toLowerCase()) === index)
         .slice(0, 2)
         .map((item, index) => ({ ...item, id: 101 + index, icon: index === 0 ? "▣" : "⌁", added: false }));
 
-      if (uniqueSuggestions.length === 2) setSuggestions(uniqueSuggestions);
+      setSuggestions(uniqueSuggestions);
       setSuggestionStatus(result.source === "model" ? "model" : "fallback");
     } catch {
       setSuggestions(seedSuggestions);
@@ -613,17 +839,23 @@ export default function Home() {
     }));
   }
 
-  function saveProfile() {
+  async function saveProfile() {
     const nextProfile = { ...profileDraft, displayName: profileDraft.displayName.trim() || "我" };
     setItems((current) => applyPresetItems(current, nextProfile, destination));
     setProfile(nextProfile);
     setShowProfile(false);
+    try {
+      const response = await fetch("/api/profile", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(nextProfile) });
+      if (!response.ok) throw new Error("偏好保存失败");
+    } catch {
+      notify("偏好已保存在本机，云端稍后重试", 3000);
+    }
   }
 
   function goBackOneStep() {
     setEditMode(false);
     if (phase === "verify") {
-      setViewedMember("我");
+      setViewedMember(currentMember);
       setPhase("prepare");
       return;
     }
@@ -636,7 +868,7 @@ export default function Home() {
       <button className="sheet-backdrop" aria-label="关闭个人中心" onClick={() => setShowProfile(false)} />
       <section className="profile-card">
         <header className="profile-header">
-          <div className="profile-identity"><CharacterAvatar member="我" /><div><small>个人中心</small><h2>{profileDraft.displayName.trim() || "我"}的出行偏好</h2></div></div>
+          <div className="profile-identity"><CharacterAvatar member={currentMember} /><div><small>个人中心</small><h2>{profileDraft.displayName.trim() || "我"}的出行偏好</h2></div></div>
           <button className="profile-close" onClick={() => setShowProfile(false)} aria-label="关闭"><X aria-hidden="true" /></button>
         </header>
         <div className="profile-scroll">
@@ -684,7 +916,11 @@ export default function Home() {
               <span aria-hidden="true">›</span>
             </button>
             <label className="setup-field"><span>这次去哪儿？</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：韩国 · 首尔" /></label>
-            <button className="setup-submit" onClick={createTeam}>生成清单 <span>→</span></button>
+            {cloudError && <p className="cloud-error" role="alert">{cloudError}</p>}
+            {needsSignIn ? <a className="setup-submit setup-signin" href="/signin-with-chatgpt?return_to=%2F">登录后创建或加入队伍 <span>→</span></a> : <button className="setup-submit" onClick={createTeam} disabled={!accountReady} aria-busy={!accountReady}>生成清单 <span>→</span></button>}
+            {!needsSignIn && accountReady && <button className="join-team-entry" onClick={() => setShowJoin((current) => !current)}>有邀请码？加入朋友的队伍</button>}
+            {!needsSignIn && showJoin && <div className="join-team-form"><input value={joinCode} onChange={(event) => setJoinCode(event.target.value.toUpperCase())} onKeyDown={(event) => event.key === "Enter" && void joinTeam()} maxLength={6} placeholder="输入 6 位邀请码" /><button onClick={() => void joinTeam()}>加入</button></div>}
+            {!needsSignIn && availableTrips.length > 0 && <section className="saved-trips"><small>我的队伍</small>{availableTrips.slice(0, 3).map((trip) => <button key={trip.id} onClick={() => void openCloudTrip(trip.id)}><span><b>{trip.name}</b><small>{trip.destination}</small></span><i>›</i></button>)}</section>}
           </div>
           {renderProfileCenter()}
           {renderInstallGuide()}
@@ -700,7 +936,7 @@ export default function Home() {
           <button className="departure-back" onClick={() => setPhase("verify")} aria-label="返回核对清单">←</button>
           <section className="departure-page">
             <div className="departure-illustration-shell">
-              <img className="departure-illustration" src={departureImageSrc} alt="三位朋友带着行李一起出发" width={700} height={700} loading="eager" decoding="async" fetchPriority="high" />
+              <Image className="departure-illustration" src={departureImageSrc} alt="三位朋友带着行李一起出发" width={700} height={700} priority unoptimized />
             </div>
             <h1>带上好心情，出发！</h1>
           </section>
@@ -722,26 +958,26 @@ export default function Home() {
   }
 
   function claim(id: number) {
-    setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) && !item.owners.includes("我") ? { ...item, owners: [...item.owners, "我"] } : item));
+    setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) && !item.owners.includes(currentMember) ? { ...item, owners: [...item.owners, currentMember] } : item));
   }
 
   function release(id: number) {
-    setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) ? { ...item, owners: item.owners.filter((member) => member !== "我"), checked: { ...item.checked, "我": false } } : item));
+    setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) ? { ...item, owners: item.owners.filter((member) => member !== currentMember), checked: { ...item.checked, [currentMember]: false } } : item));
   }
 
   function togglePacked(item: PackItem) {
-    if (viewedMember !== "我" || (!isPersonalItem(item) && !item.owners.includes("我"))) return;
+    if (viewedMember !== currentMember || (!isPersonalItem(item) && !item.owners.includes(currentMember))) return;
     setItems((current) => current.map((entry) => entry.id === item.id ? {
       ...entry,
-      checked: { ...entry.checked, "我": !entry.checked["我"] },
+      checked: { ...entry.checked, [currentMember]: !entry.checked[currentMember] },
     } : entry));
   }
 
   function selectAllPacked() {
-    if (viewedMember !== "我") return;
-    setItems((current) => current.map((item) => isPersonalItem(item) || item.owners.includes("我") ? {
+    if (viewedMember !== currentMember) return;
+    setItems((current) => current.map((item) => isPersonalItem(item) || item.owners.includes(currentMember) ? {
       ...item,
-      checked: { ...item.checked, "我": true },
+      checked: { ...item.checked, [currentMember]: true },
     } : item));
     notify("我的待带物品已全部勾选");
   }
@@ -780,7 +1016,7 @@ export default function Home() {
       index: items.findIndex((entry) => entry.id === item.id),
       notes: itemNotes.filter((note) => note.itemId === item.id),
       wasUnread: unreadItemIds.has(item.id),
-      proposal: assignmentProposal?.itemId === item.id ? assignmentProposal : null,
+      proposals: assignmentProposals.filter((proposal) => proposal.itemId === item.id),
       suggestionStates: suggestions.filter((suggestion) => suggestion.name === item.name).map((suggestion) => ({ id: suggestion.id, added: suggestion.added })),
     };
     setItems((current) => current.filter((entry) => entry.id !== item.id));
@@ -791,7 +1027,7 @@ export default function Home() {
       next.delete(item.id);
       return next;
     });
-    if (assignmentProposal?.itemId === item.id) setAssignmentProposal(null);
+    setAssignmentProposals((current) => current.filter((proposal) => proposal.itemId !== item.id));
     if (fromNotes) {
       setActiveItemId(null);
     }
@@ -809,7 +1045,7 @@ export default function Home() {
     });
     setItemNotes((current) => [...current, ...snapshot.notes]);
     if (snapshot.wasUnread) setUnreadItemIds((current) => new Set(current).add(snapshot.item.id));
-    if (snapshot.proposal) setAssignmentProposal((current) => current ?? snapshot.proposal);
+    if (snapshot.proposals.length) setAssignmentProposals((current) => [...current, ...snapshot.proposals.filter((proposal) => !current.some((entry) => entry.id === proposal.id && entry.itemId === proposal.itemId))]);
     setSuggestions((current) => current.map((suggestion) => {
       const previous = snapshot.suggestionStates.find((entry) => entry.id === suggestion.id);
       return previous ? { ...suggestion, added: previous.added } : suggestion;
@@ -872,51 +1108,65 @@ export default function Home() {
     });
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     const text = draft.trim();
     if (!text) return;
     const messageId = Date.now();
-    const additions: ChatMessage[] = [{ id: messageId, author: "我", text }];
+    const message: ChatMessage = { id: messageId, author: currentMember, text };
+    const nextMessages = [...messages, message];
+    setMessages(nextMessages);
+    setDraft("");
     const mentionedItem = (item: PackItem) => text.includes(item.name) || text.includes(item.name.slice(0, 2));
-    const releasedItem = items.find((item) => !isPersonalItem(item) && item.owners.includes("我") && mentionedItem(item));
-    const claimedItem = items.find((item) => !isPersonalItem(item) && !item.owners.includes("我") && mentionedItem(item));
+    const releasedItem = items.find((item) => !isPersonalItem(item) && item.owners.includes(currentMember) && mentionedItem(item));
+    const claimedItem = items.find((item) => !isPersonalItem(item) && !item.owners.includes(currentMember) && mentionedItem(item));
     if (hasReleaseIntent(text) && releasedItem) {
       release(releasedItem.id);
-      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我不再带${releasedItem.name}`, system: true });
     } else if (hasClaimIntent(text) && claimedItem) {
       claim(claimedItem.id);
-      additions.push({ id: Date.now() + 1, author: "带齐助手", text: `已同步：我会带${claimedItem.name}`, system: true });
     }
-    const agrees = /^(好|好的|可以|行|没问题|ok|okay)[。！!,.， ]*$/i.test(text);
-    const request = [...messages].reverse().find((message) => message.author !== "我" && message.author !== "带齐助手" && /(你来带|你带|交给你)/.test(message.text));
-    const requestedItem = request ? items.find((item) => !isPersonalItem(item) && request.text.includes(item.name)) : null;
-    if (agrees && request && requestedItem) {
-      setAssignmentProposal({ itemId: requestedItem.id, requester: request.author as Member, target: "我", afterMessageId: messageId });
+    if (!activeTripId) return;
+    try {
+      const response = await fetch(`/api/trips/${activeTripId}/intent`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: nextMessages, items: items.map((item) => ({ id: item.id, name: item.name })) }),
+      });
+      if (!response.ok) return;
+      const result = await response.json() as { assignments?: Array<{ itemId: number; requester: Member; assignee: Member; intent: "claim" | "release" | "request"; confidence: number; evidenceMessageIds: number[] }> };
+      const detected = result.assignments ?? [];
+      detected.forEach((intent) => {
+        if (intent.assignee !== currentMember) return;
+        if (intent.intent === "release") release(intent.itemId);
+        if (intent.intent === "claim" && intent.requester === currentMember && intent.evidenceMessageIds.length === 1) claim(intent.itemId);
+      });
+      const proposals = detected.filter((intent) => intent.intent === "claim" && intent.assignee === currentMember && intent.requester !== currentMember).map((intent) => ({
+        id: `${messageId}:${intent.itemId}:${intent.assignee}`,
+        itemId: intent.itemId,
+        requester: intent.requester,
+        target: intent.assignee,
+        afterMessageId: messageId,
+        confidence: intent.confidence,
+      }));
+      if (proposals.length) setAssignmentProposals((current) => [...current.filter((proposal) => !proposals.some((next) => next.id === proposal.id)), ...proposals]);
+    } catch {
+      // 聊天本身仍可发送；AI 识别失败不会阻塞朋友交流。
     }
-    setMessages((current) => [...current, ...additions]);
-    setDraft("");
   }
 
-  function resolveAssignmentProposal(accepted: boolean) {
-    if (!assignmentProposal) return;
-    const proposalItem = items.find((item) => item.id === assignmentProposal.itemId);
-    if (!proposalItem) { setAssignmentProposal(null); return; }
+  function resolveAssignmentProposal(proposal: AssignmentProposal, accepted: boolean) {
+    const proposalItem = items.find((item) => item.id === proposal.itemId);
+    if (!proposalItem) { setAssignmentProposals((current) => current.filter((entry) => entry.id !== proposal.id)); return; }
     if (accepted) claim(proposalItem.id);
-    setMessages((current) => [...current, {
-      id: Date.now(),
-      author: "带齐助手",
-      text: accepted ? `已确认：我会带${proposalItem.name}` : `未加入：${proposalItem.name}仍待认领`,
-      system: true,
-    }]);
-    setAssignmentProposal(null);
+    setAssignmentProposals((current) => current.filter((entry) => entry.id !== proposal.id));
   }
 
-  function renderAssignmentProposal() {
-    if (!assignmentProposal || !proposalItem) return null;
+  function renderAssignmentProposal(proposal: AssignmentProposal) {
+    const proposalItem = items.find((item) => item.id === proposal.itemId);
+    if (!proposalItem) return null;
     return <article className="assignment-proposal">
       <div className="proposal-label"><span>✦</span>AI 识别到一项分工</div>
-      <div className="proposal-main"><span className="proposal-icon"><ItemGraphic item={proposalItem} /></span><div><b>{assignmentProposal.requester}请你带「{proposalItem.name}」</b><small>你刚刚回复了“好”，要同步到清单吗？</small></div></div>
-      <div className="proposal-actions"><button onClick={() => resolveAssignmentProposal(false)}>我不带</button><button onClick={() => resolveAssignmentProposal(true)}>我来带</button></div>
+      <div className="proposal-main"><span className="proposal-icon"><ItemGraphic item={proposalItem} /></span><div><b>{proposal.requester}请你带「{proposalItem.name}」</b><small>你刚刚表示同意，要同步到清单吗？</small></div></div>
+      <div className="proposal-actions"><button onClick={() => resolveAssignmentProposal(proposal, false)}>我不带</button><button onClick={() => resolveAssignmentProposal(proposal, true)}>我来带</button></div>
     </article>;
   }
 
@@ -935,7 +1185,7 @@ export default function Home() {
     if (!text || !activeItem) return;
     const now = new Date();
     const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    setItemNotes((current) => [...current, { id: Date.now(), itemId: activeItem.id, author: "我", text, time }]);
+    setItemNotes((current) => [...current, { id: Date.now(), itemId: activeItem.id, author: currentMember, text, time }]);
     setNoteDraft("");
   }
 
@@ -953,9 +1203,9 @@ export default function Home() {
   function renderItem(item: PackItem) {
     const personal = isPersonalItem(item);
     const ownerMembers = item.owners.map((owner) => members.find((member) => member.name === owner)).filter(Boolean);
-    const currentWillBring = item.owners.includes("我");
+    const currentWillBring = item.owners.includes(currentMember);
     const packed = Boolean(item.checked[viewedMember]);
-    const canCheck = viewedMember === "我" && (personal || currentWillBring);
+    const canCheck = viewedMember === currentMember && (personal || currentWillBring);
     const visiblePeerIds = (personal ? personalPrepareItems : prepareItems.filter((entry) => entry.group === item.group)).map((entry) => entry.id);
     const peerPosition = visiblePeerIds.indexOf(item.id);
     const noteCount = itemNotes.filter((note) => note.itemId === item.id).length;
@@ -975,7 +1225,7 @@ export default function Home() {
           </button>}
           {phase === "prepare" && editMode && <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`} title="删除"><Trash2 aria-hidden="true" /></button>}
         </div>
-        {phase === "verify" && viewedMember === "我" && !personal && currentWillBring && <button className="verify-release-button" onClick={() => release(item.id)} aria-label={`不再携带${item.name}`}>我不带了</button>}
+        {phase === "verify" && viewedMember === currentMember && !personal && currentWillBring && <button className="verify-release-button" onClick={() => release(item.id)} aria-label={`不再携带${item.name}`}>我不带了</button>}
         {phase === "prepare" && editMode && <button
           className="drag-handle"
           onPointerDown={(event) => startDragging(event, item.id)}
@@ -992,7 +1242,7 @@ export default function Home() {
         {phase === "prepare" && !editMode && (personal ? <span className="personal-pill">每人自备</span> : item.owners.length ? (
             <div className="shared-owner-action">
               <div className="owner-avatars" aria-label={`${item.owners.join("、")}会带`}>
-                {ownerMembers.slice(0, 3).map((owner) => <button className="owner-avatar" key={owner?.name} onClick={() => phase === "prepare" && owner?.name === "我" && release(item.id)} disabled={owner?.name !== "我"} title={owner?.name === "我" ? "取消我会带" : `${owner?.name}会带`}>{owner && <CharacterAvatar member={owner.name} />}</button>)}
+                {ownerMembers.slice(0, 4).map((owner) => <button className="owner-avatar" key={owner?.name} onClick={() => phase === "prepare" && owner?.name === currentMember && release(item.id)} disabled={owner?.name !== currentMember} title={owner?.name === currentMember ? "取消我会带" : `${owner?.profile ?? owner?.name}会带`}>{owner && <CharacterAvatar member={owner.name} />}</button>)}
               </div>
               <button
                 className={`also-bring-button ${currentWillBring ? "joined" : ""}`}
@@ -1012,15 +1262,16 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-      <section className="phone-frame" aria-label="带齐旅行物品清单原型">
+      <section className="phone-frame" aria-label="带齐旅行物品协作应用">
         <div className="scroll-area main-scroll-area">
           <section className="trip-hero compact-trip-hero">
             <button className="main-back-button" onClick={goBackOneStep} aria-label="返回上一步" title="返回上一步"><ArrowLeft aria-hidden="true" /></button>
             <h1>{phase === "prepare" ? "这次带什么？" : "出发前逐件确认"}</h1>
             <div className="presence-panel">
               <div className={`member-switch ${phase === "verify" ? "switchable" : ""}`} aria-label={phase === "verify" ? "切换查看成员清单" : "成员在线状态"}>
-                {members.map((member) => phase === "verify" ? <button key={member.name} className={viewedMember === member.name ? "selected" : ""} onClick={() => setViewedMember(member.name)} title={`查看${member.name}的清单`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></button> : member.name === "我" ? <button className="profile-avatar-button" key={member.name} onClick={openProfile} aria-label="打开我的出行偏好" title="我的出行偏好"><CharacterAvatar member={member.name} /><i className="online" /></button> : <span className="member-presence" key={member.name} title={`${member.name}${member.online ? "在线" : "离线"}`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></span>)}
+                {members.map((member) => phase === "verify" ? <button key={member.name} className={viewedMember === member.name ? "selected" : ""} onClick={() => setViewedMember(member.name)} title={`查看${member.profile}的清单`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></button> : member.name === currentMember ? <button className="profile-avatar-button" key={member.name} onClick={openProfile} aria-label="打开我的出行偏好" title="我的出行偏好"><CharacterAvatar member={member.name} /><i className="online" /></button> : <span className="member-presence" key={member.name} title={`${member.profile}${member.online ? "在线" : "离线"}`}><CharacterAvatar member={member.name} /><i className={member.online ? "online" : "offline"} /></span>)}
               </div>
+              {phase === "prepare" && <button className="invite-friends-button" onClick={() => setShowInvite(true)} aria-label="邀请朋友加入队伍" title="邀请朋友"><Share2 aria-hidden="true" /></button>}
             </div>
           </section>
 
@@ -1029,9 +1280,9 @@ export default function Home() {
             <button className={phase === "verify" ? "active" : ""} onClick={() => { setEditMode(false); setPhase("verify"); }}><span>2</span>出发核对</button>
           </div>
 
-          {phase === "prepare" && <section className="ai-section">
+          {phase === "prepare" && (suggestionStatus === "loading" || suggestions.length > 0) && <section className="ai-section">
             <header>
-              <div className="ai-title"><span><Sparkles aria-hidden="true" /></span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : "AI 帮你补充了 2 件容易漏带的物品"}</h2></div>
+              <div className="ai-title"><span><Sparkles aria-hidden="true" /></span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : `AI 帮你补充了 ${suggestions.length} 件容易漏带的物品`}</h2></div>
             </header>
             <div className={`suggestion-scroll ${suggestionStatus === "loading" ? "loading" : ""}`}>
               {suggestions.slice(0, 2).map((suggestion) => (
@@ -1075,8 +1326,8 @@ export default function Home() {
             </div> : <div className="empty-list"><span>✓</span><b>这里已经处理好了</b><small>暂时没有需要处理的物品</small></div>}
           </section> : <section className="list-section verify-list-section">
             <header className="verify-toolbar">
-              <b>{viewedMember === "我" ? "我的物品" : viewedMember} · {verifiedCount}/{verifyItems.length}</b>
-              {viewedMember === "我" ? <button className="select-all-button" onClick={selectAllPacked} disabled={status.total === 0}>{status.total === 0 ? "✓ 已完成" : "全选"}</button> : <button className="remind-button" onClick={() => notify(`已提醒${viewedMember}尽快收拾`)}>提醒TA</button>}
+              <b>{viewedMember === currentMember ? "我的物品" : members.find((member) => member.name === viewedMember)?.profile ?? viewedMember} · {verifiedCount}/{verifyItems.length}</b>
+              {viewedMember === currentMember ? <button className="select-all-button" onClick={selectAllPacked} disabled={status.total === 0}>{status.total === 0 ? "✓ 已完成" : "全选"}</button> : <button className="remind-button" onClick={() => notify(`已提醒${members.find((member) => member.name === viewedMember)?.profile ?? viewedMember}尽快收拾`)}>提醒TA</button>}
             </header>
             <div className="item-list">{verifyItems.map(renderItem)}</div>
           </section>}
@@ -1084,11 +1335,11 @@ export default function Home() {
 
         <footer className="action-bar">
           {phase === "prepare" && <button className="add-item" onClick={() => setShowAdd(true)} aria-label="添加物品">＋</button>}
-          {phase === "prepare" && <button className="team-chat-action" onClick={() => setShowChat(true)} aria-label={assignmentProposal ? "团队聊天，有一项分工待确认" : "团队聊天"} title="团队聊天"><MessageCircle aria-hidden="true" />{assignmentProposal && <i>1</i>}</button>}
+          {phase === "prepare" && <button className="team-chat-action" onClick={() => setShowChat(true)} aria-label={assignmentProposals.length ? `团队聊天，有${assignmentProposals.length}项分工待确认` : "团队聊天"} title="团队聊天"><MessageCircle aria-hidden="true" />{assignmentProposals.length > 0 && <i>{assignmentProposals.length}</i>}</button>}
           {phase === "prepare" ? (
             <button className="primary-action" onClick={() => { setEditMode(false); setPhase("verify"); }}>进入出发核对 <span>→</span></button>
-          ) : viewedMember !== "我" ? (
-            <button className="primary-action" onClick={() => setViewedMember("我")}>返回我的核对清单 <span>→</span></button>
+          ) : viewedMember !== currentMember ? (
+            <button className="primary-action" onClick={() => setViewedMember(currentMember)}>返回我的核对清单 <span>→</span></button>
           ) : (
             <button className={`primary-action ${myRemaining === 0 ? "ready" : ""}`} onClick={() => myRemaining ? focusNextUnchecked() : setPhase("departed")}>{myRemaining ? "下一件未确认" : "东西带齐 · 出发"}<span>{myRemaining ? "↑" : "→"}</span></button>
           )}
@@ -1104,12 +1355,26 @@ export default function Home() {
                 {messages.length ? messages.map((message) => {
                   const meta = members.find((member) => member.name === message.author);
                   return <Fragment key={message.id}>
-                    <div className={`message-row ${message.author === "我" ? "mine" : ""} ${message.system ? "system" : ""}`}>{meta ? <CharacterAvatar member={meta.name} className="message-avatar" /> : <span className="message-avatar assistant-avatar">✦</span>}<div><small>{message.author}</small><p>{message.text}</p></div></div>
-                    {assignmentProposal?.afterMessageId === message.id && renderAssignmentProposal()}
+                    <div className={`message-row ${message.author === currentMember ? "mine" : ""} ${message.system ? "system" : ""}`}>{meta ? <CharacterAvatar member={meta.name} className="message-avatar" /> : <span className="message-avatar assistant-avatar">✦</span>}<div><small>{message.author === currentMember ? "我" : meta?.profile ?? message.author}</small><p>{message.text}</p></div></div>
+                    {assignmentProposals.filter((proposal) => proposal.afterMessageId === message.id && proposal.target === currentMember).map((proposal) => <Fragment key={proposal.id ?? `${proposal.afterMessageId}:${proposal.itemId}`}>{renderAssignmentProposal(proposal)}</Fragment>)}
                   </Fragment>;
                 }) : <div className="chat-empty"><span>•••</span><b>还没有消息</b><small>和朋友聊聊谁带什么。</small></div>}
               </div>
               <div className="chat-composer"><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && sendMessage()} placeholder="聊聊谁带什么…" /><button onClick={sendMessage} aria-label="发送消息">↑</button></div>
+            </section>
+          </div>
+        )}
+
+        {showInvite && (
+          <div className="invite-modal" role="dialog" aria-modal="true" aria-label="邀请朋友加入队伍">
+            <button className="sheet-backdrop" aria-label="关闭" onClick={() => setShowInvite(false)} />
+            <section className="invite-card">
+              <button className="profile-close" onClick={() => setShowInvite(false)} aria-label="关闭"><X aria-hidden="true" /></button>
+              <span className="invite-spark"><Sparkles aria-hidden="true" /></span>
+              <h2>邀请朋友一起准备</h2>
+              <p>让朋友登录「带齐」，输入这个邀请码即可加入。</p>
+              <button className="invite-code" onClick={() => void copyInviteCode()}><b>{inviteCode}</b><small>点击复制</small></button>
+              <small className="sync-state" aria-live="polite">{syncStatus === "saving" ? "正在同步…" : syncStatus === "offline" ? "当前离线，恢复后会重试" : "清单已云端同步"}</small>
             </section>
           </div>
         )}
@@ -1134,8 +1399,8 @@ export default function Home() {
               <footer className="item-note-actions">
                 <button className="note-delete-action" onClick={() => removeItem(activeItem, true)}><span><Trash2 aria-hidden="true" /></span><small>删除</small></button>
                 {!isPersonalItem(activeItem) && <>
-                  <button className={`note-bring-action ${activeItem.owners.includes("我") ? "is-selected" : ""}`} aria-pressed={activeItem.owners.includes("我")} onClick={() => { claim(activeItem.id); setActiveItemId(null); }}><span aria-hidden="true">＋</span><small>我来带</small></button>
-                  <button className={`note-release-action ${activeItem.owners.includes("我") ? "" : "is-selected"}`} aria-pressed={!activeItem.owners.includes("我")} onClick={() => { release(activeItem.id); setActiveItemId(null); }}><span aria-hidden="true">−</span><small>我不带</small></button>
+                  <button className={`note-bring-action ${activeItem.owners.includes(currentMember) ? "is-selected" : ""}`} aria-pressed={activeItem.owners.includes(currentMember)} onClick={() => { claim(activeItem.id); setActiveItemId(null); }}><span aria-hidden="true">＋</span><small>我来带</small></button>
+                  <button className={`note-release-action ${activeItem.owners.includes(currentMember) ? "" : "is-selected"}`} aria-pressed={!activeItem.owners.includes(currentMember)} onClick={() => { release(activeItem.id); setActiveItemId(null); }}><span aria-hidden="true">−</span><small>我不带</small></button>
                 </>}
                 <button className="note-close-action" onClick={() => setActiveItemId(null)}><span aria-hidden="true">×</span><small>关闭</small></button>
               </footer>

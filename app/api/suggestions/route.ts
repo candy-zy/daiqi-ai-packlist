@@ -43,19 +43,13 @@ function fallbackFor(destination: string, existingItems: string[]) {
 
 function extractOutputText(payload: unknown) {
   if (!payload || typeof payload !== "object") return "";
-  const output = (payload as { output?: unknown[] }).output;
-  if (!Array.isArray(output)) return "";
-  for (const entry of output) {
-    if (!entry || typeof entry !== "object") continue;
-    const content = (entry as { content?: unknown[] }).content;
-    if (!Array.isArray(content)) continue;
-    for (const block of content) {
-      if (block && typeof block === "object" && (block as { type?: string }).type === "output_text") {
-        return String((block as { text?: unknown }).text ?? "");
-      }
-    }
-  }
-  return "";
+  const choices = (payload as { choices?: Array<{ message?: { content?: unknown } }> }).choices;
+  return Array.isArray(choices) && typeof choices[0]?.message?.content === "string" ? choices[0].message.content : "";
+}
+
+function parseJsonObject(text: string) {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  return JSON.parse(cleaned) as unknown;
 }
 
 function validateSuggestions(value: unknown, existingItems: string[]): AiSuggestion[] {
@@ -74,6 +68,9 @@ function validateSuggestions(value: unknown, existingItems: string[]): AiSuggest
 }
 
 export async function POST(request: Request) {
+  if (!request.headers.get("oai-authenticated-user-id") || !request.headers.get("oai-authenticated-user-email")) {
+    return Response.json({ error: "请先登录", signInPath: "/signin-with-chatgpt?return_to=%2F" }, { status: 401 });
+  }
   let body: { destination?: unknown; existingItems?: unknown; preferences?: unknown };
   try {
     body = await request.json() as { destination?: unknown; existingItems?: unknown; preferences?: unknown };
@@ -91,60 +88,35 @@ export async function POST(request: Request) {
   if (!destination) return Response.json({ error: "请先填写目的地" }, { status: 400 });
 
   const fallback = fallbackFor(destination, existingItems);
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return Response.json({ suggestions: fallback, source: "fallback" });
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-5.6",
-        input: [
+        model: "deepseek-chat",
+        messages: [
           {
             role: "system",
-            content: "你是旅行物品清单助手，不做路线或景点攻略。只推荐容易被忽略、但对目的地确实实用的随身物品。必须排除当前清单中已有的物品及其同义项，只给2个。名称要短，理由要具体。韩国或首尔旅行可优先考虑T-money交通卡、流量卡等基础但易漏的物品。",
+            content: `你是旅行物品清单助手，不做路线或景点攻略。只推荐容易被忽略、但对目的地确实实用的随身物品。必须排除当前清单中已有的物品及其同义项，最多 2 个；没有可靠建议时可以少于 2 个。名称要短，理由要具体。只输出 JSON：{"suggestions":[{"name":"物品","group":"${CATEGORIES.join("|此处任选一个|")}","reason":"一句具体理由","signal":"最多6字"}]}`,
           },
           {
             role: "user",
             content: `去${destination}旅游，你建议我带什么，是我比较容易没想到的东西？当前清单已有：${existingItems.join("、") || "暂无"}。我的出行偏好：${preferences.join("、") || "未填写"}。只给2个，不能与清单重复；偏好只用于提高相关性。`,
           },
         ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "packing_suggestions",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                suggestions: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      group: { type: "string", enum: CATEGORIES },
-                      reason: { type: "string" },
-                      signal: { type: "string" },
-                    },
-                    required: ["name", "group", "reason", "signal"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              required: ["suggestions"],
-              additionalProperties: false,
-            },
-          },
-        },
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+        max_tokens: 700,
       }),
     });
-    if (!response.ok) throw new Error(`OpenAI returned ${response.status}`);
+    if (!response.ok) throw new Error(`DeepSeek returned ${response.status}`);
 
     const payload = await response.json();
     const outputText = extractOutputText(payload);
-    const modelSuggestions = validateSuggestions(JSON.parse(outputText), existingItems);
+    const modelSuggestions = validateSuggestions(parseJsonObject(outputText), existingItems);
     const completed = [...modelSuggestions];
     for (const item of fallback) {
       if (completed.length === 2) break;

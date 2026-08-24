@@ -1200,3 +1200,27 @@ h1,.setup-content h1,.departure-page h1 {
     .departure-page { padding-top:calc(70px + env(safe-area-inset-top)); padding-bottom:calc(38px + env(safe-area-inset-bottom)); }
   }
 }
+
+/* Cloud collaboration: account, invite and saved-team controls */
+.avatar-an { background-position:right center; filter:hue-rotate(28deg); }
+.compact-trip-hero>.presence-panel { display:flex; align-items:center; gap:8px; }
+.invite-friends-button { width:36px; height:36px; display:grid; place-items:center; padding:0; border:1.5px solid var(--ink); border-radius:50%; background:#fff; cursor:pointer; box-shadow:2px 2px 0 var(--ink); }
+.invite-friends-button svg { width:17px; height:17px; }
+.cloud-error { margin:0 0 12px; color:#b54a3e; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.setup-submit:disabled { cursor:wait; opacity:.6; }
+.setup-signin { text-decoration:none; }
+.join-team-entry { align-self:center; margin:16px 0 0; padding:8px 12px; border:0; border-bottom:1px solid currentColor; background:transparent; cursor:pointer; color:#5f6059; font-size:var(--type-secondary-size); }
+.join-team-form { display:grid; grid-template-columns:1fr auto; gap:8px; margin-top:12px; }
+.join-team-form input { min-width:0; padding:12px 14px; border:2px solid var(--ink); border-radius:14px; background:#fff; font-size:var(--type-body-size); text-transform:uppercase; letter-spacing:.12em; }
+.join-team-form button { padding:0 18px; border:2px solid var(--ink); border-radius:14px; background:var(--lime); box-shadow:2px 3px 0 var(--ink); font-weight:var(--font-semibold); }
+.saved-trips { display:grid; gap:8px; margin-top:24px; }
+.saved-trips>small { color:var(--muted); font-size:var(--type-caption-size); }
+.saved-trips>button { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border:1px solid var(--line); border-radius:14px; background:#fff; text-align:left; cursor:pointer; }
+.saved-trips>button span { display:grid; gap:2px; }.saved-trips>button b { font-size:var(--type-secondary-size); }.saved-trips>button small { color:var(--muted); font-size:var(--type-caption-size); }.saved-trips>button i { font-size:var(--type-h3-size); font-style:normal; }
+.invite-modal { position:absolute; inset:0; z-index:90; display:grid; place-items:center; padding:26px; }
+.invite-card { position:relative; z-index:2; width:min(330px,100%); display:grid; justify-items:center; padding:30px 24px 24px; border:2px solid var(--ink); border-radius:24px; background:var(--paper); box-shadow:8px 10px 0 var(--ink),0 20px 55px rgba(20,22,21,.22); text-align:center; }
+.invite-card>.profile-close { position:absolute; top:12px; right:12px; }
+.invite-spark { width:52px; height:52px; display:grid; place-items:center; border:2px solid var(--ink); border-radius:16px; background:var(--lime); box-shadow:3px 3px 0 var(--ink); }
+.invite-spark svg { width:27px; height:27px; }
+.invite-card h2 { margin:18px 0 6px; font-size:var(--type-h2-size); line-height:var(--type-h2-line); }.invite-card p { margin:0 0 18px; color:var(--muted); font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.invite-code { width:100%; display:grid; gap:3px; padding:14px; border:2px dashed var(--ink); border-radius:16px; background:#f3ffd2; cursor:pointer; }.invite-code b { font-size:var(--type-h1-size); letter-spacing:.15em; }.invite-code small,.sync-state { color:var(--muted); font-size:var(--type-caption-size); }.sync-state { margin-top:14px; }

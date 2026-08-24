@@ -7,8 +7,11 @@ async function requestSite(path = "/", init) {
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
+  const headers = new Headers(init?.headers ?? { accept: "text/html" });
+  headers.set("oai-authenticated-user-id", "test-user");
+  headers.set("oai-authenticated-user-email", "test@example.com");
   return worker.fetch(
-    new Request(`http://localhost${path}`, init ?? { headers: { accept: "text/html" } }),
+    new Request(`http://localhost${path}`, { ...(init ?? {}), headers }),
     { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
     { waitUntil() {}, passThroughOnException() {} },
   );
@@ -151,8 +154,9 @@ test("AI suggestions use two Seoul-specific fallbacks and a server-only model ro
   assert.match(page, /流量卡/);
   assert.doesNotMatch(page, /韩系拍照发夹|折叠购物袋/);
   assert.match(page, /fetch\("\/api\/suggestions"/);
-  assert.match(route, /process\.env\.OPENAI_API_KEY/);
-  assert.match(route, /https:\/\/api\.openai\.com\/v1\/responses/);
+  assert.match(route, /process\.env\.DEEPSEEK_API_KEY/);
+  assert.match(route, /https:\/\/api\.deepseek\.com\/chat\/completions/);
+  assert.match(route, /response_format: \{ type: "json_object" \}/);
   assert.match(route, /只给2个/);
   assert.match(route, /existingItems/);
 });
@@ -214,7 +218,7 @@ test("personal center uses preferences and gear only to preset unassigned items"
   assert.match(route, /body\.preferences/);
   assert.match(route, /我的出行偏好/);
   assert.match(prd, /拥有不等于携带/);
-  assert.match(prd, /GET \| `\/api\/me\/profile`/);
+  assert.match(prd, /GET \| `\/api\/profile`/);
   assert.match(prd, /设备拥有不会自动生成已认领状态/);
   assert.match(prd, /设备库只影响预设物品/);
   assert.match(prd, /仅境外目的地预设/);
@@ -228,7 +232,7 @@ test("onboarding avatars stay consistent and verification keeps one compact prog
   ]);
   assert.match(page, /function selectAllPacked/);
   assert.match(page, /"全选"/);
-  assert.match(page, /viewedMember !== "我"/);
+  assert.match(page, /viewedMember !== currentMember/);
   assert.match(page, /提醒TA/);
   assert.match(page, /className="verify-toolbar"/);
   assert.match(page, /我的物品/);
@@ -259,15 +263,16 @@ test("preparation defaults to the full list, includes unassigned view, and stays
   assert.match(page, />全部 <span>/);
   assert.match(page, />我的 <span>/);
   assert.match(page, />待分工 <span>/);
-  assert.match(page, /const myItems = \[[\s\S]*!isPersonalItem\(item\) && item\.owners\.includes\("我"\)[\s\S]*items\.filter\(isPersonalItem\)/);
+  assert.match(page, /const myItems = \[[\s\S]*!isPersonalItem\(item\) && item\.owners\.includes\(currentMember\)[\s\S]*items\.filter\(isPersonalItem\)/);
   assert.match(page, /const unassignedItems = items\.filter/);
   assert.match(page, /expandedCategories/);
   assert.match(page, /className="section-head section-toggle"/);
   assert.match(page, /personalExpanded/);
   assert.doesNotMatch(page, /const assignmentProgress|assignment-overview|只看待分配|团队物品在前，个人物品在底部|点击讨论/);
   assert.match(page, /phase === "verify" \? <button/);
-  assert.match(page, /author: "我"/);
-  assert.doesNotMatch(page, /setCurrentMember|prototype-note|context-tags/);
+  assert.match(page, /author: currentMember/);
+  assert.match(page, /setCurrentMember/);
+  assert.doesNotMatch(page, /prototype-note|context-tags/);
   assert.match(css, /team-chat-action/);
   assert.match(css, /list-controls/);
   assert.match(css, /\.list-controls \{[\s\S]*position:sticky;[\s\S]*top:0;[\s\S]*z-index:8/);
@@ -298,9 +303,8 @@ test("completed checklist opens a dedicated illustrated departure page", async (
   assert.match(page, /setPhase\("departed"\)/);
   assert.match(page, /带上好心情，出发！/);
   assert.match(page, /departure-team-v2\.webp/);
-  assert.match(page, /<img className="departure-illustration"/);
-  assert.match(page, /fetchPriority="high"/);
-  assert.doesNotMatch(page, /<Image className="departure-illustration"/);
+  assert.match(page, /<Image className="departure-illustration"/);
+  assert.match(page, /priority unoptimized/);
   assert.match(page, /phase !== "verify"/);
   assert.match(page, /const departureImage = new window\.Image\(\)/);
   assert.match(page, /departureImage\.src = departureImageSrc/);
@@ -376,7 +380,7 @@ test("item notes stay separate from team chat and keep chronological context", a
   assert.match(page, /className="note-delete-action"/);
   assert.match(page, /className=\{`note-bring-action/);
   assert.match(page, /className=\{`note-release-action/);
-  assert.match(page, /aria-pressed=\{activeItem\.owners\.includes\("我"\)\}/);
+  assert.match(page, /aria-pressed=\{activeItem\.owners\.includes\(currentMember\)\}/);
   assert.match(page, /<small>我来带<\/small>/);
   assert.match(page, /<small>我不带<\/small>/);
   assert.match(page, /claim\(activeItem\.id\); setActiveItemId\(null\);/);
@@ -397,7 +401,7 @@ test("item notes stay separate from team chat and keep chronological context", a
 test("verification is check-only and lets me return claimed team items", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /phase === "verify" \? <div className="verify-item-name">/);
-  assert.match(page, /phase === "verify" && viewedMember === "我" && !personal && currentWillBring/);
+  assert.match(page, /phase === "verify" && viewedMember === currentMember && !personal && currentWillBring/);
   assert.match(page, /className="verify-release-button" onClick=\{\(\) => release\(item\.id\)\}/);
   assert.match(page, />我不带了<\/button>/);
   assert.doesNotMatch(page, /phase === "verify"[^\n]*openItemNotes/);
@@ -411,13 +415,13 @@ test("chat assignments require the named traveler to confirm before changing the
   assert.match(page, /type AssignmentProposal/);
   assert.match(page, /afterMessageId: number/);
   assert.match(page, /afterMessageId: messageId/);
-  assert.match(page, /assignmentProposal\?\.afterMessageId === message\.id/);
+  assert.match(page, /assignmentProposals\.filter\(\(proposal\) => proposal\.afterMessageId === message\.id/);
   assert.match(page, /text: "转换插头你来带吧。"/);
   assert.match(page, /text: "好。"/);
-  assert.match(page, /afterMessageId: 2/);
+  assert.match(page, /afterMessageId: messageId/);
   assert.doesNotMatch(page, /流量卡要不要提前一起买？[\s\S]*转换插头你来带吧/);
   assert.match(page, /AI 识别到一项分工/);
-  assert.match(page, /你刚刚回复了“好”/);
+  assert.match(page, /你刚刚表示同意/);
   assert.match(page, /我不带/);
   assert.match(page, /我来带/);
   assert.match(page, /function resolveAssignmentProposal/);
@@ -433,7 +437,7 @@ test("claim actions stay quiet and AI suggestions use two compact fixed cards", 
   ]);
   assert.doesNotMatch(page, /会带这件物品|已取消自己的携带状态/);
   assert.match(page, /suggestions\.slice\(0, 2\)/);
-  assert.match(page, /AI 帮你补充了 2 件容易漏带的物品/);
+  assert.match(page, /AI 帮你补充了 \$\{suggestions\.length\} 件容易漏带的物品/);
   assert.match(page, /className="suggestion-main"/);
   assert.doesNotMatch(page, /className="signal"|className="category-decision"/);
   assert.match(page, /＋ 加入清单/);
@@ -447,4 +451,94 @@ test("claim actions stay quiet and AI suggestions use two compact fixed cards", 
   assert.match(css, /suggestion-card > button\.remove-suggestion/);
   assert.match(css, /list-controls \.list-filters \{[\s\S]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css, /grid-template-columns:43px minmax\(0,1fr\) auto/);
+});
+
+test("ships authenticated cloud collaboration with invite codes and server-authoritative state", async () => {
+  const [hosting, schema, migration, shared, session, trips, join, state, page] = await Promise.all([
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0000_stormy_darkhawk.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/_shared/server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/session/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trips/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trips/join/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trips/[tripId]/state/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.equal(JSON.parse(hosting).d1, "DB");
+  for (const table of ["users", "profiles", "trips", "trip_members", "trip_items", "item_owners", "item_notes", "chat_messages", "assignment_proposals", "trip_snapshots", "trip_events"]) {
+    assert.match(migration, new RegExp("CREATE TABLE `" + table + "`"));
+  }
+  assert.match(schema, /export const users/);
+  assert.match(schema, /export const tripMembers/);
+  assert.match(shared, /oai-authenticated-user-id/);
+  assert.match(shared, /actorSlot && previous && slot !== actorSlot/);
+  assert.match(shared, /owner !== actorSlot/);
+  assert.match(shared, /existing\?\.author \?\? actorSlot/);
+  assert.match(session, /ensureUser/);
+  assert.match(trips, /createInviteCode/);
+  assert.match(join, /最多 4 人/);
+  assert.match(state, /expectedVersion/);
+  assert.match(state, /status: 409/);
+  assert.match(state, /你不是该队伍成员/);
+  assert.match(page, /\/api\/trips\/join/);
+  assert.match(page, /setInterval\(\(\) => void poll\(\), 2500\)/);
+  assert.match(page, /朋友刚更新了清单，请重试刚才的操作/);
+  assert.match(page, /邀请码已复制/);
+});
+
+test("AI APIs use a server-only DeepSeek key and return structured recommendation and assignment data", async () => {
+  const [envExample, suggestions, intent, fallback, page] = await Promise.all([
+    readFile(new URL("../.env.example", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/suggestions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trips/[tripId]/intent/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/chat-intent.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(envExample, /^DEEPSEEK_API_KEY=/m);
+  assert.doesNotMatch(envExample, /sk-[a-z0-9]/i);
+  assert.match(suggestions, /process\.env\.DEEPSEEK_API_KEY/);
+  assert.match(suggestions, /最多 2/);
+  assert.match(intent, /itemName/);
+  assert.match(intent, /assignee/);
+  assert.match(intent, /intent/);
+  assert.match(intent, /confidence/);
+  assert.match(intent, /一次涉及多个物品分别输出/);
+  assert.match(fallback, /AGREEMENT/);
+  assert.match(fallback, /RELEASE/);
+  assert.match(fallback, /requestItems\.map/);
+  assert.match(page, /\/intent`/);
+  assert.match(page, /assignmentProposals/);
+  assert.match(page, /proposals\.length/);
+});
+
+test("chat fallback recognizes multi-item consent, release, and rejects ambiguous talk", async () => {
+  const { detectAssignmentFallback, validateAssignmentIntents } = await import("../lib/chat-intent.ts");
+  const items = [{ id: 1, name: "充电器" }, { id: 2, name: "相机" }];
+  const members = ["我", "阿哲", "小雨"];
+
+  const accepted = detectAssignmentFallback([
+    { id: 1, author: "阿哲", text: "充电器和相机你来带吧" },
+    { id: 2, author: "我", text: "好" },
+  ], items, members);
+  assert.equal(accepted.length, 2);
+  assert.deepEqual(accepted.map((entry) => entry.itemName), ["充电器", "相机"]);
+  assert.ok(accepted.every((entry) => entry.assignee === "我" && entry.intent === "claim"));
+
+  const released = detectAssignmentFallback([
+    { id: 3, author: "我", text: "相机我不带了" },
+  ], items, members);
+  assert.equal(released.length, 1);
+  assert.equal(released[0].intent, "release");
+
+  assert.deepEqual(detectAssignmentFallback([
+    { id: 4, author: "小雨", text: "谁带相机？" },
+  ], items, members), []);
+
+  const validated = validateAssignmentIntents({ assignments: [
+    { itemName: "相机", requester: "阿哲", assignee: "我", intent: "claim", confidence: 0.9, evidenceMessageIds: [1, 2] },
+    { itemName: "相机", requester: "阿哲", assignee: "陌生人", intent: "claim", confidence: 0.9, evidenceMessageIds: [1, 2] },
+    { itemName: "相机", requester: "阿哲", assignee: "我", intent: "claim", confidence: 0.2, evidenceMessageIds: [1, 2] },
+  ] }, items, members);
+  assert.equal(validated.length, 1);
 });
