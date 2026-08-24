@@ -1,4 +1,4 @@
-const CACHE_NAME = "daiqi-app-v2";
+const CACHE_NAME = "daiqi-app-v3";
 const CORE_ASSETS = [
   "/",
   "/manifest.webmanifest",
@@ -6,7 +6,7 @@ const CORE_ASSETS = [
   "/app-icon-512.png?v=2",
   "/apple-touch-icon.png?v=2",
   "/team-characters.png",
-  "/departure-team-v2.webp"
+  "/departure-team-v2.webp?v=3"
 ];
 
 self.addEventListener("install", (event) => {

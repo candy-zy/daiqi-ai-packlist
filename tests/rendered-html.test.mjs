@@ -52,7 +52,8 @@ test("ships as an installable mobile PWA with local trip continuity", async () =
   assert.match(page, /navigator\.serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(page, /localStorage\.setItem\(localStateKey/);
   assert.match(page, /添加到主屏幕/);
-  assert.match(serviceWorker, /CACHE_NAME = "daiqi-app-v2"/);
+  assert.match(serviceWorker, /CACHE_NAME = "daiqi-app-v3"/);
+  assert.match(serviceWorker, /departure-team-v2\.webp\?v=3/);
   assert.match(manifest, /app-icon-192\.png\?v=2/);
   assert.match(manifest, /app-icon-512\.png\?v=2/);
   assert.match(page, /className="brand-mark" src="\/app-icon-192\.png\?v=2"/);
@@ -303,6 +304,9 @@ test("completed checklist opens a dedicated illustrated departure page", async (
   assert.match(page, /setPhase\("departed"\)/);
   assert.match(page, /带上好心情，出发！/);
   assert.match(page, /departure-team-v2\.webp/);
+  assert.match(page, /<img className="departure-illustration"/);
+  assert.match(page, /fetchPriority="high"/);
+  assert.doesNotMatch(page, /<Image className="departure-illustration"/);
   assert.match(page, /phase !== "verify"/);
   assert.match(page, /const departureImage = new window\.Image\(\)/);
   assert.match(page, /departureImage\.src = departureImageSrc/);

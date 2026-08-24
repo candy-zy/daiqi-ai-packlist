@@ -165,7 +165,7 @@ const personalItemNames = new Set([
 ]);
 const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
 const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
-const departureImageSrc = "/departure-team-v2.webp";
+const departureImageSrc = "/departure-team-v2.webp?v=3";
 const localStateKey = "daiqi-app-state-v2";
 
 function hasReleaseIntent(text: string) {
@@ -719,7 +719,7 @@ export default function Home() {
           <button className="departure-back" onClick={() => setPhase("verify")} aria-label="返回核对清单">←</button>
           <section className="departure-page">
             <div className="departure-illustration-shell">
-              <Image className="departure-illustration" src={departureImageSrc} alt="三位朋友带着行李一起出发" width={700} height={700} sizes="(max-width: 520px) calc(100vw - 48px), 360px" priority />
+              <img className="departure-illustration" src={departureImageSrc} alt="三位朋友带着行李一起出发" width={700} height={700} loading="eager" decoding="async" fetchPriority="high" />
             </div>
             <h1>带上好心情，出发！</h1>
           </section>
