@@ -20,6 +20,22 @@ function seasonFor(month: number, latitude: number) {
   return String(seasons.find((entry) => (entry.slice(0, 3) as number[]).includes(month))?.[3] ?? "当季");
 }
 
+async function fetchForecast(url: URL) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6500);
+  try {
+    const response = await fetch(url, {
+      headers: { accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Forecast returned ${response.status}`);
+    return await response.json() as { daily?: Record<string, unknown> };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function POST(request: Request) {
   if (!request.headers.get("oai-authenticated-user-id") || !request.headers.get("oai-authenticated-user-email")) {
     return Response.json({ error: "请先登录", signInPath: "/signin-with-chatgpt?return_to=%2F" }, { status: 401 });
@@ -55,9 +71,15 @@ export async function POST(request: Request) {
     url.searchParams.set("timezone", timezone || "auto");
     url.searchParams.set("start_date", startDate);
     url.searchParams.set("end_date", endDate);
-    const response = await fetch(url, { headers: { accept: "application/json" } });
-    if (!response.ok) throw new Error(`Forecast returned ${response.status}`);
-    const payload = await response.json() as { daily?: Record<string, unknown> };
+    let payload: { daily?: Record<string, unknown> };
+    try {
+      payload = await fetchForecast(url);
+    } catch (firstError) {
+      // 某些地点服务返回的时区名称可能暂时不被天气源接受，自动使用坐标时区重试一次。
+      url.searchParams.set("timezone", "auto");
+      console.warn("Weather forecast retrying with automatic timezone", firstError);
+      payload = await fetchForecast(url);
+    }
     const daily = payload.daily ?? {};
     const minValues = Array.isArray(daily.temperature_2m_min) ? daily.temperature_2m_min.map(Number).filter(Number.isFinite) : [];
     const maxValues = Array.isArray(daily.temperature_2m_max) ? daily.temperature_2m_max.map(Number).filter(Number.isFinite) : [];
@@ -71,7 +93,8 @@ export async function POST(request: Request) {
     const condition = snowfall > 0 ? `，预计有 ${snowfall} cm 降雪` : precipitationProbability >= 40 ? `，最高降水概率 ${precipitationProbability}%` : "，降水概率较低";
     const result: WeatherResponse = { source: "forecast", minTemp, maxTemp, precipitationProbability, snowfall, summary: `行程期间约 ${minTemp}–${maxTemp}°C${condition}` };
     return Response.json(result);
-  } catch {
+  } catch (error) {
+    console.warn("Weather forecast unavailable; falling back to season context", error);
     const result: WeatherResponse = { source: "season", season, summary: `暂时无法获取逐日天气，将按当地${season}准备` };
     return Response.json(result);
   }

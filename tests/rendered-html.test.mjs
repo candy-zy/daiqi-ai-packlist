@@ -166,7 +166,7 @@ test("AI suggestions use a prompt-first ranked model response and a server-only 
   assert.match(route, /existingItems/);
 });
 
-test("onboarding uses a real place picker, travel dates and automatic weather context", async () => {
+test("onboarding resolves weather only after submission and keeps it as hidden AI context", async () => {
   const [page, places, weather, suggestions, shared] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/places/route.ts", import.meta.url), "utf8"),
@@ -177,10 +177,16 @@ test("onboarding uses a real place picker, travel dates and automatic weather co
   assert.match(page, /role="combobox"/);
   assert.match(page, /搜索城市或地区，如首尔、北海道/);
   assert.match(page, /type="date"/);
-  assert.match(page, /fetch\("\/api\/weather"/);
+  const createTeamBlock = page.slice(page.indexOf("async function createTeam"), page.indexOf("function openProfile"));
+  assert.match(createTeamBlock, /fetch\("\/api\/weather"/);
+  assert.match(createTeamBlock, /weather: resolvedWeather/);
+  assert.doesNotMatch(page, /className=\{`setup-weather/);
+  assert.doesNotMatch(page, /已加入当地季节信息/);
   assert.match(page, /applyPresetItems\(seedItems, profile, cleanDestination\)/);
   assert.match(places, /geocoding-api\.open-meteo\.com\/v1\/search/);
   assert.match(weather, /api\.open-meteo\.com\/v1\/forecast/);
+  assert.match(weather, /Weather forecast retrying with automatic timezone/);
+  assert.match(weather, /cache: "no-store"/);
   assert.match(weather, /daysAway > 15/);
   assert.match(suggestions, /旅行日期是\$\{startDate\}至\$\{endDate\}/);
   assert.match(suggestions, /天气信息和日期优先于/);
