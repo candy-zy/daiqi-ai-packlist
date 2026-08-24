@@ -522,6 +522,7 @@ export default function Home() {
   const syncInFlightRef = useRef(false);
   const syncTimerRef = useRef<number | null>(null);
   const pendingSharedStateRef = useRef<ServerTripPayload["state"] | null>(null);
+  const refreshedLegacySuggestionsRef = useRef(new Set<string>());
   const openCloudTripRef = useRef(openCloudTrip);
   const flushCloudStateRef = useRef(flushCloudState);
 
@@ -707,6 +708,32 @@ export default function Home() {
     const timer = window.setInterval(() => void poll(), 2500);
     return () => window.clearInterval(timer);
   }, [accountReady, activeTripId, teamReady]);
+
+  useEffect(() => {
+    if (!activeTripId || !teamReady || !accountReady) return;
+    const hasLegacySuggestions = suggestions.some((suggestion) => /便携加湿器|折叠晾衣架/.test(suggestion.name));
+    if (!hasLegacySuggestions || refreshedLegacySuggestionsRef.current.has(activeTripId)) return;
+    refreshedLegacySuggestionsRef.current.add(activeTripId);
+    const existingNames = new Set(items.map((item) => item.name.trim().toLowerCase()));
+    setSuggestionStatus("loading");
+    void fetch("/api/suggestions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ destination, existingItems: items.map((item) => item.name) }),
+    }).then(async (response) => {
+      if (!response.ok) throw new Error("AI suggestions request failed");
+      const result = await response.json() as { suggestions?: Omit<Suggestion, "id" | "icon" | "added">[]; source?: "model" | "fallback" };
+      const refreshed = (result.suggestions ?? [])
+        .filter((item, index, all) => !existingNames.has(item.name.trim().toLowerCase()) && all.findIndex((candidate) => candidate.name.trim().toLowerCase() === item.name.trim().toLowerCase()) === index)
+        .slice(0, 2)
+        .map((item, index) => ({ ...item, id: 101 + index, icon: index === 0 ? "▣" : "⌁", added: false }));
+      setSuggestions(refreshed);
+      setSuggestionStatus(result.source === "model" ? "model" : "fallback");
+    }).catch(() => {
+      setSuggestionStatus("fallback");
+      refreshedLegacySuggestionsRef.current.delete(activeTripId);
+    });
+  }, [accountReady, activeTripId, destination, items, suggestions, teamReady]);
 
   useEffect(() => {
     if (!teamReady || phase !== "verify") return;

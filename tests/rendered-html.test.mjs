@@ -200,6 +200,14 @@ test("AI ranking is filtered only after the model responds and common aliases ar
   assert.match(page, /applySuggestionDisplayPolicy/);
 });
 
+test("legacy low-value recommendation cards refresh once through the ranked API", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /refreshedLegacySuggestionsRef/);
+  assert.match(page, /便携加湿器\|折叠晾衣架/);
+  assert.match(page, /hasLegacySuggestions/);
+  assert.match(page, /fetch\("\/api\/suggestions"/);
+});
+
 test("personal center uses preferences and gear only to preset unassigned items", async () => {
   const [page, css, route, prd] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
