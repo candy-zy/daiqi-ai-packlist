@@ -960,7 +960,6 @@ h1,.setup-content h1,.departure-page h1 {
 .item-note-row time { flex:none; color:#92948e; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
 .item-note-row p { margin:0; color:#4d504a; font-size:var(--type-body-size); line-height:var(--type-body-line); overflow-wrap:anywhere; }
 .item-note-empty { height:100%; display:grid; place-content:center; justify-items:center; gap:5px; padding:24px; color:#7e817a; text-align:center; }
-.item-note-empty>span { width:40px; height:40px; display:grid; place-items:center; border:1.5px dashed #999b94; border-radius:50%; font-size:var(--type-h3-size); }
 .item-note-empty>b { color:var(--ink); font-size:var(--type-secondary-size); }
 .item-note-empty>small { max-width:230px; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
 .item-note-composer { display:flex; gap:8px; flex:none; padding:9px 16px; border-top:1px solid #d9d6cd; }

@@ -11,12 +11,27 @@ const SEOUL_FALLBACK_RANKING: AiSuggestion[] = [
   { name: "折叠购物袋", group: "日用杂物类", reason: "购物时可以少买塑料袋，也方便临时收纳随身物品。", signal: "轻便收纳" },
 ];
 
-const GENERAL_FALLBACK_RANKING: AiSuggestion[] = [
+const INTERNATIONAL_FALLBACK_RANKING: AiSuggestion[] = [
   { name: "转换插头", group: "电子数码类", reason: "出发前确认目的地插座标准，避免落地后无法为设备充电。", signal: "供电确认" },
+  { name: "交通卡", group: "证件与钱财类", reason: "提前了解并准备当地交通卡，抵达后乘坐公共交通更方便。", signal: "交通必备" },
   { name: "流量卡", group: "电子数码类", reason: "提前准备目的地流量，落地即可查地图、联系朋友和叫车。", signal: "上网必备" },
   { name: "行李牌", group: "日用杂物类", reason: "写好联系方式，托运行李拿错或遗失时更容易找回。", signal: "托运提醒" },
   { name: "密封袋", group: "日用杂物类", reason: "可以分装液体和潮湿物品，避免洗护用品在箱内渗漏。", signal: "收纳提醒" },
 ];
+
+const DOMESTIC_FALLBACK_RANKING: AiSuggestion[] = [
+  { name: "行李牌", group: "日用杂物类", reason: "写好联系方式，托运行李拿错或遗失时更容易找回。", signal: "托运提醒" },
+  { name: "密封袋", group: "日用杂物类", reason: "可以分装液体和潮湿物品，避免洗护用品在箱内渗漏。", signal: "收纳提醒" },
+  { name: "常用药品", group: "医药健康类", reason: "常用药提前自备，遇到身体不适时不必临时寻找合适药品。", signal: "应急备用" },
+];
+
+const mainlandDestinationMarkers = ["中国", "国内", "成都", "北京", "上海", "广州", "深圳", "杭州", "重庆", "南京", "苏州", "武汉", "西安", "长沙", "厦门", "青岛", "天津", "郑州", "昆明", "三亚", "哈尔滨", "沈阳", "大连", "济南", "福州", "南昌", "合肥", "太原", "石家庄", "贵阳", "南宁", "海口", "拉萨", "乌鲁木齐", "呼和浩特", "兰州", "银川", "西宁"];
+
+function inferInternationalDestination(destination: string, explicit: unknown) {
+  if (typeof explicit === "boolean") return explicit;
+  const normalized = destination.trim().toLowerCase();
+  return Boolean(normalized) && !mainlandDestinationMarkers.some((marker) => normalized.includes(marker));
+}
 
 function normalize(value: string) {
   return value.toLowerCase().replace(/[\s·・—_\-/（）()]/g, "");
@@ -51,8 +66,9 @@ function canonicalizeSuggestion(item: RankedItem): AiSuggestion {
   return { name: rawName, group: inferCategory(rawName), reason: item.reason, signal: "AI 推荐" };
 }
 
-function fallbackFor(destination: string, existingItems: string[]) {
-  const ranking = /(韩国|首尔|seoul|korea)/i.test(destination) ? SEOUL_FALLBACK_RANKING : GENERAL_FALLBACK_RANKING;
+function fallbackFor(destination: string, existingItems: string[], international: boolean) {
+  if (!international) return DOMESTIC_FALLBACK_RANKING.filter((item) => !isDuplicate(item.name, existingItems)).slice(0, 2);
+  const ranking = /(韩国|首尔|seoul|korea)/i.test(destination) ? SEOUL_FALLBACK_RANKING : INTERNATIONAL_FALLBACK_RANKING;
   return ranking.filter((item) => !isDuplicate(item.name, existingItems)).slice(0, 2);
 }
 
@@ -79,10 +95,11 @@ function validateRankedItems(value: unknown): RankedItem[] {
   }).sort((a, b) => a.rank - b.rank).slice(0, 10);
 }
 
-function chooseUnseenSuggestions(rankedItems: RankedItem[], existingItems: string[]) {
+function chooseUnseenSuggestions(rankedItems: RankedItem[], existingItems: string[], international: boolean) {
   const chosen: AiSuggestion[] = [];
   for (const rankedItem of rankedItems) {
     const suggestion = canonicalizeSuggestion(rankedItem);
+    if (!international && /(t-?money|交通卡|流量卡|sim卡|esim|wi-?fi|转换插头)/i.test(suggestion.name)) continue;
     if (isDuplicate(suggestion.name, existingItems) || isDuplicate(suggestion.name, chosen.map((item) => item.name))) continue;
     chosen.push(suggestion);
     if (chosen.length === 2) break;
@@ -94,9 +111,9 @@ export async function POST(request: Request) {
   if (!request.headers.get("oai-authenticated-user-id") || !request.headers.get("oai-authenticated-user-email")) {
     return Response.json({ error: "请先登录", signInPath: "/signin-with-chatgpt?return_to=%2F" }, { status: 401 });
   }
-  let body: { destination?: unknown; existingItems?: unknown; preferences?: unknown; startDate?: unknown; endDate?: unknown; weather?: unknown };
+  let body: { destination?: unknown; existingItems?: unknown; preferences?: unknown; startDate?: unknown; endDate?: unknown; weather?: unknown; international?: unknown };
   try {
-    body = await request.json() as { destination?: unknown; existingItems?: unknown; preferences?: unknown; startDate?: unknown; endDate?: unknown; weather?: unknown };
+    body = await request.json() as { destination?: unknown; existingItems?: unknown; preferences?: unknown; startDate?: unknown; endDate?: unknown; weather?: unknown; international?: unknown };
   } catch {
     return Response.json({ error: "请求格式不正确" }, { status: 400 });
   }
@@ -119,7 +136,8 @@ export async function POST(request: Request) {
   const weatherSource = rawWeather?.source === "forecast" ? "逐日天气预报" : rawWeather?.source === "season" ? "当地月份/季节信息" : "";
   if (!destination) return Response.json({ error: "请先填写目的地" }, { status: 400 });
 
-  const fallback = fallbackFor(destination, existingItems);
+  const international = inferInternationalDestination(destination, body.international);
+  const fallback = fallbackFor(destination, existingItems, international);
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return Response.json({ suggestions: fallback, source: "fallback" satisfies SuggestionSource });
 
@@ -132,7 +150,7 @@ export async function POST(request: Request) {
         messages: [
           {
             role: "user",
-            content: `去${destination}旅游。${startDate && endDate ? `旅行日期是${startDate}至${endDate}。` : ""}${weatherSummary ? `${weatherSource}：${weatherSummary}。` : ""}${preferences.length > 0 ? `我的旅行兴趣/偏好是：${preferences.join("、")}。` : "我没有提供特别的旅行兴趣或偏好。"}你建议我带什么，是我比较容易没想到的东西？请结合目的地、明确的旅行日期、天气信息和我的兴趣偏好，优先推荐轻便、实用、遗漏后影响较大的具体物品；天气信息和日期优先于对目的地气候的泛化印象，不要自行编造天气；不要推荐体积大、必要性低或酒店通常会提供的物品。请按推荐优先级从高到低排序，列出10件具体物品。不要参考任何预设物品，不要刻意包含某个答案。只返回JSON：{"items":[{"rank":1,"name":"物品名","reason":"一句话理由"}]}`,
+            content: `去${destination}旅游。${international ? "这是境外旅行：请把当地交通卡和流量卡/eSIM作为高优先级候选；若清单中没有，应优先考虑它们。" : "这是中国境内旅行：不要推荐流量卡、SIM/eSIM、T-money或其他境外交通卡，也不要推荐转换插头。"}${startDate && endDate ? `旅行日期是${startDate}至${endDate}。` : ""}${weatherSummary ? `${weatherSource}：${weatherSummary}。` : ""}${preferences.length > 0 ? `我的旅行兴趣/偏好是：${preferences.join("、")}。` : "我没有提供特别的旅行兴趣或偏好。"}你建议我带什么，是我比较容易没想到的东西？请结合目的地、明确的旅行日期、天气信息和我的兴趣偏好，优先推荐轻便、实用、遗漏后影响较大的具体物品；天气信息和日期优先于对目的地气候的泛化印象，不要自行编造天气；不要推荐体积大、必要性低或酒店通常会提供的物品。请按推荐优先级从高到低排序，列出10件具体物品。不要参考任何预设物品，不要刻意包含某个答案。只返回JSON：{"items":[{"rank":1,"name":"物品名","reason":"一句话理由"}]}`,
           },
         ],
         response_format: { type: "json_object" },
@@ -144,7 +162,7 @@ export async function POST(request: Request) {
 
     const payload = await response.json();
     const rankedItems = validateRankedItems(parseJsonObject(extractOutputText(payload)));
-    const modelSuggestions = chooseUnseenSuggestions(rankedItems, existingItems);
+    const modelSuggestions = chooseUnseenSuggestions(rankedItems, existingItems, international);
     if (modelSuggestions.length < 2) {
       for (const item of fallback) {
         if (modelSuggestions.length === 2) break;

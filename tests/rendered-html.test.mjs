@@ -223,12 +223,24 @@ test("AI ranking is filtered only after the model responds and common aliases ar
     readFile(new URL("../app/api/suggestions/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(route, /validateRankedItems/);
-  assert.match(route, /chooseUnseenSuggestions\(rankedItems, existingItems\)/);
+  assert.match(route, /chooseUnseenSuggestions\(rankedItems, existingItems, international\)/);
   assert.match(route, /canonicalizeSuggestion/);
   assert.match(route, /T-money 交通卡/);
   assert.match(route, /wi-\?fi\|sim卡\|esim\|流量卡/);
-  assert.doesNotMatch(route, /destinationPriorityFor|prioritySuggestions/);
+  assert.match(route, /这是境外旅行/);
+  assert.match(route, /这是中国境内旅行/);
   assert.match(page, /applySuggestionDisplayPolicy/);
+});
+
+test("domestic destinations never fall back to foreign connectivity items", async () => {
+  const response = await requestSite("/api/suggestions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ destination: "中国 四川 成都", existingItems: [] }),
+  });
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.ok(result.suggestions.every((item) => !/(流量卡|交通卡|T-money|转换插头)/i.test(item.name)));
 });
 
 test("legacy low-value recommendation cards refresh once through the ranked API", async () => {
@@ -446,6 +458,7 @@ test("item notes stay separate from team chat and keep chronological context", a
   assert.match(page, /<time>\{note\.time\}<\/time>/);
   assert.match(page, /className="item-copy"/);
   assert.match(page, /className="item-note-trigger"/);
+  assert.doesNotMatch(page, /className="item-note-empty"><span>＋<\/span>/);
   assert.match(page, /className={`item-icon item-icon-button/);
   assert.match(page, /onClick=\{\(\) => openItemNotes\(item\.id\)\}/);
   assert.doesNotMatch(page, /function togglePersonal|make-personal-button|各带各的/);

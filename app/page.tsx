@@ -821,6 +821,7 @@ export default function Home() {
       body: JSON.stringify({
         destination,
         existingItems: items.map((item) => item.name),
+        international: isInternationalDestination(destination),
         preferences: habitOptions.filter((option) => profile.habits.includes(option.id)).map((option) => option.label),
         startDate,
         endDate,
@@ -1107,6 +1108,7 @@ export default function Home() {
         body: JSON.stringify({
           destination: cleanDestination,
           existingItems: cleanItems.map((item) => item.name),
+          international: isInternationalDestination(cleanDestination),
           preferences: [
             ...habitOptions.filter((option) => profile.habits.includes(option.id)).map((option) => option.label),
           ],
@@ -1754,7 +1756,7 @@ export default function Home() {
                   {activeItemNotes.length ? activeItemNotes.map((note) => <article className="item-note-row" key={note.id}>
                     <CharacterAvatar member={note.author} className="item-note-avatar" />
                     <div><header><b>{note.author}</b><time>{note.time}</time></header><p>{note.text}</p></div>
-                  </article>) : <div className="item-note-empty"><span>＋</span><b>还没有留言</b><small>写下第一条，朋友打开这件物品就能看到。</small></div>}
+                  </article>) : <div className="item-note-empty"><b>还没有留言</b><small>写下第一条，朋友打开这件物品就能看到。</small></div>}
                 </div>
                 <div className="item-note-composer"><input value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addItemNote()} placeholder="写一条留言…" /><button onClick={addItemNote} aria-label="发布留言">↑</button></div>
               </section>
