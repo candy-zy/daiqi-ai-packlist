@@ -177,11 +177,20 @@ test("personal center uses preferences and gear only to preset unassigned items"
   ]);
 
   assert.match(page, /我的出行偏好/);
-  assert.match(page, /我会怎么出行/);
+  assert.match(page, /我的兴趣与出行偏好/);
   assert.match(page, /我有这些设备/);
-  assert.match(page, /喜欢拍照/);
+  assert.match(page, /摄影 \/ 拍照/);
+  assert.match(page, /户外 \/ 徒步 \/ 露营/);
+  assert.match(page, /观星 \/ 天文/);
+  assert.match(page, /容易低血糖/);
   assert.match(page, /有相机/);
   assert.match(page, /系统会把相关物品预设进清单，但不会替你认领/);
+  assert.doesNotMatch(page, /习惯带零食/);
+  assert.doesNotMatch(page, /option\.impact/);
+  assert.match(page, /items: \["相机", "备用电池", "内存卡", "手机稳定器", "三脚架"\]/);
+  assert.match(page, /items: \["登山杖", "防潮垫", "睡袋", "手电筒", "防风外套", "冲锋衣", "户外急救包", "保温毯"\]/);
+  assert.match(page, /items: \["望远镜", "红光手电", "三脚架", "保暖冲锋衣"\]/);
+  assert.match(page, /items: \["葡萄糖"\]/);
   assert.doesNotMatch(page, /有转换插头/);
   assert.match(page, /function isInternationalDestination/);
   assert.match(page, /function applyPresetItems/);
@@ -200,6 +209,7 @@ test("personal center uses preferences and gear only to preset unassigned items"
   assert.match(prd, /设备拥有不会自动生成已认领状态/);
   assert.match(prd, /设备库只影响预设物品/);
   assert.match(prd, /仅境外目的地预设/);
+  assert.match(prd, /同一物品可由多个偏好触发/);
 });
 
 test("onboarding avatars stay consistent and verification keeps one compact progress row", async () => {

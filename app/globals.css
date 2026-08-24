@@ -1107,10 +1107,10 @@ h1,.setup-content h1,.departure-page h1 {
 .preference-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .preference-grid>button {
   min-width:0;
-  min-height:74px;
+  min-height:58px;
   display:grid;
   grid-template-columns:25px minmax(0,1fr);
-  align-items:start;
+  align-items:center;
   gap:8px;
   padding:9px;
   text-align:left;
@@ -1123,10 +1123,7 @@ h1,.setup-content h1,.departure-page h1 {
 .preference-grid>button>span { width:23px; height:23px; display:grid; place-items:center; border:1.5px solid #aaa79e; border-radius:8px; background:#f4f2ec; }
 .preference-grid>button.selected>span { border-color:var(--ink); background:var(--lime); }
 .preference-grid>button>span svg { width:15px; height:15px; stroke-width:3; }
-.preference-grid>button>div { min-width:0; }
-.preference-grid b,.preference-grid small { display:block; }
-.preference-grid b { font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
-.preference-grid small { margin-top:2px; color:#77756d; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.preference-grid b { display:block; min-width:0; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
 .profile-impact { display:grid; grid-template-columns:38px minmax(0,1fr); align-items:start; gap:10px; margin:0 0 10px; padding:12px; border:2px solid var(--ink); border-radius:15px; background:#e9e3ff; }
 .profile-impact>span { width:38px; height:38px; display:grid; place-items:center; border:2px solid var(--ink); border-radius:12px; background:var(--lime); }
 .profile-impact svg { width:20px; height:20px; }

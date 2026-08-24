@@ -22,7 +22,7 @@ type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify" | "departed";
 type ListFilter = "all" | "mine" | "unassigned";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
-type HabitPreference = "photo" | "makeup" | "skincare" | "motion" | "allergy" | "snacks";
+type HabitPreference = "photo" | "outdoor" | "stargazing" | "makeup" | "motion" | "allergy" | "hypoglycemia";
 type GearPreference = "camera" | "instant-camera" | "selfie-stick" | "power-bank";
 
 type TravelProfile = {
@@ -34,7 +34,6 @@ type TravelProfile = {
 type PreferenceOption<T extends string> = {
   id: T;
   label: string;
-  impact: string;
   items: string[];
 };
 
@@ -128,24 +127,25 @@ const categories: { name: Category }[] = [
 ];
 
 const habitOptions: PreferenceOption<HabitPreference>[] = [
-  { id: "photo", label: "喜欢拍照", impact: "提醒拍摄和存储配件", items: ["自拍杆", "SD 卡"] },
-  { id: "makeup", label: "会化妆", impact: "补充卸妆和防晒用品", items: ["卸妆油", "防晒霜"] },
-  { id: "skincare", label: "重视护肤", impact: "关注水乳、面霜与面膜", items: ["水乳", "面霜", "面膜"] },
-  { id: "motion", label: "容易晕车", impact: "将晕车药列入个人提醒", items: ["晕车药"] },
-  { id: "allergy", label: "容易过敏", impact: "将过敏药列入个人提醒", items: ["过敏药"] },
-  { id: "snacks", label: "习惯带零食", impact: "保留零食和饮料提醒", items: ["零食", "饮料"] },
+  { id: "photo", label: "摄影 / 拍照", items: ["相机", "备用电池", "内存卡", "手机稳定器", "三脚架"] },
+  { id: "outdoor", label: "户外 / 徒步 / 露营", items: ["登山杖", "防潮垫", "睡袋", "手电筒", "防风外套", "冲锋衣", "户外急救包", "保温毯"] },
+  { id: "stargazing", label: "观星 / 天文", items: ["望远镜", "红光手电", "三脚架", "保暖冲锋衣"] },
+  { id: "makeup", label: "化妆", items: ["卸妆油", "防晒霜"] },
+  { id: "motion", label: "容易晕车", items: ["晕车药"] },
+  { id: "allergy", label: "容易过敏", items: ["过敏药"] },
+  { id: "hypoglycemia", label: "容易低血糖", items: ["葡萄糖"] },
 ];
 
 const gearOptions: PreferenceOption<GearPreference>[] = [
-  { id: "camera", label: "有相机", impact: "预设相机和 SD 卡", items: ["相机", "SD 卡"] },
-  { id: "instant-camera", label: "有拍立得", impact: "预设拍立得与相纸", items: ["拍立得", "拍立得相纸"] },
-  { id: "selfie-stick", label: "有自拍杆", impact: "预设自拍杆", items: ["自拍杆"] },
-  { id: "power-bank", label: "有充电宝", impact: "预设充电宝", items: ["充电宝"] },
+  { id: "camera", label: "有相机", items: ["相机", "内存卡"] },
+  { id: "instant-camera", label: "有拍立得", items: ["拍立得", "拍立得相纸"] },
+  { id: "selfie-stick", label: "有自拍杆", items: ["自拍杆"] },
+  { id: "power-bank", label: "有充电宝", items: ["充电宝"] },
 ];
 
 const defaultProfile: TravelProfile = {
   displayName: "小林",
-  habits: ["photo", "skincare"],
+  habits: ["photo"],
   gear: ["camera", "power-bank"],
 };
 
@@ -153,7 +153,7 @@ const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"]
 const personalItemNames = new Set([
   "牙刷", "毛巾", "流量卡",
   "卸妆油", "防晒霜", "水乳", "面霜", "面膜",
-  "个人慢性病药物", "晕车药", "过敏药",
+  "个人慢性病药物", "晕车药", "过敏药", "葡萄糖",
 ]);
 const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
 const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
@@ -172,19 +172,22 @@ const phosphorItemIcons: Record<string, PhosphorIcon> = {
   "身份证": IdentificationCard, "银行卡": CreditCard,
   "充电器": PlugCharging, "充电宝": BatteryCharging, "耳机": Headphones, "转换插头": PlugsConnected,
   "相机": Camera, "自拍杆": DeviceMobileCamera,
+  "备用电池": BatteryCharging, "手机稳定器": DeviceMobileCamera, "三脚架": Camera,
+  "登山杖": Footprints, "防潮垫": Towel, "睡袋": Towel, "防风外套": Hoodie,
+  "冲锋衣": Hoodie, "户外急救包": FirstAid, "保温毯": Towel, "保暖冲锋衣": Hoodie,
   "上衣": TShirt, "裤子": Pants, "外套": Hoodie, "内衣": ShirtFolded, "袜子": Sock,
   "拖鞋": Footprints, "帽子": BaseballCap,
   "牙刷": Tooth, "牙膏": TestTube, "毛巾": Towel, "洗面奶": HandSoap, "卸妆油": Eyedropper,
   "防晒霜": Sun, "洗发水": SprayBottle, "沐浴露": Shower, "水乳": Drop, "面霜": Jar,
   "面膜": MaskHappy, "皮筋": CircleNotch,
-  "个人慢性病药物": Prescription, "晕车药": Pill, "过敏药": FirstAid,
+  "个人慢性病药物": Prescription, "晕车药": Pill, "过敏药": FirstAid, "葡萄糖": Pill,
   "雨伞": Umbrella, "纸巾": ToiletPaper, "湿巾": HandSwipeRight, "口罩": FaceMask, "耳塞": Ear,
   "一次性马桶垫": Toilet, "零食": Popcorn, "T-money 交通卡": Cards, "流量卡": SimCard,
 };
 
 const lucideItemIcons: Record<string, LucideIcon> = {
   "护照 / 签证": BookOpenCheck, "现金": Banknote,
-  "SD 卡": MemoryStick, "睡衣": MoonStar,
+  "内存卡": MemoryStick, "手电筒": Sparkles, "红光手电": Sparkles, "望远镜": Sparkles, "睡衣": MoonStar,
   "驱蚊液": Bug, "水杯": GlassWater, "饮料": CupSoda,
 };
 
@@ -211,10 +214,36 @@ const presetItemCatalog: Record<string, Omit<PackItem, "owners" | "checked" | "a
   "转换插头": { id: 11, name: "转换插头", icon: "⌁", group: "电子数码类" },
   "相机": { id: 12, name: "相机", icon: "📷", group: "电子数码类" },
   "自拍杆": { id: 13, name: "自拍杆", icon: "│", group: "电子数码类" },
-  "SD 卡": { id: 14, name: "SD 卡", icon: "▮", group: "电子数码类" },
+  "内存卡": { id: 14, name: "内存卡", icon: "▮", group: "电子数码类" },
   "拍立得": { id: 50, name: "拍立得", icon: "◇", group: "电子数码类" },
   "拍立得相纸": { id: 51, name: "拍立得相纸", icon: "□", group: "电子数码类" },
+  "备用电池": { id: 60, name: "备用电池", icon: "▮", group: "电子数码类" },
+  "手机稳定器": { id: 61, name: "手机稳定器", icon: "│", group: "电子数码类" },
+  "三脚架": { id: 62, name: "三脚架", icon: "△", group: "电子数码类" },
+  "登山杖": { id: 63, name: "登山杖", icon: "│", group: "日用杂物类" },
+  "防潮垫": { id: 64, name: "防潮垫", icon: "▤", group: "日用杂物类" },
+  "睡袋": { id: 65, name: "睡袋", icon: "▰", group: "日用杂物类" },
+  "手电筒": { id: 66, name: "手电筒", icon: "✦", group: "电子数码类" },
+  "防风外套": { id: 67, name: "防风外套", icon: "♨", group: "衣物鞋帽类" },
+  "冲锋衣": { id: 68, name: "冲锋衣", icon: "♨", group: "衣物鞋帽类" },
+  "户外急救包": { id: 69, name: "户外急救包", icon: "✚", group: "医药健康类" },
+  "保温毯": { id: 70, name: "保温毯", icon: "▤", group: "医药健康类" },
+  "望远镜": { id: 71, name: "望远镜", icon: "◉", group: "电子数码类" },
+  "红光手电": { id: 72, name: "红光手电", icon: "✦", group: "电子数码类" },
+  "保暖冲锋衣": { id: 73, name: "保暖冲锋衣", icon: "♨", group: "衣物鞋帽类" },
+  "葡萄糖": { id: 74, name: "葡萄糖", icon: "✚", group: "医药健康类" },
 };
+
+const validHabitPreferences = new Set<HabitPreference>(habitOptions.map((option) => option.id));
+const validGearPreferences = new Set<GearPreference>(gearOptions.map((option) => option.id));
+
+function normalizeTravelProfile(savedProfile: Partial<TravelProfile>): TravelProfile {
+  return {
+    displayName: typeof savedProfile.displayName === "string" ? savedProfile.displayName : defaultProfile.displayName,
+    habits: Array.isArray(savedProfile.habits) ? savedProfile.habits.filter((id): id is HabitPreference => validHabitPreferences.has(id as HabitPreference)) : [],
+    gear: Array.isArray(savedProfile.gear) ? savedProfile.gear.filter((id): id is GearPreference => validGearPreferences.has(id as GearPreference)) : [],
+  };
+}
 
 const mainlandDestinationMarkers = [
   "中国", "北京", "上海", "广州", "深圳", "杭州", "成都", "重庆", "南京", "苏州", "武汉", "西安", "长沙", "厦门", "青岛", "天津", "郑州", "昆明", "三亚", "哈尔滨", "沈阳", "大连", "济南", "福州", "南昌", "合肥", "太原", "石家庄", "贵阳", "南宁", "海口", "拉萨", "乌鲁木齐", "呼和浩特", "兰州", "银川", "西宁",
@@ -411,14 +440,15 @@ export default function Home() {
         const saved = JSON.parse(raw) as Partial<PersistedAppState>;
         if (typeof saved.destination === "string") setDestination(saved.destination);
         if (typeof saved.teamReady === "boolean") setTeamReady(saved.teamReady);
-        if (Array.isArray(saved.items)) setItems(saved.items);
+        if (Array.isArray(saved.items)) setItems(saved.items.map((item) => item.name === "SD 卡" ? { ...item, name: "内存卡" } : item));
         if (Array.isArray(saved.suggestions)) setSuggestions(saved.suggestions);
         if (saved.phase === "prepare" || saved.phase === "verify" || saved.phase === "departed") setPhase(saved.phase);
         if (saved.listFilter === "all" || saved.listFilter === "mine" || saved.listFilter === "unassigned") setListFilter(saved.listFilter);
         if (saved.viewedMember === "我" || saved.viewedMember === "阿哲" || saved.viewedMember === "小雨") setViewedMember(saved.viewedMember);
         if (saved.profile) {
-          setProfile(saved.profile);
-          setProfileDraft(saved.profile);
+          const normalizedProfile = normalizeTravelProfile(saved.profile);
+          setProfile(normalizedProfile);
+          setProfileDraft(normalizedProfile);
         }
         if (Array.isArray(saved.messages)) setMessages(saved.messages);
         if (Array.isArray(saved.itemNotes)) setItemNotes(saved.itemNotes);
@@ -584,10 +614,10 @@ export default function Home() {
           <label className="profile-name-field"><span>昵称</span><input value={profileDraft.displayName} onChange={(event) => setProfileDraft((current) => ({ ...current, displayName: event.target.value.slice(0, 12) }))} placeholder="朋友会看到这个名字" /></label>
 
           <section className="profile-section">
-            <div className="profile-section-head"><div><h3>我会怎么出行</h3><p>可多选，用来决定个人提醒和 AI 推荐。</p></div><span>{profileDraft.habits.length} 项</span></div>
+            <div className="profile-section-head"><div><h3>我的兴趣与出行偏好</h3><p>可多选，系统会把相关物品加入清单。</p></div><span>{profileDraft.habits.length} 项</span></div>
             <div className="preference-grid">{habitOptions.map((option) => {
               const selected = profileDraft.habits.includes(option.id);
-              return <button key={option.id} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => toggleHabit(option.id)}><span>{selected && <Check aria-hidden="true" />}</span><div><b>{option.label}</b><small>{option.impact}</small></div></button>;
+              return <button key={option.id} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => toggleHabit(option.id)}><span>{selected && <Check aria-hidden="true" />}</span><b>{option.label}</b></button>;
             })}</div>
           </section>
 
@@ -595,7 +625,7 @@ export default function Home() {
             <div className="profile-section-head"><div><h3>我有这些设备</h3><p>系统会把相关物品预设进清单，但不会替你认领。</p></div><span>{profileDraft.gear.length} 项</span></div>
             <div className="preference-grid">{gearOptions.map((option) => {
               const selected = profileDraft.gear.includes(option.id);
-              return <button key={option.id} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => toggleGear(option.id)}><span>{selected && <Check aria-hidden="true" />}</span><div><b>{option.label}</b><small>{option.impact}</small></div></button>;
+              return <button key={option.id} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => toggleGear(option.id)}><span>{selected && <Check aria-hidden="true" />}</span><b>{option.label}</b></button>;
             })}</div>
           </section>
 
