@@ -252,6 +252,14 @@ const personalItemNames = new Set([
   "个人慢性病药物", "晕车药", "过敏药", "葡萄糖",
   "运动鞋", "水壶", "护膝", "护膝 / 护腕", "手套", "泳衣 / 潜水服", "泳衣 / 浴衣",
 ]);
+const removedPreferenceItemNames = new Set([
+  "登山杖", "防潮垫", "睡袋", "手电筒", "防风外套", "冲锋衣", "户外急救包", "保温毯",
+  "望远镜", "红光手电", "保暖冲锋衣", "运动服", "运动鞋", "水壶", "护膝", "运动相机",
+  "急救包", "头灯", "保暖外套", "儿童证件", "儿童常用药", "备用衣物", "玩具",
+  "宠物证件", "宠物粮", "水碗", "牵引绳", "宠物常用药", "钓具", "鱼线 / 鱼钩", "防晒帽", "折叠椅",
+  "防水袋", "滑雪服", "护膝 / 护腕", "手套", "暖宝宝", "泳衣 / 潜水服", "泳衣 / 浴衣", "补水喷雾",
+]);
+const removedPetItemNames = new Set(["宠物证件", "宠物粮", "水碗", "牵引绳", "宠物常用药"]);
 const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
 const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
 const departureImageSrc = "/departure-team-v2.webp?v=3";
@@ -389,6 +397,17 @@ function isInternationalDestination(destination: string) {
   return !mainlandDestinationMarkers.some((marker) => normalized.includes(marker));
 }
 
+function isManagedPresetItem(item: PackItem) {
+  return item.aiReason === "根据你的出行偏好预设"
+    || item.aiReason === "根据你的身体情况预设"
+    || item.aiReason === "根据你的设备信息预设"
+    || item.aiReason === "境外目的地预设";
+}
+
+function cleanupRemovedPreferenceItems(current: PackItem[]) {
+  return current.filter((item) => !removedPetItemNames.has(item.name) && (!removedPreferenceItemNames.has(item.name) || !isManagedPresetItem(item)));
+}
+
 function applyPresetItems(current: PackItem[], profile: TravelProfile, destination: string) {
   const reasons = new Map<string, string>();
   habitOptions
@@ -402,7 +421,9 @@ function applyPresetItems(current: PackItem[], profile: TravelProfile, destinati
     .forEach((option) => option.items.forEach((name) => reasons.set(name, "根据你的设备信息预设")));
   if (isInternationalDestination(destination)) reasons.set("转换插头", "境外目的地预设");
 
-  const next = [...current];
+  const next = cleanupRemovedPreferenceItems(current).filter((item) => {
+    return !isManagedPresetItem(item) || reasons.has(item.name);
+  });
   const existingNames = new Set(next.map((item) => item.name));
   reasons.forEach((aiReason, name) => {
     const catalogItem = presetItemCatalog[name];
@@ -612,7 +633,7 @@ export default function Home() {
           const saved = JSON.parse(raw) as Partial<PersistedAppState>;
           if (typeof saved.destination === "string") setDestination(saved.destination);
           if (typeof saved.teamReady === "boolean") setTeamReady(saved.teamReady);
-          if (Array.isArray(saved.items)) setItems(saved.items.map((item) => item.name === "SD 卡" ? { ...item, name: "内存卡" } : item));
+          if (Array.isArray(saved.items)) setItems(cleanupRemovedPreferenceItems(saved.items.map((item) => item.name === "SD 卡" ? { ...item, name: "内存卡" } : item)));
           if (Array.isArray(saved.suggestions)) setSuggestions(saved.suggestions);
           if (saved.phase === "prepare" || saved.phase === "verify" || saved.phase === "departed") setPhase(saved.phase);
           if (saved.listFilter === "all" || saved.listFilter === "mine" || saved.listFilter === "unassigned") setListFilter(saved.listFilter);
@@ -867,9 +888,11 @@ export default function Home() {
     const incomingVersion = payload.version ?? payload.trip.version;
     if (payload.trip.id === activeTripIdRef.current && incomingVersion < tripVersionRef.current) return;
     applyingRemoteRef.current = true;
+    const cleanedItems = cleanupRemovedPreferenceItems(payload.state.items ?? []);
     const governedState = {
       ...payload.state,
-      suggestions: applySuggestionDisplayPolicy(payload.state.items ?? [], payload.state.suggestions ?? []),
+      items: cleanedItems,
+      suggestions: applySuggestionDisplayPolicy(cleanedItems, payload.state.suggestions ?? []),
     };
     const serialized = JSON.stringify(governedState);
     lastSyncedStateRef.current = serialized;
