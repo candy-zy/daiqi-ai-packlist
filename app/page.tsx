@@ -436,31 +436,18 @@ const seedSuggestions: Suggestion[] = [
   { id: 102, name: "流量卡", icon: "⌁", group: "电子数码类", reason: "提前准备韩国流量卡，落地即可查地图、联系朋友和叫车。", signal: "容易漏带", added: false },
 ];
 
-const lowValueSuggestionPattern = /(便携加湿器|加湿器|折叠晾衣架|晾衣架|便携熨斗|熨斗|吹风机|烧水壶|热水壶)/;
-
 function normalizeSuggestionName(value: string) {
   return value.toLowerCase().replace(/[\s·・—_\-/（）()]/g, "");
 }
 
-function applySuggestionDisplayPolicy(destination: string, items: PackItem[], currentSuggestions: Suggestion[]) {
-  if (!/(韩国|首尔|seoul|korea)/i.test(destination)) {
-    return currentSuggestions.filter((suggestion) => !lowValueSuggestionPattern.test(suggestion.name)).slice(0, 2);
-  }
+function applySuggestionDisplayPolicy(items: PackItem[], currentSuggestions: Suggestion[]) {
   const itemNames = items.map((item) => item.name);
-  const candidates: Suggestion[] = [];
-  for (const priority of seedSuggestions) {
-    const current = currentSuggestions.find((suggestion) => normalizeSuggestionName(suggestion.name) === normalizeSuggestionName(priority.name));
-    const alreadyInList = itemNames.some((name) => normalizeSuggestionName(name) === normalizeSuggestionName(priority.name));
-    if (!alreadyInList || current?.added) candidates.push({ ...priority, added: current?.added ?? false });
-  }
-  for (const suggestion of currentSuggestions) {
-    if (candidates.length === 2) break;
-    if (lowValueSuggestionPattern.test(suggestion.name)) continue;
-    if (candidates.some((candidate) => normalizeSuggestionName(candidate.name) === normalizeSuggestionName(suggestion.name))) continue;
-    const alreadyInList = itemNames.some((name) => normalizeSuggestionName(name) === normalizeSuggestionName(suggestion.name));
-    if (!alreadyInList || suggestion.added) candidates.push(suggestion);
-  }
-  return candidates.slice(0, 2);
+  return currentSuggestions.filter((suggestion, index, all) => {
+    const normalizedName = normalizeSuggestionName(suggestion.name);
+    const alreadyInList = itemNames.some((name) => normalizeSuggestionName(name) === normalizedName);
+    const firstOccurrence = all.findIndex((candidate) => normalizeSuggestionName(candidate.name) === normalizedName) === index;
+    return firstOccurrence && (!alreadyInList || suggestion.added);
+  }).slice(0, 2);
 }
 
 const seedMessages: ChatMessage[] = [
@@ -740,7 +727,7 @@ export default function Home() {
     applyingRemoteRef.current = true;
     const governedState = {
       ...payload.state,
-      suggestions: applySuggestionDisplayPolicy(payload.trip.destination, payload.state.items ?? [], payload.state.suggestions ?? []),
+      suggestions: applySuggestionDisplayPolicy(payload.state.items ?? [], payload.state.suggestions ?? []),
     };
     const serialized = JSON.stringify(governedState);
     lastSyncedStateRef.current = serialized;

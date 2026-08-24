@@ -144,7 +144,7 @@ test("category headers stay concise without explanatory subtitles", async () => 
   assert.match(page, /<h2>{category\.name}<\/h2>/);
 });
 
-test("AI suggestions use two Seoul-specific fallbacks and a server-only model route", async () => {
+test("AI suggestions use a prompt-first ranked model response and a server-only route", async () => {
   const [page, route] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/suggestions/route.ts", import.meta.url), "utf8"),
@@ -157,12 +157,25 @@ test("AI suggestions use two Seoul-specific fallbacks and a server-only model ro
   assert.match(route, /process\.env\.DEEPSEEK_API_KEY/);
   assert.match(route, /https:\/\/api\.deepseek\.com\/chat\/completions/);
   assert.match(route, /response_format: \{ type: "json_object" \}/);
-  assert.match(route, /slotsNeeded/);
+  assert.match(route, /按推荐优先级从高到低排序，列出10件具体物品/);
+  assert.match(route, /chooseUnseenSuggestions/);
   assert.match(route, /slice\(0, 2\)/);
   assert.match(route, /existingItems/);
 });
 
-test("AI suggestions endpoint returns exactly two unseen Seoul items without a key", async () => {
+test("AI suggestions skip an existing converter before selecting the next two ranked items", async () => {
+  const response = await requestSite("/api/suggestions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ destination: "韩国 · 首尔", existingItems: ["身份证", "转换插头", "相机", "充电宝"] }),
+  });
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.source, "fallback");
+  assert.deepEqual(result.suggestions.map((item) => item.name), ["T-money 交通卡", "流量卡"]);
+});
+
+test("AI suggestions keep the converter first when it is absent from the list", async () => {
   const response = await requestSite("/api/suggestions", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -170,22 +183,21 @@ test("AI suggestions endpoint returns exactly two unseen Seoul items without a k
   });
   assert.equal(response.status, 200);
   const result = await response.json();
-  assert.equal(result.source, "rules");
-  assert.deepEqual(result.suggestions.map((item) => item.name), ["T-money 交通卡", "流量卡"]);
+  assert.deepEqual(result.suggestions.map((item) => item.name), ["转换插头", "T-money 交通卡"]);
 });
 
-test("Seoul recommendation rules outrank the model and filter low-value baggage", async () => {
+test("AI ranking is filtered only after the model responds and common aliases are normalized", async () => {
   const [page, route] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/suggestions/route.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(route, /destinationPriorityFor/);
-  assert.match(route, /prioritySuggestions\.length === 2/);
-  assert.match(route, /LOW_VALUE_ITEM_PATTERN/);
-  assert.match(route, /禁止推荐便携加湿器、晾衣架、熨斗、吹风机和热水壶/);
-  assert.match(route, /目的地高频刚需；体积小但遗漏影响大/);
+  assert.match(route, /validateRankedItems/);
+  assert.match(route, /chooseUnseenSuggestions\(rankedItems, existingItems\)/);
+  assert.match(route, /canonicalizeSuggestion/);
+  assert.match(route, /T-money 交通卡/);
+  assert.match(route, /wi-\?fi\|sim卡\|esim\|流量卡/);
+  assert.doesNotMatch(route, /destinationPriorityFor|prioritySuggestions/);
   assert.match(page, /applySuggestionDisplayPolicy/);
-  assert.match(page, /lowValueSuggestionPattern/);
 });
 
 test("personal center uses preferences and gear only to preset unassigned items", async () => {
@@ -232,8 +244,7 @@ test("personal center uses preferences and gear only to preset unassigned items"
   assert.doesNotMatch(css, /\.profile-impact/);
   assert.match(css, /\.preference-grid b \{[^}]*font-weight:var\(--font-regular\)/);
   assert.match(css, /\.preference-grid>button\.selected b \{[^}]*font-weight:var\(--font-semibold\)/);
-  assert.match(route, /body\.preferences/);
-  assert.match(route, /我的出行偏好/);
+  assert.match(route, /不要参考任何预设物品，不要刻意包含某个答案/);
   assert.match(prd, /拥有不等于携带/);
   assert.match(prd, /GET \| `\/api\/profile`/);
   assert.match(prd, /设备拥有不会自动生成已认领状态/);
@@ -526,7 +537,8 @@ test("AI APIs use a server-only DeepSeek key and return structured recommendatio
   assert.match(envExample, /^DEEPSEEK_API_KEY=/m);
   assert.doesNotMatch(envExample, /sk-[a-z0-9]/i);
   assert.match(suggestions, /process\.env\.DEEPSEEK_API_KEY/);
-  assert.match(suggestions, /destinationPriorityFor/);
+  assert.match(suggestions, /chooseUnseenSuggestions/);
+  assert.match(suggestions, /validateRankedItems/);
   assert.match(suggestions, /slice\(0, 2\)/);
   assert.match(intent, /itemName/);
   assert.match(intent, /assignee/);
