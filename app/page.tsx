@@ -5,7 +5,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
-  ArrowLeft, Banknote, BookOpenCheck, Bug, CalendarDays, CloudSun, CupSoda, GlassWater, MapPin, MemoryStick,
+  ArrowLeft, Banknote, BookOpenCheck, Bug, CalendarDays, CupSoda, GlassWater, MapPin, MemoryStick,
   Check, Download, Menu, MessageCircle, MoonStar, Package, Search, Share2, Sparkles, Trash2, X,
 } from "lucide-react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
@@ -528,7 +528,7 @@ export default function Home() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [weatherContext, setWeatherContext] = useState<WeatherContext | null>(null);
-  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [isGeneratingTeam, setIsGeneratingTeam] = useState(false);
   const [setupError, setSetupError] = useState("");
   const [items, setItems] = useState(seedItems);
   const [suggestions, setSuggestions] = useState(seedSuggestions);
@@ -726,36 +726,6 @@ export default function Home() {
       controller.abort();
     };
   }, [accountReady, locationQuery, needsSignIn, selectedPlace]);
-
-  useEffect(() => {
-    if (!selectedPlace || !startDate || !endDate || endDate < startDate || needsSignIn) {
-      return;
-    }
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setWeatherLoading(true);
-      try {
-        const response = await fetch("/api/weather", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ latitude: selectedPlace.latitude, longitude: selectedPlace.longitude, timezone: selectedPlace.timezone, startDate, endDate }),
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("天气查询失败");
-        setWeatherContext(await response.json() as WeatherContext);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setWeatherContext({ source: "season", summary: "天气暂时不可用，AI 将按目的地和出行月份准备" });
-        }
-      } finally {
-        if (!controller.signal.aborted) setWeatherLoading(false);
-      }
-    }, 250);
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [endDate, needsSignIn, selectedPlace, startDate]);
 
   useEffect(() => {
     if (!storageReady) return;
@@ -1076,7 +1046,6 @@ export default function Home() {
     setStartDate(value);
     if (endDate && endDate < value) setEndDate("");
     setWeatherContext(null);
-    setWeatherLoading(false);
     setSetupError("");
   }
 
@@ -1089,8 +1058,21 @@ export default function Home() {
       setSetupError("请选择完整且有效的出发、返程日期");
       return;
     }
+    setIsGeneratingTeam(true);
     const cleanDestination = selectedPlace.label;
-    const tripContext: TripContext = { startDate, endDate, place: selectedPlace, weather: weatherContext };
+    let resolvedWeather: WeatherContext = { source: "season", summary: "请结合目的地和出行月份判断天气相关物品" };
+    try {
+      const weatherResponse = await fetch("/api/weather", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ latitude: selectedPlace.latitude, longitude: selectedPlace.longitude, timezone: selectedPlace.timezone, startDate, endDate }),
+      });
+      if (weatherResponse.ok) resolvedWeather = await weatherResponse.json() as WeatherContext;
+    } catch {
+      // 天气只是 AI 推荐的补充上下文；失败时静默按目的地和月份降级，不阻塞建队。
+    }
+    setWeatherContext(resolvedWeather);
+    const tripContext: TripContext = { startDate, endDate, place: selectedPlace, weather: resolvedWeather };
     const preparedItems = applyPresetItems(seedItems, profile, cleanDestination);
     const cleanItems = preparedItems.map((item) => ({ ...item, owners: item.owners.filter((owner) => owner === "我"), checked: {} }));
     setSuggestionStatus("loading");
@@ -1114,6 +1096,7 @@ export default function Home() {
     } catch (error) {
       setCloudError(error instanceof Error ? error.message : "创建队伍失败");
       setSuggestionStatus("idle");
+      setIsGeneratingTeam(false);
       return;
     }
 
@@ -1129,7 +1112,7 @@ export default function Home() {
           ],
           startDate,
           endDate,
-          weather: weatherContext,
+          weather: resolvedWeather,
         }),
       });
       if (!response.ok) throw new Error("AI suggestions request failed");
@@ -1146,6 +1129,8 @@ export default function Home() {
     } catch {
       setSuggestions(seedSuggestions);
       setSuggestionStatus("fallback");
+    } finally {
+      setIsGeneratingTeam(false);
     }
   }
 
@@ -1290,15 +1275,11 @@ export default function Home() {
               <legend>什么时候去？</legend>
               <label><span><CalendarDays aria-hidden="true" />出发</span><input type="date" min={todayValue} value={startDate} onChange={(event) => updateStartDate(event.target.value)} /></label>
               <i aria-hidden="true">—</i>
-              <label><span><CalendarDays aria-hidden="true" />返程</span><input type="date" min={startDate || todayValue} value={endDate} onChange={(event) => { setEndDate(event.target.value); setWeatherContext(null); setWeatherLoading(false); setSetupError(""); }} /></label>
+              <label><span><CalendarDays aria-hidden="true" />返程</span><input type="date" min={startDate || todayValue} value={endDate} onChange={(event) => { setEndDate(event.target.value); setWeatherContext(null); setSetupError(""); }} /></label>
             </fieldset>
-            {(weatherLoading || weatherContext) && <div className={`setup-weather ${weatherLoading ? "loading" : ""}`} aria-live="polite">
-              <CloudSun aria-hidden="true" />
-              <span><b>{weatherLoading ? "正在匹配行程天气" : weatherContext?.source === "forecast" ? "行程天气已加入推荐" : "已加入当地季节信息"}</b><small>{weatherLoading ? "天气会自动参与 AI 清单生成" : weatherContext?.summary}</small></span>
-            </div>}
             {setupError && <p className="setup-error" role="alert">{setupError}</p>}
             {cloudError && <p className="cloud-error" role="alert">{cloudError}</p>}
-            {needsSignIn ? <a className="setup-submit setup-signin" href="/signin-with-chatgpt?return_to=%2F">登录后创建或加入队伍 <span>→</span></a> : <button className="setup-submit" onClick={createTeam} disabled={!accountReady || weatherLoading} aria-busy={!accountReady || weatherLoading}>生成清单 <span>→</span></button>}
+            {needsSignIn ? <a className="setup-submit setup-signin" href="/signin-with-chatgpt?return_to=%2F">登录后创建或加入队伍 <span>→</span></a> : <button className="setup-submit" onClick={createTeam} disabled={!accountReady || isGeneratingTeam} aria-busy={isGeneratingTeam}>{isGeneratingTeam ? "正在生成清单…" : "生成清单"} <span>→</span></button>}
             {!needsSignIn && accountReady && <button className="join-team-entry" onClick={() => setShowJoin((current) => !current)}>有邀请码？加入朋友的队伍</button>}
             {!needsSignIn && showJoin && <div className="join-team-form"><input value={joinCode} onChange={(event) => setJoinCode(event.target.value.toUpperCase())} onKeyDown={(event) => event.key === "Enter" && void joinTeam()} maxLength={6} placeholder="输入 6 位邀请码" /><button onClick={() => void joinTeam()}>加入</button></div>}
             {!needsSignIn && availableTrips.length > 0 && <section className="saved-trips"><small>我的队伍</small>{availableTrips.slice(0, 3).map((trip) => <button key={trip.id} onClick={() => void openCloudTrip(trip.id)}><span><b>{trip.name}</b><small>{trip.destination}</small></span><i>›</i></button>)}</section>}

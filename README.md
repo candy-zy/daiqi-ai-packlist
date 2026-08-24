@@ -178,7 +178,7 @@ erDiagram
 | GET | `/api/session` | 当前账号与已加入队伍 |
 | GET / PUT | `/api/profile` | 读取和保存出行偏好 |
 | GET | `/api/places` | 搜索并标准化城市或地区 |
-| POST | `/api/weather` | 根据坐标和行程日期获取天气或季节信息 |
+| POST | `/api/weather` | 生成清单时后台获取天气，作为 AI 补漏的隐藏上下文 |
 | GET / POST | `/api/trips` | 获取队伍或创建新队伍 |
 | POST | `/api/trips/join` | 使用邀请码加入队伍 |
 | GET / PUT | `/api/trips/:tripId/state` | 增量读取与乐观锁保存共同状态 |
