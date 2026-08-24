@@ -1224,3 +1224,46 @@ h1,.setup-content h1,.departure-page h1 {
 .invite-spark svg { width:27px; height:27px; }
 .invite-card h2 { margin:18px 0 6px; font-size:var(--type-h2-size); line-height:var(--type-h2-line); }.invite-card p { margin:0 0 18px; color:var(--muted); font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
 .invite-code { width:100%; display:grid; gap:3px; padding:14px; border:2px dashed var(--ink); border-radius:16px; background:#f3ffd2; cursor:pointer; }.invite-code b { font-size:var(--type-h1-size); letter-spacing:.15em; }.invite-code small,.sync-state { color:var(--muted); font-size:var(--type-caption-size); }.sync-state { margin-top:14px; }
+
+/* Guided trip context: destination, dates and automatic weather. */
+.setup-content { justify-content:flex-start; }
+.setup-location-field { position:relative; z-index:5; }
+.setup-field>label,.setup-dates>legend { color:var(--ink); font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); font-weight:var(--font-semibold); }
+.location-combobox { display:grid; grid-template-columns:22px minmax(0,1fr) 22px; align-items:center; gap:8px; min-height:54px; padding:0 14px; border:2px solid var(--ink); border-radius:16px; background:#fff; box-shadow:3px 4px 0 var(--ink); }
+.location-combobox:focus-within { box-shadow:3px 4px 0 var(--ink),0 0 0 4px rgba(203,255,82,.38); }
+.location-combobox.has-selection { background:#f3ffd2; }
+.location-combobox>svg { width:21px; height:21px; stroke-width:2.4; }
+.location-combobox input { min-width:0; padding:13px 0; border:0; background:transparent; box-shadow:none; font-family:inherit; font-size:var(--type-body-size); line-height:var(--type-body-line); }
+.location-combobox input:focus { border:0; box-shadow:none; outline:0; }
+.location-loading { color:#73756f; animation:spin 1s linear infinite; }
+.location-results { position:absolute; z-index:10; top:calc(100% - 9px); left:0; right:0; overflow:hidden; border:2px solid var(--ink); border-radius:0 0 16px 16px; background:#fff; box-shadow:4px 5px 0 var(--ink); }
+.location-results button { width:100%; display:grid; grid-template-columns:24px 1fr; align-items:center; gap:9px; padding:10px 13px; border:0; border-bottom:1px dashed #a8a69e; background:#fff; text-align:left; cursor:pointer; }
+.location-results button:last-child { border-bottom:0; }
+.location-results button:hover,.location-results button:focus-visible { background:#f3ffd2; }
+.location-results button>svg { width:19px; height:19px; }
+.location-results button span { min-width:0; display:grid; gap:1px; }
+.location-results button b { font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.location-results button small { overflow:hidden; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--type-caption-line); text-overflow:ellipsis; white-space:nowrap; }
+.setup-dates { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:end; gap:8px; margin:0 0 14px; padding:0; border:0; }
+.setup-dates>legend { grid-column:1/-1; margin-bottom:7px; }
+.setup-dates>label { min-width:0; display:grid; gap:5px; }
+.setup-dates>label>span { display:flex; align-items:center; gap:5px; color:#6a6c66; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.setup-dates>label>span svg { width:15px; height:15px; }
+.setup-dates input { width:100%; min-width:0; min-height:48px; padding:9px 10px; border:2px solid var(--ink); border-radius:14px; background:#fff; box-shadow:2px 3px 0 var(--ink); font:inherit; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.setup-dates>i { padding-bottom:13px; color:#85857f; font-style:normal; }
+.setup-weather { display:grid; grid-template-columns:38px minmax(0,1fr); align-items:center; gap:10px; margin:0 0 14px; padding:10px 12px; border:1.5px solid var(--ink); border-radius:14px; background:#eaf6ff; }
+.setup-weather>svg { width:30px; height:30px; padding:5px; border:1.5px solid var(--ink); border-radius:10px; background:#fff; }
+.setup-weather span { min-width:0; display:grid; gap:1px; }
+.setup-weather b { font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.setup-weather small { color:#5f6768; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.setup-weather.loading>svg { animation:pulse 1.2s ease-in-out infinite; }
+.setup-error { margin:-2px 0 11px; color:#b54a3e; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes pulse { 50% { opacity:.45; } }
+
+@media(max-width:520px){
+  .setup-content { padding-top:25px; }
+  .setup-illustration { margin-bottom:22px; }
+  .setup-content h1 br { display:none; }
+  .setup-intro { margin-bottom:22px; }
+}

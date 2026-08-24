@@ -2,12 +2,19 @@ import { env } from "cloudflare:workers";
 
 export type AuthenticatedUser = { userId: string; email: string; displayName: string };
 export type TripMember = { name: string; short: string; profile: string; className: string; online: boolean };
+export type SharedTripContext = {
+  startDate: string;
+  endDate: string;
+  place: { id: string; name: string; country: string; admin1: string; latitude: number; longitude: number; timezone: string; label: string } | null;
+  weather: { source: "forecast" | "season"; summary: string; minTemp?: number; maxTemp?: number; precipitationProbability?: number; snowfall?: number; season?: string } | null;
+};
 export type SharedTripState = {
   items: Array<{ id: number; name: string; icon: string; group: string; owners: string[]; checked: Record<string, boolean>; aiReason?: string }>;
   suggestions: Array<{ id: number; name: string; icon: string; group: string; reason: string; signal: string; added: boolean }>;
   messages: Array<{ id: number; author: string; text: string; system?: boolean }>;
   itemNotes: Array<{ id: number; itemId: number; author: string; text: string; time: string }>;
   assignmentProposals: Array<{ id?: string; itemId: number; requester: string; target: string; afterMessageId: number; confidence?: number }>;
+  tripContext: SharedTripContext | null;
 };
 
 const MEMBER_SLOTS = ["我", "阿哲", "小雨", "小安"];
@@ -92,6 +99,45 @@ function numberValue(value: unknown) {
   return Number.isFinite(number) ? Math.trunc(number) : 0;
 }
 
+function finiteValue(value: unknown, minimum: number, maximum: number) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(minimum, Math.min(maximum, number)) : undefined;
+}
+
+function sanitizeTripContext(value: unknown): SharedTripContext | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as Record<string, unknown>;
+  const startDate = textValue(source.startDate, 10);
+  const endDate = textValue(source.endDate, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate) || endDate < startDate) return null;
+  const rawPlace = source.place && typeof source.place === "object" ? source.place as Record<string, unknown> : null;
+  const latitude = finiteValue(rawPlace?.latitude, -90, 90);
+  const longitude = finiteValue(rawPlace?.longitude, -180, 180);
+  const place = rawPlace && latitude !== undefined && longitude !== undefined ? {
+    id: textValue(rawPlace.id, 80) || `${latitude},${longitude}`,
+    name: textValue(rawPlace.name, 60),
+    country: textValue(rawPlace.country, 60),
+    admin1: textValue(rawPlace.admin1, 60),
+    latitude,
+    longitude,
+    timezone: textValue(rawPlace.timezone, 80) || "auto",
+    label: textValue(rawPlace.label, 120),
+  } : null;
+  if (!place?.name || !place.label) return null;
+  const rawWeather = source.weather && typeof source.weather === "object" ? source.weather as Record<string, unknown> : null;
+  const weatherSource = rawWeather?.source === "forecast" ? "forecast" : rawWeather?.source === "season" ? "season" : null;
+  const weather = rawWeather && weatherSource ? {
+    source: weatherSource,
+    summary: textValue(rawWeather.summary, 180),
+    ...(finiteValue(rawWeather.minTemp, -100, 70) !== undefined ? { minTemp: finiteValue(rawWeather.minTemp, -100, 70) } : {}),
+    ...(finiteValue(rawWeather.maxTemp, -100, 70) !== undefined ? { maxTemp: finiteValue(rawWeather.maxTemp, -100, 70) } : {}),
+    ...(finiteValue(rawWeather.precipitationProbability, 0, 100) !== undefined ? { precipitationProbability: finiteValue(rawWeather.precipitationProbability, 0, 100) } : {}),
+    ...(finiteValue(rawWeather.snowfall, 0, 1000) !== undefined ? { snowfall: finiteValue(rawWeather.snowfall, 0, 1000) } : {}),
+    ...(textValue(rawWeather.season, 20) ? { season: textValue(rawWeather.season, 20) } : {}),
+  } : null;
+  return { startDate, endDate, place, weather };
+}
+
 export function sanitizeSharedState(
   input: unknown,
   allowedSlots: string[],
@@ -165,7 +211,8 @@ export function sanitizeSharedState(
     if (!itemIds.has(itemId) || !slotSet.has(requester) || !slotSet.has(target)) return [];
     return [{ id: textValue(proposal.id, 80) || createId("proposal"), itemId, requester, target, afterMessageId: numberValue(proposal.afterMessageId), confidence: Math.max(0, Math.min(1, Number(proposal.confidence) || 0.8)) }];
   });
-  return { items, suggestions, messages, itemNotes, assignmentProposals };
+  const tripContext = sanitizeTripContext(source.tripContext) ?? previous?.tripContext ?? null;
+  return { items, suggestions, messages, itemNotes, assignmentProposals, tripContext };
 }
 
 export async function loadSnapshot(db: D1Database, tripId: string): Promise<{ state: SharedTripState; version: number } | null> {
