@@ -22,7 +22,7 @@ type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify" | "departed";
 type ListFilter = "all" | "mine" | "unassigned";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
-type HabitPreference = "photo" | "outdoor" | "stargazing" | "makeup" | "motion" | "allergy" | "hypoglycemia";
+type HabitPreference = "photo" | "fitness" | "outdoor" | "stargazing" | "family-with-child" | "pet" | "fishing" | "skiing" | "water-sports" | "hot-spring" | "makeup" | "motion" | "allergy" | "hypoglycemia";
 type GearPreference = "camera" | "instant-camera" | "selfie-stick" | "power-bank";
 
 type TravelProfile = {
@@ -127,9 +127,16 @@ const categories: { name: Category }[] = [
 ];
 
 const habitOptions: PreferenceOption<HabitPreference>[] = [
-  { id: "photo", label: "摄影 / 拍照", items: ["相机", "备用电池", "内存卡", "手机稳定器", "三脚架"] },
-  { id: "outdoor", label: "户外 / 徒步 / 露营", items: ["登山杖", "防潮垫", "睡袋", "手电筒", "防风外套", "冲锋衣", "户外急救包", "保温毯"] },
-  { id: "stargazing", label: "观星 / 天文", items: ["望远镜", "红光手电", "三脚架", "保暖冲锋衣"] },
+  { id: "photo", label: "摄影 / 拍照", items: ["相机", "备用电池", "内存卡", "充电宝", "三脚架"] },
+  { id: "fitness", label: "运动 / 健身", items: ["运动服", "运动鞋", "水壶", "护膝", "运动相机"] },
+  { id: "outdoor", label: "户外 / 徒步 / 露营", items: ["登山杖", "急救包", "防风外套", "头灯", "防潮垫"] },
+  { id: "stargazing", label: "观星", items: ["望远镜", "红光手电", "保暖外套", "三脚架"] },
+  { id: "family-with-child", label: "带娃出行", items: ["儿童证件", "儿童常用药", "湿巾", "备用衣物", "玩具"] },
+  { id: "pet", label: "宠物出行", items: ["宠物证件", "宠物粮", "水碗", "牵引绳", "宠物常用药"] },
+  { id: "fishing", label: "钓鱼", items: ["钓具", "鱼线 / 鱼钩", "防晒帽", "折叠椅", "防水袋"] },
+  { id: "skiing", label: "滑雪 / 冰雪活动", items: ["滑雪服", "护膝 / 护腕", "手套", "暖宝宝"] },
+  { id: "water-sports", label: "水上运动 / 潜水", items: ["泳衣 / 潜水服", "防水袋", "防晒霜", "拖鞋", "毛巾"] },
+  { id: "hot-spring", label: "温泉 / 泡汤", items: ["泳衣 / 浴衣", "拖鞋", "毛巾", "防水袋", "补水喷雾"] },
   { id: "makeup", label: "化妆", items: ["卸妆油", "防晒霜"] },
   { id: "motion", label: "容易晕车", items: ["晕车药"] },
   { id: "allergy", label: "容易过敏", items: ["过敏药"] },
@@ -154,6 +161,7 @@ const personalItemNames = new Set([
   "牙刷", "毛巾", "流量卡",
   "卸妆油", "防晒霜", "水乳", "面霜", "面膜",
   "个人慢性病药物", "晕车药", "过敏药", "葡萄糖",
+  "运动鞋", "水壶", "护膝", "护膝 / 护腕", "手套", "泳衣 / 潜水服", "泳衣 / 浴衣",
 ]);
 const claimIntentPattern = /(我来带|我带|我有|交给我|算我的)/;
 const releaseIntentPattern = /(我不带|我带不了|我没法带|不算我|别算我|我先不带|不用我带|算了.{0,10}(不带|你带|你们带|别人带)|还是.{0,10}(你带|你们带|别人带)|要不.{0,10}(你带|你们带|别人带))/;
@@ -175,6 +183,12 @@ const phosphorItemIcons: Record<string, PhosphorIcon> = {
   "备用电池": BatteryCharging, "手机稳定器": DeviceMobileCamera, "三脚架": Camera,
   "登山杖": Footprints, "防潮垫": Towel, "睡袋": Towel, "防风外套": Hoodie,
   "冲锋衣": Hoodie, "户外急救包": FirstAid, "保温毯": Towel, "保暖冲锋衣": Hoodie,
+  "运动服": TShirt, "运动鞋": Footprints, "护膝": FirstAid, "运动相机": Camera,
+  "急救包": FirstAid, "保暖外套": Hoodie, "儿童证件": IdentificationCard, "儿童常用药": Prescription,
+  "备用衣物": ShirtFolded, "宠物证件": IdentificationCard, "宠物粮": Popcorn,
+  "牵引绳": CircleNotch, "宠物常用药": Prescription, "防晒帽": BaseballCap,
+  "滑雪服": Hoodie, "护膝 / 护腕": FirstAid, "手套": HandSwipeRight, "暖宝宝": Sun,
+  "泳衣 / 潜水服": TShirt, "泳衣 / 浴衣": TShirt, "补水喷雾": SprayBottle,
   "上衣": TShirt, "裤子": Pants, "外套": Hoodie, "内衣": ShirtFolded, "袜子": Sock,
   "拖鞋": Footprints, "帽子": BaseballCap,
   "牙刷": Tooth, "牙膏": TestTube, "毛巾": Towel, "洗面奶": HandSoap, "卸妆油": Eyedropper,
@@ -187,7 +201,8 @@ const phosphorItemIcons: Record<string, PhosphorIcon> = {
 
 const lucideItemIcons: Record<string, LucideIcon> = {
   "护照 / 签证": BookOpenCheck, "现金": Banknote,
-  "内存卡": MemoryStick, "手电筒": Sparkles, "红光手电": Sparkles, "望远镜": Sparkles, "睡衣": MoonStar,
+  "内存卡": MemoryStick, "手电筒": Sparkles, "红光手电": Sparkles, "头灯": Sparkles, "望远镜": Sparkles, "睡衣": MoonStar,
+  "水壶": GlassWater, "水碗": GlassWater, "玩具": Package, "钓具": Package, "鱼线 / 鱼钩": Package, "折叠椅": Package, "防水袋": Package,
   "驱蚊液": Bug, "水杯": GlassWater, "饮料": CupSoda,
 };
 
@@ -232,6 +247,35 @@ const presetItemCatalog: Record<string, Omit<PackItem, "owners" | "checked" | "a
   "红光手电": { id: 72, name: "红光手电", icon: "✦", group: "电子数码类" },
   "保暖冲锋衣": { id: 73, name: "保暖冲锋衣", icon: "♨", group: "衣物鞋帽类" },
   "葡萄糖": { id: 74, name: "葡萄糖", icon: "✚", group: "医药健康类" },
+  "运动服": { id: 80, name: "运动服", icon: "◫", group: "衣物鞋帽类" },
+  "运动鞋": { id: 81, name: "运动鞋", icon: "◇", group: "衣物鞋帽类" },
+  "水壶": { id: 82, name: "水壶", icon: "◉", group: "日用杂物类" },
+  "护膝": { id: 83, name: "护膝", icon: "✚", group: "医药健康类" },
+  "运动相机": { id: 84, name: "运动相机", icon: "📷", group: "电子数码类" },
+  "急救包": { id: 85, name: "急救包", icon: "✚", group: "医药健康类" },
+  "头灯": { id: 86, name: "头灯", icon: "✦", group: "电子数码类" },
+  "保暖外套": { id: 87, name: "保暖外套", icon: "♨", group: "衣物鞋帽类" },
+  "儿童证件": { id: 88, name: "儿童证件", icon: "▣", group: "证件与钱财类" },
+  "儿童常用药": { id: 89, name: "儿童常用药", icon: "✚", group: "医药健康类" },
+  "备用衣物": { id: 90, name: "备用衣物", icon: "▤", group: "衣物鞋帽类" },
+  "玩具": { id: 91, name: "玩具", icon: "◇", group: "日用杂物类" },
+  "宠物证件": { id: 92, name: "宠物证件", icon: "▣", group: "证件与钱财类" },
+  "宠物粮": { id: 93, name: "宠物粮", icon: "●", group: "零食饮料类" },
+  "水碗": { id: 94, name: "水碗", icon: "◉", group: "日用杂物类" },
+  "牵引绳": { id: 95, name: "牵引绳", icon: "⌇", group: "日用杂物类" },
+  "宠物常用药": { id: 96, name: "宠物常用药", icon: "✚", group: "医药健康类" },
+  "钓具": { id: 97, name: "钓具", icon: "⌁", group: "日用杂物类" },
+  "鱼线 / 鱼钩": { id: 98, name: "鱼线 / 鱼钩", icon: "⌇", group: "日用杂物类" },
+  "防晒帽": { id: 99, name: "防晒帽", icon: "▰", group: "衣物鞋帽类" },
+  "折叠椅": { id: 100, name: "折叠椅", icon: "▤", group: "日用杂物类" },
+  "防水袋": { id: 103, name: "防水袋", icon: "▰", group: "日用杂物类" },
+  "滑雪服": { id: 104, name: "滑雪服", icon: "♨", group: "衣物鞋帽类" },
+  "护膝 / 护腕": { id: 105, name: "护膝 / 护腕", icon: "✚", group: "医药健康类" },
+  "手套": { id: 106, name: "手套", icon: "▤", group: "衣物鞋帽类" },
+  "暖宝宝": { id: 107, name: "暖宝宝", icon: "☀", group: "医药健康类" },
+  "泳衣 / 潜水服": { id: 108, name: "泳衣 / 潜水服", icon: "▤", group: "衣物鞋帽类" },
+  "泳衣 / 浴衣": { id: 109, name: "泳衣 / 浴衣", icon: "▤", group: "衣物鞋帽类" },
+  "补水喷雾": { id: 110, name: "补水喷雾", icon: "◉", group: "洗护化妆类" },
 };
 
 const validHabitPreferences = new Set<HabitPreference>(habitOptions.map((option) => option.id));
