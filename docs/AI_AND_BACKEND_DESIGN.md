@@ -86,7 +86,13 @@ flowchart LR
 
 ```json
 {
-  "destination": "韩国 · 首尔",
+  "destination": "韩国 首尔",
+  "startDate": "2026-08-28",
+  "endDate": "2026-09-01",
+  "weather": {
+    "source": "forecast",
+    "summary": "行程期间约 22–29°C，最高降水概率 70%"
+  },
   "existingItems": ["身份证", "相机", "充电宝"],
   "preferences": ["想出片", "重视护肤"]
 }
@@ -107,7 +113,8 @@ flowchart LR
 ### 提示词与护栏
 
 - 明确“不做路线和景点攻略”，只补物品缺口。
-- 把目的地、显式偏好和完整已有物品传给模型。
+- 把标准地点、旅行日期、天气/季节信息、显式偏好和完整已有物品传给模型。
+- 15 天可靠预报窗口外只传递当地月份与季节，不伪造远期逐日天气。
 - 要求 JSON 对象、固定 7 类、最多 2 件；没有可靠建议可以返回 0 件。
 - 服务端再次做长度、类别、重复、同义包含和数量校验。
 - DeepSeek 不可用、超时或输出异常时使用目的地回退库。
@@ -176,6 +183,8 @@ flowchart LR
 |---|---|---|
 | GET | `/api/session` | 当前账号与已加入队伍 |
 | GET / PUT | `/api/profile` | 读取、保存个人偏好 |
+| GET | `/api/places` | 搜索地点并返回标准名称、坐标与时区 |
+| POST | `/api/weather` | 根据坐标和旅行日期返回逐日天气摘要或季节降级信息 |
 | GET / POST | `/api/trips` | 队伍列表、创建队伍 |
 | POST | `/api/trips/join` | 使用邀请码加入 |
 | GET / PUT | `/api/trips/:tripId/state` | 获取、保存、同步完整协作状态 |

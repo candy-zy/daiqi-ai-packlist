@@ -562,6 +562,7 @@ export default function Home() {
   const syncInFlightRef = useRef(false);
   const syncTimerRef = useRef<number | null>(null);
   const pendingSharedStateRef = useRef<ServerTripPayload["state"] | null>(null);
+  const locationSearchIdRef = useRef(0);
   const refreshedLegacySuggestionsRef = useRef(new Set<string>());
   const openCloudTripRef = useRef(openCloudTrip);
   const flushCloudStateRef = useRef(flushCloudState);
@@ -683,12 +684,14 @@ export default function Home() {
       return;
     }
     const controller = new AbortController();
+    const requestId = ++locationSearchIdRef.current;
     const timer = window.setTimeout(async () => {
       setLocationLoading(true);
       try {
         const response = await fetch(`/api/places?q=${encodeURIComponent(query)}`, { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error("地点搜索失败");
         const result = await response.json() as { places?: PlaceSelection[] };
+        if (controller.signal.aborted || requestId !== locationSearchIdRef.current) return;
         setLocationResults(Array.isArray(result.places) ? result.places : []);
         setShowLocationResults(true);
       } catch (error) {
@@ -1023,6 +1026,7 @@ export default function Home() {
   }
 
   function updateLocationQuery(value: string) {
+    locationSearchIdRef.current += 1;
     setLocationQuery(value);
     setDestination("");
     setSelectedPlace(null);
@@ -1033,6 +1037,7 @@ export default function Home() {
   }
 
   function choosePlace(place: PlaceSelection) {
+    locationSearchIdRef.current += 1;
     setSelectedPlace(place);
     setLocationQuery(place.label);
     setDestination(place.label);
@@ -1159,7 +1164,17 @@ export default function Home() {
       setPhase("prepare");
       return;
     }
+    setDestination("");
+    setLocationQuery("");
+    setLocationResults([]);
+    setSelectedPlace(null);
+    setShowLocationResults(false);
+    setStartDate("");
+    setEndDate("");
+    setWeatherContext(null);
+    setSetupError("");
     setTeamReady(false);
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function renderProfileCenter() {
