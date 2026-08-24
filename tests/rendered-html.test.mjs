@@ -182,12 +182,14 @@ test("personal center uses preferences and gear only to preset unassigned items"
   ]);
 
   assert.match(page, /我的出行偏好/);
-  assert.match(page, /我的兴趣与出行偏好/);
+  assert.match(page, /旅行时，我更在意/);
+  assert.match(page, /出行时，我容易/);
   assert.match(page, /我有这些设备/);
-  assert.match(page, /摄影 \/ 拍照/);
-  assert.match(page, /户外 \/ 徒步 \/ 露营/);
-  assert.match(page, /label: "观星 \/ 天文"/);
-  assert.match(page, /label: "化妆"/);
+  assert.match(page, /label: "想出片"/);
+  assert.match(page, /label: "会化妆"/);
+  assert.match(page, /label: "重视护肤"/);
+  assert.doesNotMatch(page, /label: "户外 \/ 徒步 \/ 露营"/);
+  assert.doesNotMatch(page, /label: "观星 \/ 天文"/);
   assert.match(page, /容易晕车/);
   assert.match(page, /容易过敏/);
   assert.match(page, /容易低血糖/);
@@ -195,9 +197,8 @@ test("personal center uses preferences and gear only to preset unassigned items"
   assert.match(page, /系统会把相关物品预设进清单，但不会替你认领/);
   assert.doesNotMatch(page, /习惯带零食/);
   assert.doesNotMatch(page, /option\.impact/);
-  assert.match(page, /items: \["相机", "备用电池", "内存卡", "手机稳定器", "三脚架"\]/);
-  assert.match(page, /items: \["登山杖", "防潮垫", "睡袋", "手电筒", "防风外套", "冲锋衣", "户外急救包", "保温毯"\]/);
-  assert.match(page, /items: \["望远镜", "红光手电", "三脚架", "保暖冲锋衣"\]/);
+  assert.match(page, /items: \["自拍杆", "手机稳定器", "三脚架"\]/);
+  assert.match(page, /items: \["水乳", "面霜", "面膜", "防晒霜"\]/);
   assert.doesNotMatch(page, /label: "(?:运动 \/ 健身|带娃出行|宠物出行|钓鱼|滑雪 \/ 冰雪活动|水上运动 \/ 潜水|温泉 \/ 泡汤|美食|手作 \/ 绘画|商务出行|音乐 \/ 演出|骑行|自驾游)"/);
   assert.match(page, /items: \["葡萄糖"\]/);
   assert.doesNotMatch(page, /有转换插头/);
@@ -208,6 +209,7 @@ test("personal center uses preferences and gear only to preset unassigned items"
   assert.doesNotMatch(seedBlock, /name: "转换插头"/);
   const gearBlock = page.slice(page.indexOf("const gearOptions"), page.indexOf("const defaultProfile"));
   assert.doesNotMatch(gearBlock, /adapter|转换插头/);
+  assert.doesNotMatch(gearBlock, /power-bank|有充电宝/);
   assert.match(page, /preferences:/);
   assert.match(css, /\.profile-modal/);
   assert.match(css, /\.preference-grid>button\.selected/);

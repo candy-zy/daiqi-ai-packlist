@@ -22,8 +22,8 @@ type Member = "我" | "阿哲" | "小雨" | "小安";
 type Phase = "prepare" | "verify" | "departed";
 type ListFilter = "all" | "mine" | "unassigned";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
-type HabitPreference = "photo" | "outdoor" | "stargazing" | "makeup" | "motion" | "allergy" | "hypoglycemia";
-type GearPreference = "camera" | "instant-camera" | "selfie-stick" | "power-bank";
+type HabitPreference = "photo" | "makeup" | "skincare" | "motion" | "allergy" | "hypoglycemia";
+type GearPreference = "camera" | "instant-camera" | "selfie-stick";
 
 type TravelProfile = {
   displayName: string;
@@ -118,7 +118,7 @@ type TripSummary = { id: string; name: string; destination: string; inviteCode: 
 type ServerTripPayload = { trip: TripSummary; state: { items: PackItem[]; suggestions: Suggestion[]; messages: ChatMessage[]; itemNotes: ItemNote[]; assignmentProposals: AssignmentProposal[] }; members: MemberRecord[]; version: number };
 
 const demoMembers: MemberRecord[] = [
-  { name: "我", short: "我", profile: "有充电宝", className: "member-me", online: true },
+  { name: "我", short: "我", profile: "想出片", className: "member-me", online: true },
   { name: "阿哲", short: "哲", profile: "有相机", className: "member-zhe", online: true },
   { name: "小雨", short: "雨", profile: "有水杯", className: "member-yu", online: false },
 ];
@@ -134,10 +134,12 @@ const categories: { name: Category }[] = [
 ];
 
 const habitOptions: PreferenceOption<HabitPreference>[] = [
-  { id: "photo", label: "摄影 / 拍照", items: ["相机", "备用电池", "内存卡", "手机稳定器", "三脚架"] },
-  { id: "outdoor", label: "户外 / 徒步 / 露营", items: ["登山杖", "防潮垫", "睡袋", "手电筒", "防风外套", "冲锋衣", "户外急救包", "保温毯"] },
-  { id: "stargazing", label: "观星 / 天文", items: ["望远镜", "红光手电", "三脚架", "保暖冲锋衣"] },
-  { id: "makeup", label: "化妆", items: ["卸妆油", "防晒霜"] },
+  { id: "photo", label: "想出片", items: ["自拍杆", "手机稳定器", "三脚架"] },
+  { id: "makeup", label: "会化妆", items: ["卸妆油", "防晒霜"] },
+  { id: "skincare", label: "重视护肤", items: ["水乳", "面霜", "面膜", "防晒霜"] },
+];
+
+const healthOptions: PreferenceOption<HabitPreference>[] = [
   { id: "motion", label: "容易晕车", items: ["晕车药"] },
   { id: "allergy", label: "容易过敏", items: ["过敏药"] },
   { id: "hypoglycemia", label: "容易低血糖", items: ["葡萄糖"] },
@@ -147,13 +149,12 @@ const gearOptions: PreferenceOption<GearPreference>[] = [
   { id: "camera", label: "有相机", items: ["相机", "内存卡"] },
   { id: "instant-camera", label: "有拍立得", items: ["拍立得", "拍立得相纸"] },
   { id: "selfie-stick", label: "有自拍杆", items: ["自拍杆"] },
-  { id: "power-bank", label: "有充电宝", items: ["充电宝"] },
 ];
 
 const defaultProfile: TravelProfile = {
   displayName: "小林",
   habits: ["photo"],
-  gear: ["camera", "power-bank"],
+  gear: ["camera"],
 };
 
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
@@ -279,7 +280,7 @@ const presetItemCatalog: Record<string, Omit<PackItem, "owners" | "checked" | "a
   "补水喷雾": { id: 110, name: "补水喷雾", icon: "◉", group: "洗护化妆类" },
 };
 
-const validHabitPreferences = new Set<HabitPreference>(habitOptions.map((option) => option.id));
+const validHabitPreferences = new Set<HabitPreference>([...habitOptions, ...healthOptions].map((option) => option.id));
 const validGearPreferences = new Set<GearPreference>(gearOptions.map((option) => option.id));
 
 function normalizeTravelProfile(savedProfile: Partial<TravelProfile>): TravelProfile {
@@ -305,6 +306,9 @@ function applyPresetItems(current: PackItem[], profile: TravelProfile, destinati
   habitOptions
     .filter((option) => profile.habits.includes(option.id))
     .forEach((option) => option.items.forEach((name) => reasons.set(name, "根据你的出行偏好预设")));
+  healthOptions
+    .filter((option) => profile.habits.includes(option.id))
+    .forEach((option) => option.items.forEach((name) => reasons.set(name, "根据你的身体情况预设")));
   gearOptions
     .filter((option) => profile.gear.includes(option.id))
     .forEach((option) => option.items.forEach((name) => reasons.set(name, "根据你的设备信息预设")));
@@ -875,8 +879,16 @@ export default function Home() {
           <label className="profile-name-field"><span>昵称</span><input value={profileDraft.displayName} onChange={(event) => setProfileDraft((current) => ({ ...current, displayName: event.target.value.slice(0, 12) }))} placeholder="朋友会看到这个名字" /></label>
 
           <section className="profile-section">
-            <div className="profile-section-head"><div><h3>我的兴趣与出行偏好</h3><p>可多选，系统会把相关物品加入清单。</p></div><span>{profileDraft.habits.length} 项</span></div>
+            <div className="profile-section-head"><div><h3>旅行时，我更在意</h3><p>可多选，帮助补充更适合你的物品。</p></div><span>{habitOptions.filter((option) => profileDraft.habits.includes(option.id)).length} 项</span></div>
             <div className="preference-grid">{habitOptions.map((option) => {
+              const selected = profileDraft.habits.includes(option.id);
+              return <button key={option.id} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => toggleHabit(option.id)}><span>{selected && <Check aria-hidden="true" />}</span><b>{option.label}</b></button>;
+            })}</div>
+          </section>
+
+          <section className="profile-section">
+            <div className="profile-section-head"><div><h3>出行时，我容易</h3><p>可多选，只用于你的个人清单。</p></div><span>{healthOptions.filter((option) => profileDraft.habits.includes(option.id)).length} 项</span></div>
+            <div className="preference-grid">{healthOptions.map((option) => {
               const selected = profileDraft.habits.includes(option.id);
               return <button key={option.id} className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => toggleHabit(option.id)}><span>{selected && <Check aria-hidden="true" />}</span><b>{option.label}</b></button>;
             })}</div>
@@ -890,7 +902,7 @@ export default function Home() {
             })}</div>
           </section>
 
-          <p className="profile-privacy">健康相关偏好仅用于你的个人清单；设备信息只用于预设物品。</p>
+          <p className="profile-privacy">身体情况仅用于你的个人清单；设备信息只用于预设物品。</p>
         </div>
         <footer className="profile-footer"><button onClick={saveProfile}>保存并更新清单 <span>→</span></button></footer>
       </section>

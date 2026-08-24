@@ -88,7 +88,7 @@ flowchart LR
 {
   "destination": "韩国 · 首尔",
   "existingItems": ["身份证", "相机", "充电宝"],
-  "preferences": ["摄影 / 拍照"]
+  "preferences": ["想出片", "重视护肤"]
 }
 ```
 
