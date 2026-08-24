@@ -158,9 +158,34 @@ test("AI suggestions use a prompt-first ranked model response and a server-only 
   assert.match(route, /https:\/\/api\.deepseek\.com\/chat\/completions/);
   assert.match(route, /response_format: \{ type: "json_object" \}/);
   assert.match(route, /按推荐优先级从高到低排序，列出10件具体物品/);
+  assert.match(route, /我的旅行兴趣\/偏好是/);
+  assert.match(route, /preferences\.join\("、"\)/);
+  assert.match(route, /请结合目的地、明确的旅行日期、天气信息和我的兴趣偏好/);
   assert.match(route, /chooseUnseenSuggestions/);
   assert.match(route, /slice\(0, 2\)/);
   assert.match(route, /existingItems/);
+});
+
+test("onboarding uses a real place picker, travel dates and automatic weather context", async () => {
+  const [page, places, weather, suggestions, shared] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/places/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/weather/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/suggestions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/_shared/server.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /role="combobox"/);
+  assert.match(page, /搜索城市或地区，如首尔、北海道/);
+  assert.match(page, /type="date"/);
+  assert.match(page, /fetch\("\/api\/weather"/);
+  assert.match(page, /applyPresetItems\(seedItems, profile, cleanDestination\)/);
+  assert.match(places, /geocoding-api\.open-meteo\.com\/v1\/search/);
+  assert.match(weather, /api\.open-meteo\.com\/v1\/forecast/);
+  assert.match(weather, /daysAway > 15/);
+  assert.match(suggestions, /旅行日期是\$\{startDate\}至\$\{endDate\}/);
+  assert.match(suggestions, /天气信息和日期优先于/);
+  assert.match(shared, /tripContext: SharedTripContext \| null/);
+  assert.match(shared, /sanitizeTripContext/);
 });
 
 test("AI suggestions skip an existing converter before selecting the next two ranked items", async () => {

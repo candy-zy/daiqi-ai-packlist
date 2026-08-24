@@ -5,8 +5,8 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
-  ArrowLeft, Banknote, BookOpenCheck, Bug, CupSoda, GlassWater, MemoryStick,
-  Check, Download, Menu, MessageCircle, MoonStar, Package, Share2, Sparkles, Trash2, X,
+  ArrowLeft, Banknote, BookOpenCheck, Bug, CalendarDays, CloudSun, CupSoda, GlassWater, MapPin, MemoryStick,
+  Check, Download, Menu, MessageCircle, MoonStar, Package, Search, Share2, Sparkles, Trash2, X,
 } from "lucide-react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -29,6 +29,34 @@ type TravelProfile = {
   displayName: string;
   habits: HabitPreference[];
   gear: GearPreference[];
+};
+
+type PlaceSelection = {
+  id: string;
+  name: string;
+  country: string;
+  admin1: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  label: string;
+};
+
+type WeatherContext = {
+  source: "forecast" | "season";
+  summary: string;
+  minTemp?: number;
+  maxTemp?: number;
+  precipitationProbability?: number;
+  snowfall?: number;
+  season?: string;
+};
+
+type TripContext = {
+  startDate: string;
+  endDate: string;
+  place: PlaceSelection | null;
+  weather: WeatherContext | null;
 };
 
 type PreferenceOption<T extends string> = {
@@ -111,11 +139,12 @@ type PersistedAppState = {
   unreadItemIds: number[];
   expandedCategories: Category[];
   personalExpanded: boolean;
+  tripContext?: TripContext;
 };
 
 type MemberRecord = { name: Member; short: string; profile: string; className: string; online: boolean };
 type TripSummary = { id: string; name: string; destination: string; inviteCode: string; version: number; currentMember: Member; role: "owner" | "member" };
-type ServerTripPayload = { trip: TripSummary; state: { items: PackItem[]; suggestions: Suggestion[]; messages: ChatMessage[]; itemNotes: ItemNote[]; assignmentProposals: AssignmentProposal[] }; members: MemberRecord[]; version: number };
+type ServerTripPayload = { trip: TripSummary; state: { items: PackItem[]; suggestions: Suggestion[]; messages: ChatMessage[]; itemNotes: ItemNote[]; assignmentProposals: AssignmentProposal[]; tripContext: TripContext | null }; members: MemberRecord[]; version: number };
 
 function mergeUniqueByKey<T>(remote: T[], pending: T[], keyFor: (entry: T) => string) {
   const merged = [...remote];
@@ -172,6 +201,7 @@ function rebasePendingMemberState(
       pending.assignmentProposals,
       (proposal) => proposal.id ?? `${proposal.itemId}:${proposal.requester}:${proposal.target}:${proposal.afterMessageId}`,
     ),
+    tripContext: pending.tripContext ?? remote.tripContext ?? null,
   };
 }
 
@@ -468,7 +498,17 @@ const seedItemNotes: ItemNote[] = [
 
 export default function Home() {
   const [teamReady, setTeamReady] = useState(false);
-  const [destination, setDestination] = useState("韩国 · 首尔");
+  const [destination, setDestination] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState<PlaceSelection[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceSelection | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [showLocationResults, setShowLocationResults] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [weatherContext, setWeatherContext] = useState<WeatherContext | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [setupError, setSetupError] = useState("");
   const [items, setItems] = useState(seedItems);
   const [suggestions, setSuggestions] = useState(seedSuggestions);
   const [suggestionStatus, setSuggestionStatus] = useState<"idle" | "loading" | "model" | "fallback">("idle");
@@ -522,6 +562,7 @@ export default function Home() {
   const syncInFlightRef = useRef(false);
   const syncTimerRef = useRef<number | null>(null);
   const pendingSharedStateRef = useRef<ServerTripPayload["state"] | null>(null);
+  const locationSearchIdRef = useRef(0);
   const refreshedLegacySuggestionsRef = useRef(new Set<string>());
   const openCloudTripRef = useRef(openCloudTrip);
   const flushCloudStateRef = useRef(flushCloudState);
@@ -543,6 +584,7 @@ export default function Home() {
   const myRemaining = items.filter((item) => (isPersonalItem(item) || item.owners.includes(currentMember)) && !item.checked[currentMember]).length;
   const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
   const activeItemNotes = activeItem ? itemNotes.filter((note) => note.itemId === activeItem.id) : [];
+  const todayValue = useMemo(() => new Date().toISOString().slice(0, 10), []);
   useEffect(() => {
     const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
     const installedTimer = window.setTimeout(() => setIsInstalled(window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true), 0);
@@ -587,6 +629,13 @@ export default function Home() {
           if (Array.isArray(saved.unreadItemIds)) setUnreadItemIds(new Set(saved.unreadItemIds));
           if (Array.isArray(saved.expandedCategories)) setExpandedCategories(new Set(saved.expandedCategories));
           if (typeof saved.personalExpanded === "boolean") setPersonalExpanded(saved.personalExpanded);
+          if (saved.tripContext) {
+            setSelectedPlace(saved.tripContext.place ?? null);
+            setLocationQuery(saved.tripContext.place?.label ?? "");
+            setStartDate(saved.tripContext.startDate ?? "");
+            setEndDate(saved.tripContext.endDate ?? "");
+            setWeatherContext(saved.tripContext.weather ?? null);
+          }
         }
       } catch {
         window.localStorage.removeItem(localStateKey);
@@ -620,13 +669,72 @@ export default function Home() {
       unreadItemIds: [...unreadItemIds],
       expandedCategories: [...expandedCategories],
       personalExpanded,
+      tripContext: { startDate, endDate, place: selectedPlace, weather: weatherContext },
     };
     window.localStorage.setItem(localStateKey, JSON.stringify(state));
-  }, [assignmentProposals, destination, expandedCategories, itemNotes, items, listFilter, messages, personalExpanded, phase, profile, storageReady, suggestions, teamReady, unreadItemIds, viewedMember]);
+  }, [assignmentProposals, destination, endDate, expandedCategories, itemNotes, items, listFilter, messages, personalExpanded, phase, profile, selectedPlace, startDate, storageReady, suggestions, teamReady, unreadItemIds, viewedMember, weatherContext]);
 
   useEffect(() => { activeTripIdRef.current = activeTripId; }, [activeTripId]);
   useEffect(() => { tripVersionRef.current = tripVersion; }, [tripVersion]);
   useEffect(() => { currentMemberRef.current = currentMember; }, [currentMember]);
+
+  useEffect(() => {
+    const query = locationQuery.trim();
+    if (!accountReady || needsSignIn || selectedPlace?.label === query || query.length < 2) {
+      return;
+    }
+    const controller = new AbortController();
+    const requestId = ++locationSearchIdRef.current;
+    const timer = window.setTimeout(async () => {
+      setLocationLoading(true);
+      try {
+        const response = await fetch(`/api/places?q=${encodeURIComponent(query)}`, { cache: "no-store", signal: controller.signal });
+        if (!response.ok) throw new Error("地点搜索失败");
+        const result = await response.json() as { places?: PlaceSelection[] };
+        if (controller.signal.aborted || requestId !== locationSearchIdRef.current) return;
+        setLocationResults(Array.isArray(result.places) ? result.places : []);
+        setShowLocationResults(true);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) setLocationResults([]);
+      } finally {
+        if (!controller.signal.aborted) setLocationLoading(false);
+      }
+    }, 280);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [accountReady, locationQuery, needsSignIn, selectedPlace]);
+
+  useEffect(() => {
+    if (!selectedPlace || !startDate || !endDate || endDate < startDate || needsSignIn) {
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setWeatherLoading(true);
+      try {
+        const response = await fetch("/api/weather", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ latitude: selectedPlace.latitude, longitude: selectedPlace.longitude, timezone: selectedPlace.timezone, startDate, endDate }),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("天气查询失败");
+        setWeatherContext(await response.json() as WeatherContext);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setWeatherContext({ source: "season", summary: "天气暂时不可用，AI 将按目的地和出行月份准备" });
+        }
+      } finally {
+        if (!controller.signal.aborted) setWeatherLoading(false);
+      }
+    }, 250);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [endDate, needsSignIn, selectedPlace, startDate]);
 
   useEffect(() => {
     if (!storageReady) return;
@@ -673,7 +781,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!activeTripId || !teamReady || !accountReady) return;
-    pendingSharedStateRef.current = { items, suggestions, messages, itemNotes, assignmentProposals };
+    pendingSharedStateRef.current = { items, suggestions, messages, itemNotes, assignmentProposals, tripContext: { startDate, endDate, place: selectedPlace, weather: weatherContext } };
     const serialized = JSON.stringify(pendingSharedStateRef.current);
     if (serialized === lastSyncedStateRef.current || syncInFlightRef.current || syncTimerRef.current !== null) return;
     syncTimerRef.current = window.setTimeout(() => void flushCloudStateRef.current(), 450);
@@ -683,7 +791,7 @@ export default function Home() {
         syncTimerRef.current = null;
       }
     };
-  }, [accountReady, activeTripId, assignmentProposals, itemNotes, items, messages, suggestions, teamReady]);
+  }, [accountReady, activeTripId, assignmentProposals, endDate, itemNotes, items, messages, selectedPlace, startDate, suggestions, teamReady, weatherContext]);
 
   useEffect(() => {
     if (!activeTripId || !teamReady || !accountReady) return;
@@ -719,7 +827,14 @@ export default function Home() {
     void fetch("/api/suggestions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ destination, existingItems: items.map((item) => item.name) }),
+      body: JSON.stringify({
+        destination,
+        existingItems: items.map((item) => item.name),
+        preferences: habitOptions.filter((option) => profile.habits.includes(option.id)).map((option) => option.label),
+        startDate,
+        endDate,
+        weather: weatherContext,
+      }),
     }).then(async (response) => {
       if (!response.ok) throw new Error("AI suggestions request failed");
       const result = await response.json() as { suggestions?: Omit<Suggestion, "id" | "icon" | "added">[]; source?: "model" | "fallback" };
@@ -733,7 +848,7 @@ export default function Home() {
       setSuggestionStatus("fallback");
       refreshedLegacySuggestionsRef.current.delete(activeTripId);
     });
-  }, [accountReady, activeTripId, destination, items, suggestions, teamReady]);
+  }, [accountReady, activeTripId, destination, endDate, items, profile.habits, startDate, suggestions, teamReady, weatherContext]);
 
   useEffect(() => {
     if (!teamReady || phase !== "verify") return;
@@ -764,6 +879,20 @@ export default function Home() {
     setMessages(governedState.messages ?? []);
     setItemNotes(governedState.itemNotes ?? []);
     setAssignmentProposals(governedState.assignmentProposals ?? []);
+    const incomingContext = governedState.tripContext;
+    if (incomingContext) {
+      setSelectedPlace(incomingContext.place ?? null);
+      setLocationQuery(incomingContext.place?.label ?? payload.trip.destination);
+      setStartDate(incomingContext.startDate ?? "");
+      setEndDate(incomingContext.endDate ?? "");
+      setWeatherContext(incomingContext.weather ?? null);
+    } else {
+      setSelectedPlace(null);
+      setLocationQuery(payload.trip.destination);
+      setStartDate("");
+      setEndDate("");
+      setWeatherContext(null);
+    }
     setMembers(Array.isArray(payload.members) && payload.members.length ? payload.members : demoMembers.slice(0, 1));
     setDestination(payload.trip.destination);
     setInviteCode(payload.trip.inviteCode);
@@ -819,6 +948,12 @@ export default function Home() {
         setMessages(rebasedState.messages);
         setItemNotes(rebasedState.itemNotes);
         setAssignmentProposals(rebasedState.assignmentProposals);
+        if (rebasedState.tripContext) {
+          setSelectedPlace(rebasedState.tripContext.place);
+          setStartDate(rebasedState.tripContext.startDate);
+          setEndDate(rebasedState.tripContext.endDate);
+          setWeatherContext(rebasedState.tripContext.weather);
+        }
         if (Array.isArray(result.members)) setMembers(result.members);
         setTripVersion(result.version);
         tripVersionRef.current = result.version;
@@ -890,10 +1025,49 @@ export default function Home() {
     </div>;
   }
 
+  function updateLocationQuery(value: string) {
+    locationSearchIdRef.current += 1;
+    setLocationQuery(value);
+    setDestination("");
+    setSelectedPlace(null);
+    if (value.trim().length < 2) setLocationResults([]);
+    setLocationLoading(false);
+    setWeatherContext(null);
+    setSetupError("");
+  }
+
+  function choosePlace(place: PlaceSelection) {
+    locationSearchIdRef.current += 1;
+    setSelectedPlace(place);
+    setLocationQuery(place.label);
+    setDestination(place.label);
+    setLocationResults([]);
+    setShowLocationResults(false);
+    setLocationLoading(false);
+    setWeatherContext(null);
+    setSetupError("");
+  }
+
+  function updateStartDate(value: string) {
+    setStartDate(value);
+    if (endDate && endDate < value) setEndDate("");
+    setWeatherContext(null);
+    setWeatherLoading(false);
+    setSetupError("");
+  }
+
   async function createTeam() {
-    const cleanDestination = destination.trim();
-    if (!cleanDestination) return;
-    const preparedItems = applyPresetItems(items, profile, cleanDestination);
+    if (!selectedPlace) {
+      setSetupError("请从搜索结果中选择一个目的地");
+      return;
+    }
+    if (!startDate || !endDate || endDate < startDate) {
+      setSetupError("请选择完整且有效的出发、返程日期");
+      return;
+    }
+    const cleanDestination = selectedPlace.label;
+    const tripContext: TripContext = { startDate, endDate, place: selectedPlace, weather: weatherContext };
+    const preparedItems = applyPresetItems(seedItems, profile, cleanDestination);
     const cleanItems = preparedItems.map((item) => ({ ...item, owners: item.owners.filter((owner) => owner === "我"), checked: {} }));
     setSuggestionStatus("loading");
     setCloudError("");
@@ -904,8 +1078,8 @@ export default function Home() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           destination: cleanDestination,
-          name: `${cleanDestination.replaceAll(" · ", "")}小队`,
-          state: { items: cleanItems, suggestions: seedSuggestions, messages: [], itemNotes: [], assignmentProposals: [] },
+          name: `${selectedPlace.name}小队`,
+          state: { items: cleanItems, suggestions: seedSuggestions, messages: [], itemNotes: [], assignmentProposals: [], tripContext },
         }),
       });
       const created = await createResponse.json().catch(() => ({})) as ServerTripPayload & { error?: string };
@@ -929,6 +1103,9 @@ export default function Home() {
           preferences: [
             ...habitOptions.filter((option) => profile.habits.includes(option.id)).map((option) => option.label),
           ],
+          startDate,
+          endDate,
+          weather: weatherContext,
         }),
       });
       if (!response.ok) throw new Error("AI suggestions request failed");
@@ -987,7 +1164,17 @@ export default function Home() {
       setPhase("prepare");
       return;
     }
+    setDestination("");
+    setLocationQuery("");
+    setLocationResults([]);
+    setSelectedPlace(null);
+    setShowLocationResults(false);
+    setStartDate("");
+    setEndDate("");
+    setWeatherContext(null);
+    setSetupError("");
     setTeamReady(false);
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function renderProfileCenter() {
@@ -1045,15 +1232,49 @@ export default function Home() {
           <div className="setup-content">
             <div className="setup-illustration"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div>
             <h1>和朋友一起，<br />把行李带齐。</h1>
-            <p className="setup-intro">输入目的地，马上生成一份可以共同认领的清单。</p>
+            <p className="setup-intro">选好地点和日期，马上生成一份可以共同认领的清单。</p>
             <button className="setup-profile-entry" onClick={openProfile}>
               <CharacterAvatar member="我" />
               <span><b>我的出行偏好</b><small>已设置 {profile.habits.length + profile.gear.length} 项，点击调整</small></span>
               <span aria-hidden="true">›</span>
             </button>
-            <label className="setup-field"><span>这次去哪儿？</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="例如：韩国 · 首尔" /></label>
+            <div className="setup-field setup-location-field">
+              <label htmlFor="destination-search">这次去哪儿？</label>
+              <div className={`location-combobox ${selectedPlace ? "has-selection" : ""}`}>
+                <MapPin aria-hidden="true" />
+                <input
+                  id="destination-search"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={showLocationResults && locationResults.length > 0}
+                  aria-controls="destination-results"
+                  value={locationQuery}
+                  onChange={(event) => updateLocationQuery(event.target.value)}
+                  onFocus={() => setShowLocationResults(true)}
+                  placeholder="搜索城市或地区，如首尔、北海道"
+                  autoComplete="off"
+                />
+                {locationLoading && <Search className="location-loading" aria-label="正在搜索" />}
+              </div>
+              {showLocationResults && locationResults.length > 0 && <div className="location-results" id="destination-results" role="listbox">
+                {locationResults.map((place) => <button key={place.id} role="option" aria-selected={selectedPlace?.id === place.id} onClick={() => choosePlace(place)}>
+                  <MapPin aria-hidden="true" /><span><b>{place.name}</b><small>{[place.country, place.admin1].filter((part, index, all) => part && all.indexOf(part) === index).join(" ")}</small></span>
+                </button>)}
+              </div>}
+            </div>
+            <fieldset className="setup-dates">
+              <legend>什么时候去？</legend>
+              <label><span><CalendarDays aria-hidden="true" />出发</span><input type="date" min={todayValue} value={startDate} onChange={(event) => updateStartDate(event.target.value)} /></label>
+              <i aria-hidden="true">—</i>
+              <label><span><CalendarDays aria-hidden="true" />返程</span><input type="date" min={startDate || todayValue} value={endDate} onChange={(event) => { setEndDate(event.target.value); setWeatherContext(null); setWeatherLoading(false); setSetupError(""); }} /></label>
+            </fieldset>
+            {(weatherLoading || weatherContext) && <div className={`setup-weather ${weatherLoading ? "loading" : ""}`} aria-live="polite">
+              <CloudSun aria-hidden="true" />
+              <span><b>{weatherLoading ? "正在匹配行程天气" : weatherContext?.source === "forecast" ? "行程天气已加入推荐" : "已加入当地季节信息"}</b><small>{weatherLoading ? "天气会自动参与 AI 清单生成" : weatherContext?.summary}</small></span>
+            </div>}
+            {setupError && <p className="setup-error" role="alert">{setupError}</p>}
             {cloudError && <p className="cloud-error" role="alert">{cloudError}</p>}
-            {needsSignIn ? <a className="setup-submit setup-signin" href="/signin-with-chatgpt?return_to=%2F">登录后创建或加入队伍 <span>→</span></a> : <button className="setup-submit" onClick={createTeam} disabled={!accountReady} aria-busy={!accountReady}>生成清单 <span>→</span></button>}
+            {needsSignIn ? <a className="setup-submit setup-signin" href="/signin-with-chatgpt?return_to=%2F">登录后创建或加入队伍 <span>→</span></a> : <button className="setup-submit" onClick={createTeam} disabled={!accountReady || weatherLoading} aria-busy={!accountReady || weatherLoading}>生成清单 <span>→</span></button>}
             {!needsSignIn && accountReady && <button className="join-team-entry" onClick={() => setShowJoin((current) => !current)}>有邀请码？加入朋友的队伍</button>}
             {!needsSignIn && showJoin && <div className="join-team-form"><input value={joinCode} onChange={(event) => setJoinCode(event.target.value.toUpperCase())} onKeyDown={(event) => event.key === "Enter" && void joinTeam()} maxLength={6} placeholder="输入 6 位邀请码" /><button onClick={() => void joinTeam()}>加入</button></div>}
             {!needsSignIn && availableTrips.length > 0 && <section className="saved-trips"><small>我的队伍</small>{availableTrips.slice(0, 3).map((trip) => <button key={trip.id} onClick={() => void openCloudTrip(trip.id)}><span><b>{trip.name}</b><small>{trip.destination}</small></span><i>›</i></button>)}</section>}
