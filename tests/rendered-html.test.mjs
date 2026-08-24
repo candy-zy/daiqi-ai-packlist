@@ -266,6 +266,8 @@ test("personal center uses preferences and gear only to preset unassigned items"
   assert.match(page, /function isManagedPresetItem/);
   assert.match(page, /function cleanupRemovedPreferenceItems/);
   assert.match(page, /items: cleanedItems/);
+  assert.match(page, /const removedLegacyItems = cleanedItems\.length/);
+  assert.match(page, /removedLegacyItems \? JSON\.stringify\(payload\.state\) : serialized/);
   assert.match(page, /setItems\(cleanupRemovedPreferenceItems\(saved\.items/);
   assert.match(page, /items: \["葡萄糖"\]/);
   assert.doesNotMatch(page, /有转换插头/);
