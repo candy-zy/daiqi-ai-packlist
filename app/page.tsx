@@ -22,7 +22,7 @@ type Member = "我" | "阿哲" | "小雨";
 type Phase = "prepare" | "verify" | "departed";
 type ListFilter = "all" | "mine" | "unassigned";
 type Category = "证件与钱财类" | "电子数码类" | "衣物鞋帽类" | "洗护化妆类" | "医药健康类" | "日用杂物类" | "零食饮料类";
-type HabitPreference = "photo" | "fitness" | "outdoor" | "stargazing" | "family-with-child" | "pet" | "fishing" | "skiing" | "water-sports" | "hot-spring" | "makeup" | "motion" | "allergy" | "hypoglycemia";
+type HabitPreference = "photo" | "outdoor" | "stargazing" | "makeup" | "motion" | "allergy" | "hypoglycemia";
 type GearPreference = "camera" | "instant-camera" | "selfie-stick" | "power-bank";
 
 type TravelProfile = {
@@ -127,16 +127,9 @@ const categories: { name: Category }[] = [
 ];
 
 const habitOptions: PreferenceOption<HabitPreference>[] = [
-  { id: "photo", label: "摄影 / 拍照", items: ["相机", "备用电池", "内存卡", "充电宝", "三脚架"] },
-  { id: "fitness", label: "运动 / 健身", items: ["运动服", "运动鞋", "水壶", "护膝", "运动相机"] },
-  { id: "outdoor", label: "户外 / 徒步 / 露营", items: ["登山杖", "急救包", "防风外套", "头灯", "防潮垫"] },
-  { id: "stargazing", label: "观星", items: ["望远镜", "红光手电", "保暖外套", "三脚架"] },
-  { id: "family-with-child", label: "带娃出行", items: ["儿童证件", "儿童常用药", "湿巾", "备用衣物", "玩具"] },
-  { id: "pet", label: "宠物出行", items: ["宠物证件", "宠物粮", "水碗", "牵引绳", "宠物常用药"] },
-  { id: "fishing", label: "钓鱼", items: ["钓具", "鱼线 / 鱼钩", "防晒帽", "折叠椅", "防水袋"] },
-  { id: "skiing", label: "滑雪 / 冰雪活动", items: ["滑雪服", "护膝 / 护腕", "手套", "暖宝宝"] },
-  { id: "water-sports", label: "水上运动 / 潜水", items: ["泳衣 / 潜水服", "防水袋", "防晒霜", "拖鞋", "毛巾"] },
-  { id: "hot-spring", label: "温泉 / 泡汤", items: ["泳衣 / 浴衣", "拖鞋", "毛巾", "防水袋", "补水喷雾"] },
+  { id: "photo", label: "摄影 / 拍照", items: ["相机", "备用电池", "内存卡", "手机稳定器", "三脚架"] },
+  { id: "outdoor", label: "户外 / 徒步 / 露营", items: ["登山杖", "防潮垫", "睡袋", "手电筒", "防风外套", "冲锋衣", "户外急救包", "保温毯"] },
+  { id: "stargazing", label: "观星 / 天文", items: ["望远镜", "红光手电", "三脚架", "保暖冲锋衣"] },
   { id: "makeup", label: "化妆", items: ["卸妆油", "防晒霜"] },
   { id: "motion", label: "容易晕车", items: ["晕车药"] },
   { id: "allergy", label: "容易过敏", items: ["过敏药"] },
