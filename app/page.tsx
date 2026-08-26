@@ -568,6 +568,7 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState("");
   const [showJoin, setShowJoin] = useState(false);
   const [showCreateTrip, setShowCreateTrip] = useState(false);
+  const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
   const [availableTrips, setAvailableTrips] = useState<TripSummary[]>([]);
   const [accountReady, setAccountReady] = useState(false);
   const [needsSignIn, setNeedsSignIn] = useState(false);
@@ -1161,6 +1162,30 @@ export default function Home() {
     setShowJoin((current) => !current);
   }
 
+  async function deleteTrip(trip: TripSummary) {
+    if (trip.role !== "owner" || deletingTripId) return;
+    const confirmed = window.confirm(`确定删除“${trip.name}”吗？队伍成员、清单和留言都会被删除。`);
+    if (!confirmed) return;
+    setDeletingTripId(trip.id);
+    setCloudError("");
+    try {
+      const response = await fetch(`/api/trips/${trip.id}`, { method: "DELETE" });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || "删除队伍失败");
+      setAvailableTrips((current) => current.filter((entry) => entry.id !== trip.id));
+      if (activeTripIdRef.current === trip.id) {
+        activeTripIdRef.current = null;
+        setActiveTripId(null);
+        window.localStorage.removeItem(cloudTripKey);
+        setTeamReady(false);
+      }
+    } catch (error) {
+      setCloudError(error instanceof Error ? error.message : "删除队伍失败");
+    } finally {
+      setDeletingTripId(null);
+    }
+  }
+
   function toggleHabit(id: HabitPreference) {
     setProfileDraft((current) => ({
       ...current,
@@ -1303,11 +1328,14 @@ export default function Home() {
                 </section>
               ) : (
                 <section className="team-cards" aria-label="已有队伍">
-                  {availableTrips.map((trip) => <button className="team-card" key={trip.id} onClick={() => void openCloudTrip(trip.id)}>
-                    <span className="team-card-mark" aria-hidden="true"><MapPin /></span>
-                    <span className="team-card-copy"><b>{trip.name}</b><small>{trip.destination}</small><em>{trip.role === "owner" ? "我创建的队伍" : "朋友邀请我加入"}</em></span>
-                    <span className="team-card-arrow" aria-hidden="true">›</span>
-                  </button>)}
+                  {availableTrips.map((trip) => <div className="team-card-row" key={trip.id}>
+                    <button className="team-card" onClick={() => void openCloudTrip(trip.id)}>
+                      <span className="team-card-mark" aria-hidden="true"><MapPin /></span>
+                      <span className="team-card-copy"><b>{trip.name}</b><small>{trip.destination}</small><em>{trip.role === "owner" ? "我创建的队伍" : "朋友邀请我加入"}</em></span>
+                      <span className="team-card-arrow" aria-hidden="true">›</span>
+                    </button>
+                    {trip.role === "owner" && <button className="team-delete-button" onClick={(event) => { event.stopPropagation(); void deleteTrip(trip); }} disabled={deletingTripId === trip.id} aria-label={`删除${trip.name}`} title="删除队伍"><Trash2 aria-hidden="true" /><span>{deletingTripId === trip.id ? "删除中" : "删除"}</span></button>}
+                  </div>)}
                 </section>
               )}
               <div className="team-list-actions">

@@ -1328,6 +1328,7 @@ h1,.setup-content h1,.departure-page h1 {
 .team-empty-state h2 { margin:4px 0 0; font-size:var(--type-h2-size); line-height:var(--type-h2-line); }
 .team-empty-state p { max-width:280px; margin:0; color:#74756e; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
 .team-cards { display:grid; gap:12px; margin-bottom:20px; }
+.team-card-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:stretch; gap:8px; }
 .team-card { width:100%; min-width:0; display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; gap:12px; padding:14px; text-align:left; border:2px solid var(--ink); border-radius:18px; background:#fff; box-shadow:3px 4px 0 var(--ink); cursor:pointer; }
 .team-card:active { transform:translate(1px,1px); box-shadow:1px 2px 0 var(--ink); }
 .team-card-mark { width:44px; height:44px; display:grid; place-items:center; border:2px solid var(--ink); border-radius:14px; color:var(--ink); background:var(--lime); box-shadow:2px 2px 0 var(--ink); }
@@ -1337,6 +1338,10 @@ h1,.setup-content h1,.departure-page h1 {
 .team-card-copy small { overflow:hidden; color:#5e6159; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); white-space:nowrap; text-overflow:ellipsis; }
 .team-card-copy em { color:#96968e; font-size:var(--type-caption-size); line-height:var(--type-caption-line); font-style:normal; }
 .team-card-arrow { font-size:var(--type-h1-size); line-height:1; }
+.team-delete-button { align-self:center; display:grid; justify-items:center; gap:3px; min-width:49px; padding:7px 6px; border:2px solid #d9bcb5; border-radius:14px; color:#a65348; background:#fff8f5; cursor:pointer; }
+.team-delete-button svg { width:18px; height:18px; }
+.team-delete-button span { font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.team-delete-button:disabled { cursor:wait; opacity:.55; }
 .team-list-actions { display:grid; gap:10px; margin-top:18px; }
 .team-primary-action,.team-secondary-action { width:100%; min-height:52px; display:flex; align-items:center; justify-content:center; gap:10px; border:2px solid var(--ink); border-radius:16px; cursor:pointer; font-size:var(--type-body-size); line-height:var(--type-body-line); font-weight:var(--font-semibold); }
 .team-primary-action { color:var(--ink); background:var(--lime); box-shadow:3px 4px 0 var(--ink); }
