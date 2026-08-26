@@ -1019,6 +1019,36 @@ export default function Home() {
     setSetupError("");
   }
 
+  function updateLocationQuery(value: string) {
+    locationSearchIdRef.current += 1;
+    setLocationQuery(value);
+    setDestination("");
+    setSelectedPlace(null);
+    if (value.trim().length < 2) setLocationResults([]);
+    setLocationLoading(false);
+    setWeatherContext(null);
+    setSetupError("");
+  }
+
+  function choosePlace(place: PlaceSelection) {
+    locationSearchIdRef.current += 1;
+    setSelectedPlace(place);
+    setLocationQuery(place.label);
+    setDestination(place.label);
+    setLocationResults([]);
+    setShowLocationResults(false);
+    setLocationLoading(false);
+    setWeatherContext(null);
+    setSetupError("");
+  }
+
+  function updateStartDate(value: string) {
+    setStartDate(value);
+    if (endDate && endDate < value) setEndDate("");
+    setWeatherContext(null);
+    setSetupError("");
+  }
+
   async function createTeam() {
     if (!selectedPlace) {
       setSetupError("请从搜索结果中选择一个目的地");
