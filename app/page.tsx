@@ -568,6 +568,7 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState("");
   const [showJoin, setShowJoin] = useState(false);
   const [showCreateTrip, setShowCreateTrip] = useState(false);
+  const [teamManageMode, setTeamManageMode] = useState(false);
   const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
   const [availableTrips, setAvailableTrips] = useState<TripSummary[]>([]);
   const [accountReady, setAccountReady] = useState(false);
@@ -1318,7 +1319,7 @@ export default function Home() {
             <div className="team-list-content">
               <div className="team-list-heading">
                 <div><small>我的旅行队伍</small><h1>和朋友一起，<br />把行李带齐。</h1></div>
-                <span className="team-list-count">{availableTrips.length}</span>
+                <button className={`team-list-manage-toggle ${teamManageMode ? "active" : ""}`} onClick={() => setTeamManageMode((current) => !current)} aria-pressed={teamManageMode}>{teamManageMode ? "完成" : "管理"}</button>
               </div>
               {availableTrips.length === 0 ? (
                 <section className="team-empty-state">
@@ -1334,7 +1335,7 @@ export default function Home() {
                       <span className="team-card-copy"><b>{trip.name}</b><small>{trip.destination}</small><em>{trip.role === "owner" ? "我创建的队伍" : "朋友邀请我加入"}</em></span>
                       <span className="team-card-arrow" aria-hidden="true">›</span>
                     </button>
-                    {trip.role === "owner" && <button className="team-delete-button" onClick={(event) => { event.stopPropagation(); void deleteTrip(trip); }} disabled={deletingTripId === trip.id} aria-label={`删除${trip.name}`} title="删除队伍"><Trash2 aria-hidden="true" /><span>{deletingTripId === trip.id ? "删除中" : "删除"}</span></button>}
+                    {teamManageMode && trip.role === "owner" && <button className="team-delete-button" onClick={(event) => { event.stopPropagation(); void deleteTrip(trip); }} disabled={deletingTripId === trip.id} aria-label={`删除${trip.name}`} title={deletingTripId === trip.id ? "删除中" : `删除${trip.name}`}><Trash2 aria-hidden="true" /></button>}
                   </div>)}
                 </section>
               )}

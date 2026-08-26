@@ -1320,7 +1320,8 @@ h1,.setup-content h1,.departure-page h1 {
 .team-list-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:22px; }
 .team-list-heading small { display:block; margin-bottom:7px; color:#77756d; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); font-weight:var(--font-semibold); }
 .team-list-heading h1 { max-width:280px; font-size:var(--type-display-size); line-height:var(--type-display-line); }
-.team-list-count { min-width:34px; height:34px; display:grid; place-items:center; border:2px solid var(--ink); border-radius:50%; color:#506713; background:var(--lime); font-size:var(--type-secondary-size); font-weight:var(--font-semibold); }
+.team-list-manage-toggle { min-width:58px; min-height:40px; align-self:flex-start; margin-top:2px; padding:7px 12px; border:2px solid var(--ink); border-radius:14px; color:var(--ink); background:#fff; box-shadow:2px 3px 0 var(--ink); cursor:pointer; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); font-weight:var(--font-semibold); }
+.team-list-manage-toggle.active { background:var(--lime); }
 .team-empty-state { display:grid; justify-items:center; gap:8px; min-height:310px; padding:28px 22px 24px; border:2px dashed #c8c5bb; border-radius:22px; background:linear-gradient(150deg,#fffdf9,#f3f0e6); text-align:center; }
 .team-empty-art { width:100%; min-height:125px; display:flex; align-items:flex-end; justify-content:center; padding:18px 12px; border-radius:17px; background:#e9f0c4; background-image:radial-gradient(circle at 20% 22%,rgba(255,255,255,.75) 0 5px,transparent 6px),radial-gradient(circle at 80% 65%,rgba(255,255,255,.55) 0 4px,transparent 5px); }
 .team-empty-art>.character-avatar { width:75px; height:75px; margin:0 -5px; border:2px solid var(--ink); box-shadow:3px 3px 0 var(--ink); }
@@ -1338,9 +1339,8 @@ h1,.setup-content h1,.departure-page h1 {
 .team-card-copy small { overflow:hidden; color:#5e6159; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); white-space:nowrap; text-overflow:ellipsis; }
 .team-card-copy em { color:#96968e; font-size:var(--type-caption-size); line-height:var(--type-caption-line); font-style:normal; }
 .team-card-arrow { font-size:var(--type-h1-size); line-height:1; }
-.team-delete-button { align-self:center; display:grid; justify-items:center; gap:3px; min-width:49px; padding:7px 6px; border:2px solid #d9bcb5; border-radius:14px; color:#a65348; background:#fff8f5; cursor:pointer; }
-.team-delete-button svg { width:18px; height:18px; }
-.team-delete-button span { font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.team-delete-button { align-self:stretch; min-width:52px; display:grid; place-items:center; padding:0; border:2px solid #d9bcb5; border-radius:18px; color:#a65348; background:#fff8f5; cursor:pointer; }
+.team-delete-button svg { width:22px; height:22px; }
 .team-delete-button:disabled { cursor:wait; opacity:.55; }
 .team-list-actions { display:grid; gap:10px; margin-top:18px; }
 .team-primary-action,.team-secondary-action { width:100%; min-height:52px; display:flex; align-items:center; justify-content:center; gap:10px; border:2px solid var(--ink); border-radius:16px; cursor:pointer; font-size:var(--type-body-size); line-height:var(--type-body-line); font-weight:var(--font-semibold); }
