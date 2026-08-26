@@ -549,6 +549,7 @@ export default function Home() {
   const [showChat, setShowChat] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [profileView, setProfileView] = useState<"home" | "preferences">("home");
   const [profile, setProfile] = useState<TravelProfile>(defaultProfile);
   const [profileDraft, setProfileDraft] = useState<TravelProfile>(defaultProfile);
   const [addCategory, setAddCategory] = useState<Category>("日用杂物类");
@@ -1137,6 +1138,7 @@ export default function Home() {
 
   function openProfile() {
     setProfileDraft({ ...profile, habits: [...profile.habits], gear: [...profile.gear] });
+    setProfileView("home");
     setShowProfile(true);
   }
 
@@ -1178,6 +1180,7 @@ export default function Home() {
     profileRef.current = nextProfile;
     setItems((current) => applyPresetItems(current, nextProfile, destination));
     setProfile(nextProfile);
+    setProfileView("home");
     setShowProfile(false);
     try {
       const response = await fetch("/api/profile", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(nextProfile) });
@@ -1210,14 +1213,39 @@ export default function Home() {
 
   function renderProfileCenter() {
     if (!showProfile) return null;
+    const isPreferences = profileView === "preferences";
     return <div className="profile-modal" role="dialog" aria-modal="true" aria-label="个人中心">
       <button className="sheet-backdrop" aria-label="关闭个人中心" onClick={() => setShowProfile(false)} />
       <section className="profile-card">
         <header className="profile-header">
-          <div className="profile-identity"><CharacterAvatar member={currentMember} /><div><small>个人中心</small><h2>{profileDraft.displayName.trim() || "我"}的出行偏好</h2></div></div>
+          <div className="profile-identity">
+            {isPreferences && <button className="profile-subpage-back" onClick={() => setProfileView("home")} aria-label="返回个人中心"><ArrowLeft aria-hidden="true" /></button>}
+            <CharacterAvatar member={currentMember} />
+            <div><small>{isPreferences ? "个人中心 / 出行偏好" : "个人中心"}</small><h2>{isPreferences ? `${profileDraft.displayName.trim() || "我"}的出行偏好` : "我的设置"}</h2></div>
+          </div>
           <button className="profile-close" onClick={() => setShowProfile(false)} aria-label="关闭"><X aria-hidden="true" /></button>
         </header>
-        <div className="profile-scroll">
+        <div className={isPreferences ? "profile-scroll" : "profile-scroll profile-home-scroll"}>
+          {!isPreferences ? <>
+            <p className="profile-home-intro">管理你的出行设置</p>
+            <section className="profile-menu" aria-label="个人中心菜单">
+              <button className="profile-menu-button" onClick={() => setProfileView("preferences")}>
+                <span className="profile-menu-icon"><CharacterAvatar member={currentMember} /></span>
+                <span className="profile-menu-copy"><b>出行偏好</b><small>选择兴趣与设备，让清单更贴合你</small></span>
+                <span className="profile-menu-arrow" aria-hidden="true">›</span>
+              </button>
+              <button className="profile-menu-button" onClick={() => notify("意见反馈功能即将开放", 2200)}>
+                <span className="profile-menu-icon profile-menu-icon-mint"><MessageCircle aria-hidden="true" /></span>
+                <span className="profile-menu-copy"><b>意见反馈</b><small>告诉我们哪里还可以更好</small></span>
+                <span className="profile-menu-arrow" aria-hidden="true">›</span>
+              </button>
+              <button className="profile-menu-button" onClick={() => notify("带齐 · 和朋友一起把行李带齐", 2200)}>
+                <span className="profile-menu-icon profile-menu-icon-lilac"><Package aria-hidden="true" /></span>
+                <span className="profile-menu-copy"><b>关于带齐</b><small>一起准备，少一点遗漏</small></span>
+                <span className="profile-menu-arrow" aria-hidden="true">›</span>
+              </button>
+            </section>
+          </> : <>
           <label className="profile-name-field"><span>昵称</span><input value={profileDraft.displayName} onChange={(event) => setProfileDraft((current) => ({ ...current, displayName: event.target.value.slice(0, 12) }))} placeholder="朋友会看到这个名字" /></label>
 
           <section className="profile-section">
@@ -1246,20 +1274,8 @@ export default function Home() {
 
           <p className="profile-privacy">身体情况仅用于你的个人清单；设备信息只用于预设物品。</p>
 
-          <section className="profile-links" aria-label="更多设置">
-            <button onClick={() => notify("意见反馈功能即将开放", 2200)}>
-              <MessageCircle aria-hidden="true" />
-              <span><b>意见反馈</b><small>告诉我们哪里还可以更好</small></span>
-              <span aria-hidden="true">›</span>
-            </button>
-            <button onClick={() => notify("带齐 · 和朋友一起把行李带齐", 2200)}>
-              <Package aria-hidden="true" />
-              <span><b>关于带齐</b><small>一起准备，少一点遗漏</small></span>
-              <span aria-hidden="true">›</span>
-            </button>
-          </section>
-        </div>
-        <footer className="profile-footer"><button onClick={saveProfile}>保存并更新清单 <span>→</span></button></footer>
+        </>}</div>
+        {isPreferences && <footer className="profile-footer"><button onClick={saveProfile}>保存并更新清单 <span>→</span></button></footer>}
       </section>
     </div>;
   }
