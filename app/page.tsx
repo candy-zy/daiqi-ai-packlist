@@ -6,7 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
   ArrowLeft, Banknote, BookOpenCheck, Bug, CalendarDays, CupSoda, GlassWater, MapPin, MemoryStick,
-  Check, Download, Menu, MessageCircle, MoonStar, Package, Search, Share2, Sparkles, Trash2, X,
+  Check, Menu, MessageCircle, MoonStar, Package, Search, Share2, Sparkles, Trash2, X,
 } from "lucide-react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -116,11 +116,6 @@ type DeletedItemSnapshot = {
   wasUnread: boolean;
   proposals: AssignmentProposal[];
   suggestionStates: { id: number; added: boolean }[];
-};
-
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
 type PersistedAppState = {
@@ -571,6 +566,7 @@ export default function Home() {
   const [showInvite, setShowInvite] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [showJoin, setShowJoin] = useState(false);
+  const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [availableTrips, setAvailableTrips] = useState<TripSummary[]>([]);
   const [accountReady, setAccountReady] = useState(false);
   const [needsSignIn, setNeedsSignIn] = useState(false);
@@ -583,9 +579,6 @@ export default function Home() {
   const [draggingItemId, setDraggingItemId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ message: string; canUndo: boolean } | null>(null);
   const [storageReady, setStorageReady] = useState(false);
-  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
   const draggingItemRef = useRef<number | null>(null);
   const deletedItemRef = useRef<DeletedItemSnapshot | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -623,24 +616,9 @@ export default function Home() {
   const activeItemNotes = activeItem ? itemNotes.filter((note) => note.itemId === activeItem.id) : [];
   const todayValue = useMemo(() => new Date().toISOString().slice(0, 10), []);
   useEffect(() => {
-    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-    const installedTimer = window.setTimeout(() => setIsInstalled(window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true), 0);
-
     if ("serviceWorker" in navigator && window.location.protocol === "https:") {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }
-
-    const handleInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
-    };
-    const handleInstalled = () => {
-      setDeferredInstallPrompt(null);
-      setShowInstallGuide(false);
-      setIsInstalled(true);
-    };
-    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
-    window.addEventListener("appinstalled", handleInstalled);
 
     const restoreTimer = window.setTimeout(() => {
       try {
@@ -683,10 +661,7 @@ export default function Home() {
     }, 0);
 
     return () => {
-      window.clearTimeout(installedTimer);
       window.clearTimeout(restoreTimer);
-      window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
-      window.removeEventListener("appinstalled", handleInstalled);
     };
   }, []);
 
@@ -916,6 +891,7 @@ export default function Home() {
     setTripVersion(payload.version ?? payload.trip.version);
     tripVersionRef.current = payload.version ?? payload.trip.version;
     currentMemberRef.current = payload.trip.currentMember;
+    setShowCreateTrip(false);
     window.localStorage.setItem(cloudTripKey, payload.trip.id);
     setTeamReady(true);
     setCloudError("");
@@ -1011,31 +987,6 @@ export default function Home() {
     if (!inviteCode) return;
     await navigator.clipboard?.writeText(inviteCode);
     notify("邀请码已复制");
-  }
-
-  async function installApp() {
-    if (!deferredInstallPrompt) {
-      setShowInstallGuide(true);
-      return;
-    }
-    await deferredInstallPrompt.prompt();
-    const choice = await deferredInstallPrompt.userChoice;
-    if (choice.outcome === "accepted") setIsInstalled(true);
-    setDeferredInstallPrompt(null);
-  }
-
-  function renderInstallGuide() {
-    if (!showInstallGuide) return null;
-    return <div className="install-guide-modal" role="dialog" aria-modal="true" aria-label="安装带齐到手机">
-      <button className="sheet-backdrop" aria-label="关闭安装说明" onClick={() => setShowInstallGuide(false)} />
-      <section className="install-guide-card">
-        <header><span><Download aria-hidden="true" /></span><div><small>安装到手机</small><h2>把「带齐」放到桌面</h2></div><button onClick={() => setShowInstallGuide(false)} aria-label="关闭"><X aria-hidden="true" /></button></header>
-        <div className="install-guide-step"><b>iPhone · Safari</b><p>点击底部的 <Share2 aria-hidden="true" /> 分享，再选择“添加到主屏幕”。</p></div>
-        <div className="install-guide-step"><b>Android · Chrome</b><p>点击右上角菜单，再选择“安装应用”或“添加到主屏幕”。</p></div>
-        <p className="install-guide-note">安装后会独立全屏打开；当前设备上的清单和偏好也会自动保留。</p>
-        <button className="install-guide-done" onClick={() => setShowInstallGuide(false)}>知道了</button>
-      </section>
-    </div>;
   }
 
   function updateLocationQuery(value: string) {
@@ -1159,6 +1110,25 @@ export default function Home() {
     setShowProfile(true);
   }
 
+  function startCreateTrip() {
+    if (!accountReady) return;
+    if (needsSignIn) {
+      window.location.href = "/signin-with-chatgpt?return_to=%2F";
+      return;
+    }
+    setSetupError("");
+    setShowCreateTrip(true);
+  }
+
+  function startJoinTrip() {
+    if (!accountReady) return;
+    if (needsSignIn) {
+      window.location.href = "/signin-with-chatgpt?return_to=%2F";
+      return;
+    }
+    setShowJoin((current) => !current);
+  }
+
   function toggleHabit(id: HabitPreference) {
     setProfileDraft((current) => ({
       ...current,
@@ -1203,6 +1173,7 @@ export default function Home() {
     setEndDate("");
     setWeatherContext(null);
     setSetupError("");
+    setShowCreateTrip(false);
     setTeamReady(false);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -1244,6 +1215,19 @@ export default function Home() {
           </section>
 
           <p className="profile-privacy">身体情况仅用于你的个人清单；设备信息只用于预设物品。</p>
+
+          <section className="profile-links" aria-label="更多设置">
+            <button onClick={() => notify("意见反馈功能即将开放", 2200)}>
+              <MessageCircle aria-hidden="true" />
+              <span><b>意见反馈</b><small>告诉我们哪里还可以更好</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
+            <button onClick={() => notify("带齐 · 和朋友一起把行李带齐", 2200)}>
+              <Package aria-hidden="true" />
+              <span><b>关于带齐</b><small>一起准备，少一点遗漏</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
+          </section>
         </div>
         <footer className="profile-footer"><button onClick={saveProfile}>保存并更新清单 <span>→</span></button></footer>
       </section>
@@ -1251,13 +1235,55 @@ export default function Home() {
   }
 
   if (!teamReady) {
+    if (!showCreateTrip) {
+      return (
+        <main className="app-shell setup-shell team-list-shell">
+          <section className="phone-frame setup-frame team-list-frame" aria-label="我的旅行队伍">
+            <header className="topbar setup-topbar team-list-topbar">
+              <Image className="brand-mark" src="/app-icon-192.png?v=2" alt="" width={32} height={32} priority />
+              <div className="brand-name">带齐</div>
+              <button className="team-profile-button" onClick={openProfile} aria-label="打开个人中心" title="个人中心"><CharacterAvatar member={currentMember} /></button>
+            </header>
+            <div className="team-list-content">
+              <div className="team-list-heading">
+                <div><small>我的旅行队伍</small><h1>和朋友一起，<br />把行李带齐。</h1></div>
+                <span className="team-list-count">{availableTrips.length}</span>
+              </div>
+              {availableTrips.length === 0 ? (
+                <section className="team-empty-state">
+                  <div className="team-empty-art" aria-hidden="true"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div>
+                  <h2>还没有旅行队伍</h2>
+                  <p>创建一个目的地，和朋友一起准备、认领并核对行李。</p>
+                </section>
+              ) : (
+                <section className="team-cards" aria-label="已有队伍">
+                  {availableTrips.map((trip) => <button className="team-card" key={trip.id} onClick={() => void openCloudTrip(trip.id)}>
+                    <span className="team-card-mark" aria-hidden="true"><MapPin /></span>
+                    <span className="team-card-copy"><b>{trip.name}</b><small>{trip.destination}</small><em>{trip.role === "owner" ? "我创建的队伍" : "朋友邀请我加入"}</em></span>
+                    <span className="team-card-arrow" aria-hidden="true">›</span>
+                  </button>)}
+                </section>
+              )}
+              <div className="team-list-actions">
+                <button className="team-primary-action" onClick={startCreateTrip} disabled={!accountReady}>{needsSignIn ? "登录后新建队伍" : "新建队伍"} <span>＋</span></button>
+                <button className="team-secondary-action" onClick={startJoinTrip} disabled={!accountReady}>加入队伍 <span>邀请码</span></button>
+              </div>
+              {!needsSignIn && showJoin && <div className="team-join-panel"><label htmlFor="team-list-invite-code">输入朋友发来的邀请码</label><div><input id="team-list-invite-code" value={joinCode} onChange={(event) => setJoinCode(event.target.value.toUpperCase())} onKeyDown={(event) => event.key === "Enter" && void joinTeam()} maxLength={6} placeholder="6 位邀请码" /><button onClick={() => void joinTeam()}>加入</button></div></div>}
+              {cloudError && <p className="cloud-error" role="alert">{cloudError}</p>}
+              <p className="team-list-note">队伍里的清单会和成员实时同步，邀请码只用于加入对应队伍。</p>
+            </div>
+            {renderProfileCenter()}
+          </section>
+        </main>
+      );
+    }
     return (
       <main className="app-shell setup-shell">
         <section className="phone-frame setup-frame" aria-label="创建旅行队伍">
           <header className="topbar setup-topbar">
+            <button className="setup-back-button" onClick={() => setShowCreateTrip(false)} aria-label="返回队伍列表"><ArrowLeft aria-hidden="true" /></button>
             <Image className="brand-mark" src="/app-icon-192.png?v=2" alt="" width={32} height={32} priority />
             <div className="brand-name">带齐</div>
-            {!isInstalled && <button className="install-app-button" onClick={installApp}><Download aria-hidden="true" />安装</button>}
           </header>
           <div className="setup-content">
             <div className="setup-illustration"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div>
@@ -1301,12 +1327,8 @@ export default function Home() {
             {setupError && <p className="setup-error" role="alert">{setupError}</p>}
             {cloudError && <p className="cloud-error" role="alert">{cloudError}</p>}
             {needsSignIn ? <a className="setup-submit setup-signin" href="/signin-with-chatgpt?return_to=%2F">登录后创建或加入队伍 <span>→</span></a> : <button className="setup-submit" onClick={createTeam} disabled={!accountReady || isGeneratingTeam} aria-busy={isGeneratingTeam}>{isGeneratingTeam ? "正在生成清单…" : "生成清单"} <span>→</span></button>}
-            {!needsSignIn && accountReady && <button className="join-team-entry" onClick={() => setShowJoin((current) => !current)}>有邀请码？加入朋友的队伍</button>}
-            {!needsSignIn && showJoin && <div className="join-team-form"><input value={joinCode} onChange={(event) => setJoinCode(event.target.value.toUpperCase())} onKeyDown={(event) => event.key === "Enter" && void joinTeam()} maxLength={6} placeholder="输入 6 位邀请码" /><button onClick={() => void joinTeam()}>加入</button></div>}
-            {!needsSignIn && availableTrips.length > 0 && <section className="saved-trips"><small>我的队伍</small>{availableTrips.slice(0, 3).map((trip) => <button key={trip.id} onClick={() => void openCloudTrip(trip.id)}><span><b>{trip.name}</b><small>{trip.destination}</small></span><i>›</i></button>)}</section>}
           </div>
           {renderProfileCenter()}
-          {renderInstallGuide()}
         </section>
       </main>
     );
@@ -1323,7 +1345,6 @@ export default function Home() {
             </div>
             <h1>带上好心情，出发！</h1>
           </section>
-          {renderInstallGuide()}
         </section>
       </main>
     );
@@ -1806,7 +1827,6 @@ export default function Home() {
 
         {renderProfileCenter()}
 
-        {renderInstallGuide()}
 
         {toast && <div className="toast" role="status"><span>{toast.message}</span>{toast.canUndo && <button onClick={undoDelete}>撤回</button>}</div>}
       </section>

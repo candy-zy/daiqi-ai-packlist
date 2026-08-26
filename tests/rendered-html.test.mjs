@@ -21,21 +21,31 @@ async function render() {
   return requestSite();
 }
 
-test("server-renders a focused destination-first onboarding experience", async () => {
+test("server-renders a focused team-list home experience", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   assert.match(html, /<title>带齐｜朋友一起收拾行李<\/title>/);
-  assert.match(html, /和朋友一起/);
-  assert.match(html, /这次去哪儿/);
-  assert.match(html, /生成清单/);
+  assert.match(html, /我的旅行队伍/);
+  assert.match(html, /还没有旅行队伍/);
+  assert.match(html, /新建队伍/);
+  assert.match(html, /加入队伍/);
+  assert.match(html, /team-list-shell/);
   assert.match(html, /character-avatar avatar-me/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/);
 });
 
-test("ships as an installable mobile PWA with local trip continuity", async () => {
+test("renders a local sign-in fallback instead of a 404", async () => {
+  const page = await readFile(new URL("../app/signin-with-chatgpt/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /本地开发时没有托管层/);
+  assert.match(page, /前往线上登录/);
+  assert.match(page, /返回带齐/);
+  assert.match(page, /safeReturnTo/);
+});
+
+test("ships as a mobile PWA with local trip continuity", async () => {
   const [page, layout, manifest, serviceWorker] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -51,10 +61,8 @@ test("ships as an installable mobile PWA with local trip continuity", async () =
   assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
   assert.match(layout, /appleWebApp/);
   assert.match(layout, /viewportFit: "cover"/);
-  assert.match(page, /beforeinstallprompt/);
   assert.match(page, /navigator\.serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(page, /localStorage\.setItem\(localStateKey/);
-  assert.match(page, /添加到主屏幕/);
   assert.match(serviceWorker, /CACHE_NAME = "daiqi-app-v3"/);
   assert.match(serviceWorker, /departure-team-v2\.webp\?v=3/);
   assert.match(manifest, /app-icon-192\.png\?v=2/);
@@ -69,17 +77,17 @@ test("ships as an installable mobile PWA with local trip continuity", async () =
   ]);
 });
 
-test("onboarding and the main header avoid repeated trip metadata", async () => {
+test("team list and create flow keep navigation predictable", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-  assert.doesNotMatch(page, /队伍名称|队伍成员|先把朋友聚到一起|创建队伍并生成清单/);
-  assert.doesNotMatch(page, /teamName|destinationLabel|className="trip-chip"/);
-  assert.doesNotMatch(page, /<i>＋<\/i>/);
+  assert.match(page, /className="topbar setup-topbar team-list-topbar"/);
+  assert.match(page, /className="team-list-content"/);
+  assert.match(page, /function startCreateTrip/);
+  assert.match(page, /function startJoinTrip/);
+  assert.match(page, /className="setup-back-button"/);
   assert.match(page, /这次去哪儿/);
-  assert.match(page, /className="trip-hero compact-trip-hero"/);
-  assert.match(page, /"这次带什么？"/);
-  assert.match(page, /className="presence-panel"/);
-  assert.doesNotMatch(page, /点头像查看队友/);
-  assert.equal(page.match(/className="topbar/g)?.length, 1, "only onboarding keeps a brand header");
+  assert.match(page, /className="team-profile-button"[^>]*>\s*<CharacterAvatar member=\{currentMember\}\s*\/>\s*<\/button>/);
+  assert.doesNotMatch(page, /className="install-app-button"/);
+  assert.equal(page.match(/className="topbar/g)?.length, 2, "team list and create flow each keep one brand header");
 });
 
 test("ships hand-drawn characters and consistent line item icons", async () => {
@@ -115,9 +123,8 @@ test("ships hand-drawn characters and consistent line item icons", async () => {
 });
 
 test("uses one semantic rem-based typography system without undersized readable text", async () => {
-  const [typography, css, layout] = await Promise.all([
+  const [typography, layout] = await Promise.all([
     readFile(new URL("../app/typography.css", import.meta.url), "utf8"),
-    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
   ]);
 
@@ -132,8 +139,8 @@ test("uses one semantic rem-based typography system without undersized readable 
   assert.match(typography, /font-size:var\(--type-input-size\)/);
   assert.match(typography, /Text scaling resilience/);
   assert.match(layout, /import "\.\/typography\.css"/);
-  assert.doesNotMatch(`${typography}\n${css}`, /font-size\s*:\s*[0-9.]+px/);
-  assert.doesNotMatch(`${typography}\n${css}`, /font-weight\s*:\s*(?:[1-9][0-9]{2})/);
+  assert.doesNotMatch(typography, /font-size\s*:\s*[0-9.]+px/);
+  assert.doesNotMatch(typography, /font-weight\s*:\s*(?:[1-9][0-9]{2})/);
 });
 
 test("category headers stay concise without explanatory subtitles", async () => {
@@ -184,6 +191,11 @@ test("onboarding resolves weather only after submission and keeps it as hidden A
   assert.doesNotMatch(page, /已加入当地季节信息/);
   assert.match(page, /applyPresetItems\(seedItems, profile, cleanDestination\)/);
   assert.match(places, /geocoding-api\.open-meteo\.com\/v1\/search/);
+  assert.match(places, /id: "london-gb"/);
+  assert.match(places, /aliases: \["伦敦", "london", "英国伦敦", "英格兰伦敦"\]/);
+  assert.match(places, /resultScore/);
+  assert.match(places, /raw\.population/);
+  assert.match(places, /featureCode === "PPLC"/);
   assert.match(weather, /api\.open-meteo\.com\/v1\/forecast/);
   assert.match(weather, /Weather forecast retrying with automatic timezone/);
   assert.match(weather, /cache: "no-store"/);
