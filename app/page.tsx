@@ -614,6 +614,7 @@ export default function Home() {
   const teamPrepareItems = prepareItems.filter((item) => !isPersonalItem(item));
   const personalPrepareItems = prepareItems.filter(isPersonalItem);
   const visibleSuggestions = isInternationalDestination(destination) ? suggestions : suggestions.filter((suggestion) => !isForeignConnectivitySuggestion(suggestion.name));
+  const suggestionResultReady = suggestionStatus === "model" || suggestionStatus === "fallback";
   const status = useMemo(() => {
     const total = items.filter((item) => (isPersonalItem(item) || item.owners.includes(viewedMember)) && !item.checked[viewedMember]).length;
     return { total };
@@ -1769,18 +1770,18 @@ export default function Home() {
             <button className={phase === "verify" ? "active" : ""} onClick={() => { setEditMode(false); setPhase("verify"); }}><span>2</span>出发核对</button>
           </div>
 
-          {phase === "prepare" && (suggestionStatus === "loading" || visibleSuggestions.length > 0) && <section className="ai-section">
+          {phase === "prepare" && (suggestionStatus === "loading" || visibleSuggestions.length > 0 || suggestionResultReady) && <section className="ai-section">
             <header>
-              <div className="ai-title"><span><Sparkles aria-hidden="true" /></span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : `AI 帮你补充了 ${visibleSuggestions.length} 件容易漏带的物品`}</h2></div>
+              <div className="ai-title"><span><Sparkles aria-hidden="true" /></span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : visibleSuggestions.length > 0 ? `AI 帮你补充了 ${visibleSuggestions.length} 件容易漏带的物品` : "AI 检查完成，当前清单已覆盖常见遗漏"}</h2></div>
             </header>
             <div className={`suggestion-scroll ${suggestionStatus === "loading" ? "loading" : ""}`}>
-              {visibleSuggestions.slice(0, 2).map((suggestion) => (
+              {visibleSuggestions.length > 0 ? visibleSuggestions.slice(0, 2).map((suggestion) => (
                 <article className={`suggestion-card ${suggestion.added ? "added" : ""}`} key={suggestion.id}>
                   <div className="suggestion-main"><div className={`suggestion-icon suggestion-${suggestion.id}`}><ItemGraphic item={suggestion} /></div><h3>{suggestion.name}</h3></div>
                   <p title={suggestion.reason}>{suggestion.reason}</p>
                   <button className={suggestion.added ? "remove-suggestion" : ""} onClick={() => toggleSuggestion(suggestion)} aria-label={suggestion.added ? `从清单移出${suggestion.name}` : `将${suggestion.name}加入清单`}>{suggestion.added ? "－ 移出清单" : "＋ 加入清单"}</button>
                 </article>
-              ))}
+              )) : <div className="suggestion-empty">这次不用额外补充，现有清单可以直接继续分工。</div>}
             </div>
           </section>}
 

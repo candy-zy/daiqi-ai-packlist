@@ -560,6 +560,8 @@ test("claim actions stay quiet and AI suggestions use two compact fixed cards", 
   assert.doesNotMatch(page, /会带这件物品|已取消自己的携带状态/);
   assert.match(page, /visibleSuggestions\.slice\(0, 2\)/);
   assert.match(page, /AI 帮你补充了 \$\{visibleSuggestions\.length\} 件容易漏带的物品/);
+  assert.match(page, /AI 检查完成，当前清单已覆盖常见遗漏/);
+  assert.match(page, /这次不用额外补充，现有清单可以直接继续分工/);
   assert.match(page, /className="suggestion-main"/);
   assert.doesNotMatch(page, /className="signal"|className="category-decision"/);
   assert.match(page, /＋ 加入清单/);

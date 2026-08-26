@@ -731,6 +731,13 @@ h1,.setup-content h1,.departure-page h1 {
 .suggestion-card>button {
   margin-top:auto;
 }
+.suggestion-empty {
+  grid-column:1/-1;
+  padding:12px 8px 8px;
+  color:#5e6159;
+  font-size:var(--type-secondary-size);
+  line-height:var(--type-secondary-line);
+}
 
 .list-controls {
   position:sticky;
