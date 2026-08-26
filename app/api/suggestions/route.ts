@@ -28,8 +28,12 @@ const DOMESTIC_FALLBACK_RANKING: AiSuggestion[] = [
 const mainlandDestinationMarkers = ["中国", "国内", "成都", "北京", "上海", "广州", "深圳", "杭州", "重庆", "南京", "苏州", "武汉", "西安", "长沙", "厦门", "青岛", "天津", "郑州", "昆明", "三亚", "哈尔滨", "沈阳", "大连", "济南", "福州", "南昌", "合肥", "太原", "石家庄", "贵阳", "南宁", "海口", "拉萨", "乌鲁木齐", "呼和浩特", "兰州", "银川", "西宁"];
 
 function inferInternationalDestination(destination: string, explicit: unknown) {
-  if (typeof explicit === "boolean") return explicit;
   const normalized = destination.trim().toLowerCase();
+  // Never let a stale or incorrect client flag turn a known mainland city into
+  // an overseas trip. The destination text is the source of truth for this
+  // safety rule because connectivity items are materially wrong domestically.
+  if (mainlandDestinationMarkers.some((marker) => normalized.includes(marker))) return false;
+  if (typeof explicit === "boolean") return explicit;
   return Boolean(normalized) && !mainlandDestinationMarkers.some((marker) => normalized.includes(marker));
 }
 

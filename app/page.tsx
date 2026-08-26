@@ -510,6 +510,10 @@ function applySuggestionDisplayPolicy(items: PackItem[], currentSuggestions: Sug
   }).slice(0, 2);
 }
 
+function isForeignConnectivitySuggestion(name: string) {
+  return /(t-?money|交通卡|流量卡|sim卡|esim|wi-?fi|转换插头)/i.test(name);
+}
+
 const seedMessages: ChatMessage[] = [
   { id: 1, author: "阿哲", text: "转换插头你来带吧。" },
   { id: 2, author: "我", text: "好。" },
@@ -609,6 +613,7 @@ export default function Home() {
   const prepareItems = listFilter === "mine" ? myItems : listFilter === "unassigned" ? unassignedItems : items;
   const teamPrepareItems = prepareItems.filter((item) => !isPersonalItem(item));
   const personalPrepareItems = prepareItems.filter(isPersonalItem);
+  const visibleSuggestions = isInternationalDestination(destination) ? suggestions : suggestions.filter((suggestion) => !isForeignConnectivitySuggestion(suggestion.name));
   const status = useMemo(() => {
     const total = items.filter((item) => (isPersonalItem(item) || item.owners.includes(viewedMember)) && !item.checked[viewedMember]).length;
     return { total };
@@ -807,7 +812,8 @@ export default function Home() {
   useEffect(() => {
     if (!activeTripId || !teamReady || !accountReady) return;
     const hasLegacySuggestions = suggestions.some((suggestion) => /便携加湿器|折叠晾衣架/.test(suggestion.name));
-    if (!hasLegacySuggestions || refreshedLegacySuggestionsRef.current.has(activeTripId)) return;
+    const hasInvalidDomesticSuggestions = !isInternationalDestination(destination) && suggestions.some((suggestion) => isForeignConnectivitySuggestion(suggestion.name));
+    if ((!hasLegacySuggestions && !hasInvalidDomesticSuggestions) || refreshedLegacySuggestionsRef.current.has(activeTripId)) return;
     refreshedLegacySuggestionsRef.current.add(activeTripId);
     const existingNames = new Set(items.map((item) => item.name.trim().toLowerCase()));
     setSuggestionStatus("loading");
@@ -833,6 +839,7 @@ export default function Home() {
       setSuggestions(refreshed);
       setSuggestionStatus(result.source === "model" ? "model" : "fallback");
     }).catch(() => {
+      if (hasInvalidDomesticSuggestions) setSuggestions((current) => current.filter((suggestion) => !isForeignConnectivitySuggestion(suggestion.name)));
       setSuggestionStatus("fallback");
       refreshedLegacySuggestionsRef.current.delete(activeTripId);
     });
@@ -1131,7 +1138,10 @@ export default function Home() {
       setSuggestions(uniqueSuggestions);
       setSuggestionStatus(result.source === "model" || result.source === "hybrid" || result.source === "rules" ? "model" : "fallback");
     } catch {
-      setSuggestions(seedSuggestions);
+      // A failed recommendation request must never reintroduce the overseas
+      // demo cards for a mainland trip. Keep the domestic screen quiet until
+      // the user retries, instead of showing a misleading adapter/SIM card.
+      setSuggestions(isInternationalDestination(cleanDestination) ? seedSuggestions : []);
       setSuggestionStatus("fallback");
     } finally {
       setIsGeneratingTeam(false);
@@ -1759,12 +1769,12 @@ export default function Home() {
             <button className={phase === "verify" ? "active" : ""} onClick={() => { setEditMode(false); setPhase("verify"); }}><span>2</span>出发核对</button>
           </div>
 
-          {phase === "prepare" && (suggestionStatus === "loading" || suggestions.length > 0) && <section className="ai-section">
+          {phase === "prepare" && (suggestionStatus === "loading" || visibleSuggestions.length > 0) && <section className="ai-section">
             <header>
-              <div className="ai-title"><span><Sparkles aria-hidden="true" /></span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : `AI 帮你补充了 ${suggestions.length} 件容易漏带的物品`}</h2></div>
+              <div className="ai-title"><span><Sparkles aria-hidden="true" /></span><h2>{suggestionStatus === "loading" ? "AI 正在检查清单有没有漏项" : `AI 帮你补充了 ${visibleSuggestions.length} 件容易漏带的物品`}</h2></div>
             </header>
             <div className={`suggestion-scroll ${suggestionStatus === "loading" ? "loading" : ""}`}>
-              {suggestions.slice(0, 2).map((suggestion) => (
+              {visibleSuggestions.slice(0, 2).map((suggestion) => (
                 <article className={`suggestion-card ${suggestion.added ? "added" : ""}`} key={suggestion.id}>
                   <div className="suggestion-main"><div className={`suggestion-icon suggestion-${suggestion.id}`}><ItemGraphic item={suggestion} /></div><h3>{suggestion.name}</h3></div>
                   <p title={suggestion.reason}>{suggestion.reason}</p>

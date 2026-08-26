@@ -255,11 +255,25 @@ test("domestic destinations never fall back to foreign connectivity items", asyn
   assert.ok(result.suggestions.every((item) => !/(流量卡|交通卡|T-money|转换插头)/i.test(item.name)));
 });
 
+test("domestic classification overrides a stale overseas flag", async () => {
+  const response = await requestSite("/api/suggestions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ destination: "中国 四川 成都", international: true, existingItems: [] }),
+  });
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.ok(result.suggestions.every((item) => !/(流量卡|交通卡|T-money|转换插头)/i.test(item.name)));
+});
+
 test("legacy low-value recommendation cards refresh once through the ranked API", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /refreshedLegacySuggestionsRef/);
   assert.match(page, /便携加湿器\|折叠晾衣架/);
   assert.match(page, /hasLegacySuggestions/);
+  assert.match(page, /hasInvalidDomesticSuggestions/);
+  assert.match(page, /visibleSuggestions/);
+  assert.match(page, /setSuggestions\(isInternationalDestination\(cleanDestination\) \? seedSuggestions : \[\]\)/);
   assert.match(page, /fetch\("\/api\/suggestions"/);
 });
 
@@ -544,8 +558,8 @@ test("claim actions stay quiet and AI suggestions use two compact fixed cards", 
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.doesNotMatch(page, /会带这件物品|已取消自己的携带状态/);
-  assert.match(page, /suggestions\.slice\(0, 2\)/);
-  assert.match(page, /AI 帮你补充了 \$\{suggestions\.length\} 件容易漏带的物品/);
+  assert.match(page, /visibleSuggestions\.slice\(0, 2\)/);
+  assert.match(page, /AI 帮你补充了 \$\{visibleSuggestions\.length\} 件容易漏带的物品/);
   assert.match(page, /className="suggestion-main"/);
   assert.doesNotMatch(page, /className="signal"|className="category-decision"/);
   assert.match(page, /＋ 加入清单/);
