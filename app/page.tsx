@@ -1744,7 +1744,7 @@ export default function Home() {
         <div className="scroll-area main-scroll-area">
           <section className="trip-hero compact-trip-hero">
             <button className="main-back-button" onClick={goBackOneStep} aria-label="返回上一步" title="返回上一步"><ArrowLeft aria-hidden="true" /></button>
-            <h1>{phase === "prepare" ? "这次带什么？" : "出发前逐件确认"}</h1>
+            {phase === "verify" && <h1>出发前逐件确认</h1>}
             <div className="presence-panel">
               <div className={`member-switch ${phase === "verify" ? "switchable" : ""}`} aria-label={phase === "verify" ? "切换查看成员清单" : "成员在线状态"}>
                 {members.map((member) => phase === "verify" ? <button key={member.name} className={viewedMember === member.name ? "selected" : ""} onClick={() => setViewedMember(member.name)} title={`查看${member.profile}的清单`}><CharacterAvatar member={member.name} />{member.online && <i className="online" />}</button> : <span className="member-presence" key={member.name} title={`${member.profile}${member.online ? "在线" : "离线"}`}><CharacterAvatar member={member.name} />{member.online && <i className="online" />}</span>)}
