@@ -1805,7 +1805,7 @@ export default function Home() {
     if (!proposalItem) return null;
     return <article className="assignment-proposal">
       <div className="proposal-label"><span>✦</span>AI 识别到一项分工</div>
-      <div className="proposal-main"><span className="proposal-icon"><ItemGraphic item={proposalItem} /></span><div><b>{proposal.requester}请你带「{proposalItem.name}」</b><small>你刚刚表示同意，要同步到清单吗？</small></div></div>
+      <div className="proposal-main"><span className="proposal-icon"><ItemGraphic item={proposalItem} /></span><div><b>你愿意带「{proposalItem.name}」</b><small>确认后，将同步到你的清单</small></div></div>
       <div className="proposal-actions"><button onClick={() => resolveAssignmentProposal(proposal, false)}>我不带</button><button onClick={() => resolveAssignmentProposal(proposal, true)}>我来带</button></div>
     </article>;
   }

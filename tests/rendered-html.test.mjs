@@ -582,7 +582,8 @@ test("chat assignments require the named traveler to confirm before changing the
   assert.match(page, /afterMessageId: messageId/);
   assert.doesNotMatch(page, /流量卡要不要提前一起买？[\s\S]*转换插头你来带吧/);
   assert.match(page, /AI 识别到一项分工/);
-  assert.match(page, /你刚刚表示同意/);
+  assert.match(page, /你愿意带/);
+  assert.match(page, /确认后，将同步到你的清单/);
   assert.match(page, /我不带/);
   assert.match(page, /我来带/);
   assert.match(page, /function resolveAssignmentProposal/);
