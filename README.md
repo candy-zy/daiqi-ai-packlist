@@ -8,10 +8,12 @@
 
 <table>
   <tr>
-    <td align="center" valign="top" width="25%"><img src="docs/assets/demo-current-create-team-card.jpg" width="220" alt="带齐创建旅行队伍：选择目的地、日期和个人出行偏好"/><br/><sub>建队与个性化</sub></td>
-    <td align="center" valign="top" width="25%"><img src="docs/assets/demo-03-prepare-list.jpg" width="220" alt="带齐根据目的地、天气和个人偏好推荐清单中尚未包含的物品"/><br/><sub>AI 推荐清单缺口</sub></td>
-    <td align="center" valign="top" width="25%"><img src="docs/assets/demo-06-team-collaboration.jpg" width="220" alt="带齐多人协作清单：无人认领、单人认领和多人共同携带"/><br/><sub>多人协作认领</sub></td>
-    <td align="center" valign="top" width="25%"><img src="docs/assets/demo-04-ai-assignment.jpg" width="220" alt="带齐从团队聊天识别行李分工并由负责人确认"/><br/><sub>AI 识别聊天分工</sub></td>
+    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-current-create-team-card.jpg" width="340" alt="带齐创建旅行队伍：选择目的地、日期和个人出行偏好"/><br/><sub>建队与个性化</sub></td>
+    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-03-prepare-list.jpg" width="340" alt="带齐根据目的地、天气和个人偏好推荐清单中尚未包含的物品"/><br/><sub>AI 推荐清单缺口</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-06-team-collaboration.jpg" width="340" alt="带齐多人协作清单：无人认领、单人认领和多人共同携带"/><br/><sub>多人协作认领</sub></td>
+    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-04-ai-assignment.jpg" width="340" alt="带齐从团队聊天识别行李分工并由负责人确认"/><br/><sub>AI 识别聊天分工</sub></td>
   </tr>
 </table>
 
