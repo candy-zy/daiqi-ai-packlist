@@ -8,7 +8,7 @@
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/assets/demo-current-create-team.png" width="260" alt="带齐创建旅行队伍：选择目的地、日期和个人出行偏好"/><br/><sub>建队：地点、日期与个人偏好</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/demo-current-create-team-card.jpg" width="260" alt="带齐创建旅行队伍：选择目的地、日期和个人出行偏好"/><br/><sub>建队：地点、日期与个人偏好</sub></td>
     <td align="center" width="33%"><img src="docs/assets/demo-06-team-collaboration.jpg" width="260" alt="带齐多人协作清单：无人认领、单人认领和多人共同携带"/><br/><sub>协作：一件物品可由一人或多人携带</sub></td>
     <td align="center" width="33%"><img src="docs/assets/demo-04-ai-assignment.jpg" width="260" alt="带齐从团队聊天识别行李分工并由负责人确认"/><br/><sub>AI：从聊天提取分工，确认后写回清单</sub></td>
   </tr>
@@ -65,7 +65,7 @@
 
 <table>
   <tr>
-    <td align="center" width="50%"><img src="docs/assets/demo-current-personalization.png" width="340" alt="当前个人中心中的出行偏好、身体情况和已有设备"/><br/><sub>少量高价值问题完成个性化，不把注册做成长问卷</sub></td>
+    <td align="center" width="50%"><img src="docs/assets/demo-current-personalization-card.jpg" width="340" alt="当前个人中心中的出行偏好、身体情况和已有设备"/><br/><sub>少量高价值问题完成个性化，不把注册做成长问卷</sub></td>
     <td align="center" width="50%"><img src="docs/assets/demo-03-prepare-list.jpg" width="340" alt="AI 推荐目的地容易漏带的物品"/><br/><sub>AI 结合地点、日期、天气和偏好，只展示 2 个清单缺口</sub></td>
   </tr>
 </table>
