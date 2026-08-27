@@ -110,6 +110,14 @@ type AssignmentProposal = {
   confidence?: number;
 };
 
+type AssignmentResolutionFeedback = {
+  id: string;
+  afterMessageId: number;
+  itemName: string;
+  accepted: boolean;
+  status: "saving" | "saved";
+};
+
 type DeletedItemSnapshot = {
   item: PackItem;
   index: number;
@@ -569,6 +577,7 @@ export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
   const [itemNotes, setItemNotes] = useState<ItemNote[]>(seedItemNotes);
   const [assignmentProposals, setAssignmentProposals] = useState<AssignmentProposal[]>([]);
+  const [assignmentResolutionFeedback, setAssignmentResolutionFeedback] = useState<AssignmentResolutionFeedback[]>([]);
   const [members, setMembers] = useState<MemberRecord[]>(demoMembers);
   const [currentMember, setCurrentMember] = useState<Member>("我");
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
@@ -1793,11 +1802,59 @@ export default function Home() {
     }
   }
 
-  function resolveAssignmentProposal(proposal: AssignmentProposal, accepted: boolean) {
+  async function resolveAssignmentProposal(proposal: AssignmentProposal, accepted: boolean) {
     const proposalItem = items.find((item) => item.id === proposal.itemId);
     if (!proposalItem) { setAssignmentProposals((current) => current.filter((entry) => entry.id !== proposal.id)); return; }
-    if (accepted) claim(proposalItem.id);
+    const proposalKey = proposal.id ?? `${proposal.afterMessageId}:${proposal.itemId}:${proposal.target}`;
+    const previousItems = itemsRef.current;
+    if (accepted && !proposalItem.owners.includes(currentMember)) {
+      const nextItems = previousItems.map((item) => item.id === proposal.itemId ? { ...item, owners: [...item.owners, currentMember] } : item);
+      itemsRef.current = nextItems;
+      setItems(nextItems);
+    }
     setAssignmentProposals((current) => current.filter((entry) => entry.id !== proposal.id));
+    setAssignmentResolutionFeedback((current) => [
+      ...current.filter((entry) => entry.id !== proposalKey),
+      { id: proposalKey, afterMessageId: proposal.afterMessageId, itemName: proposalItem.name, accepted, status: "saving" },
+    ]);
+    if (!activeTripId) {
+      setAssignmentResolutionFeedback((current) => current.map((entry) => entry.id === proposalKey ? { ...entry, status: "saved" } : entry));
+      return;
+    }
+    try {
+      const response = await fetch(`/api/trips/${activeTripId}/assignments`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          proposalId: proposal.id,
+          itemId: proposal.itemId,
+          afterMessageId: proposal.afterMessageId,
+          decision: accepted ? "accept" : "decline",
+        }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string; version?: number };
+      if (!response.ok) throw new Error(result.error || "分工确认失败");
+      if (typeof result.version === "number") {
+        setTripVersion(result.version);
+        tripVersionRef.current = result.version;
+      }
+      setAssignmentResolutionFeedback((current) => current.map((entry) => entry.id === proposalKey ? { ...entry, status: "saved" } : entry));
+      setSyncStatus("saved");
+    } catch (error) {
+      itemsRef.current = previousItems;
+      setItems(previousItems);
+      setAssignmentProposals((current) => current.some((entry) => entry.id === proposal.id) ? current : [...current, proposal]);
+      setAssignmentResolutionFeedback((current) => current.filter((entry) => entry.id !== proposalKey));
+      setCloudError(error instanceof Error ? error.message : "分工确认失败，请重试");
+      setSyncStatus("offline");
+    }
+  }
+
+  function renderAssignmentResolutionFeedback(feedback: AssignmentResolutionFeedback) {
+    return <div className={`assignment-resolution ${feedback.accepted ? "accepted" : "declined"}`} role="status">
+      <span>{feedback.status === "saving" ? "…" : feedback.accepted ? "✓" : "—"}</span>
+      <div><b>{feedback.status === "saving" ? "正在同步…" : feedback.accepted ? `已把「${feedback.itemName}」加入你的清单` : `已选择不带「${feedback.itemName}」`}</b><small>可以继续聊天</small></div>
+    </div>;
   }
 
   function renderAssignmentProposal(proposal: AssignmentProposal) {
@@ -1997,6 +2054,7 @@ export default function Home() {
                   return <Fragment key={message.id}>
                     <div className={`message-row ${message.author === currentMember ? "mine" : ""} ${message.system ? "system" : ""}`}>{meta ? <CharacterAvatar member={meta.name} className="message-avatar" /> : <span className="message-avatar assistant-avatar">✦</span>}<div><small>{message.author === currentMember ? "我" : meta?.profile ?? message.author}</small><p>{message.text}</p></div></div>
                     {assignmentProposals.filter((proposal) => proposal.afterMessageId === message.id && proposal.target === currentMember).map((proposal) => <Fragment key={proposal.id ?? `${proposal.afterMessageId}:${proposal.itemId}`}>{renderAssignmentProposal(proposal)}</Fragment>)}
+                    {assignmentResolutionFeedback.filter((feedback) => feedback.afterMessageId === message.id).map((feedback) => <Fragment key={feedback.id}>{renderAssignmentResolutionFeedback(feedback)}</Fragment>)}
                   </Fragment>;
                 }) : <div className="chat-empty"><span>•••</span><b>还没有消息</b><small>和朋友聊聊谁带什么。</small></div>}
               </div>

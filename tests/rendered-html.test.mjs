@@ -587,8 +587,13 @@ test("chat assignments require the named traveler to confirm before changing the
   assert.match(page, /我不带/);
   assert.match(page, /我来带/);
   assert.match(page, /function resolveAssignmentProposal/);
+  assert.match(page, /\/api\/trips\/\$\{activeTripId\}\/assignments/);
+  assert.match(page, /可以继续聊天/);
+  assert.match(page, /assignmentResolutionFeedback/);
+  assert.doesNotMatch(page.match(/async function resolveAssignmentProposal[\s\S]*?function renderAssignmentProposal/)?.[0] ?? "", /setShowChat\(false\)/);
   assert.doesNotMatch(page, /AI 只建议，确认后才会修改清单/);
   assert.match(css, /assignment-proposal/);
+  assert.match(css, /assignment-resolution/);
   assert.match(css, /proposal-actions/);
 });
 
