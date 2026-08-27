@@ -1001,6 +1001,18 @@ export default function Home() {
     }
   }
 
+  async function refreshAvailableTrips() {
+    const response = await fetch("/api/trips", { cache: "no-store" });
+    const result = await response.json().catch(() => ({})) as { trips?: TripSummary[]; error?: string };
+    if (response.status === 401) {
+      setNeedsSignIn(true);
+      setAvailableTrips([]);
+      return;
+    }
+    if (!response.ok) throw new Error(result.error || "队伍列表刷新失败");
+    setAvailableTrips(Array.isArray(result.trips) ? result.trips : []);
+  }
+
   async function joinTeam() {
     const code = joinCode.trim().toUpperCase();
     if (!code) return;
@@ -1010,6 +1022,7 @@ export default function Home() {
       const result = await response.json().catch(() => ({})) as ServerTripPayload & { error?: string };
       if (!response.ok) throw new Error(result.error || "加入队伍失败");
       applyCloudPayload({ ...result, version: result.trip.version });
+      setAvailableTrips((current) => [result.trip, ...current.filter((trip) => trip.id !== result.trip.id)]);
       setShowJoin(false);
       setJoinCode("");
     } catch (error) {
@@ -1277,6 +1290,9 @@ export default function Home() {
     setSetupError("");
     setShowCreateTrip(false);
     setTeamReady(false);
+    void refreshAvailableTrips().catch((error) => {
+      setCloudError(error instanceof Error ? error.message : "队伍列表刷新失败");
+    });
     window.scrollTo({ top: 0, behavior: "instant" });
   }
 
