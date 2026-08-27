@@ -819,7 +819,9 @@ export default function Home() {
         const payload = await response.json() as ServerTripPayload & { unchanged?: boolean; currentMember?: Member };
         if (requestedTripId !== activeTripIdRef.current) return;
         if (payload.unchanged) {
-          if (Array.isArray(payload.members)) setMembers(payload.members);
+          if (Array.isArray(payload.members)) {
+            setMembers((current) => JSON.stringify(current) === JSON.stringify(payload.members) ? current : payload.members);
+          }
           return;
         }
         if (syncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
@@ -980,7 +982,7 @@ export default function Home() {
         if (Array.isArray(result.members)) setMembers(result.members);
         setTripVersion(result.version);
         tripVersionRef.current = result.version;
-        setSyncStatus("saving");
+        setSyncStatus(JSON.stringify(rebasedState) === JSON.stringify(result.state) ? "saved" : "saving");
         return;
       }
       if (!response.ok) throw new Error(result.error || "保存失败");
@@ -1984,7 +1986,7 @@ export default function Home() {
               <h2>邀请朋友一起准备</h2>
               <p>让朋友登录「带齐」，输入这个邀请码即可加入。</p>
               <button className="invite-code" onClick={() => void copyInviteCode()}><b>{inviteCode}</b><small>点击复制</small></button>
-              <small className="sync-state" aria-live="polite">{syncStatus === "saving" ? "正在同步…" : syncStatus === "offline" ? "当前离线，恢复后会重试" : "清单已云端同步"}</small>
+              <small className="sync-state" aria-live="polite">{syncStatus === "offline" ? "当前离线，恢复后会重试" : "队伍清单会自动同步"}</small>
             </section>
           </div>
         )}
