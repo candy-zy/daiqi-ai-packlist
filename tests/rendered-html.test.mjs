@@ -180,6 +180,7 @@ test("team chat uses an authenticated atomic message endpoint and shared polling
   ]);
   assert.match(page, /fetch\(`\/api\/trips\/\$\{activeTripId\}\/messages`/);
   assert.match(page, /chatSyncInFlightRef/);
+  assert.match(page, /Math\.floor\(Math\.random\(\) \* 1_000_000_000\) \+ 1/);
   assert.match(page, /persistedMessages/);
   assert.match(page, /setInterval\(\(\) => void poll\(\), 2500\)/);
   assert.match(route, /getMembership/);

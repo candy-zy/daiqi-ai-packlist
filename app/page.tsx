@@ -1724,7 +1724,10 @@ export default function Home() {
   async function sendMessage() {
     const text = draft.trim();
     if (!text || chatSyncInFlightRef.current) return;
-    const messageId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+    // Keep the client-generated id within the integer range accepted by the
+    // deployed request runtime. A billion possible values is ample for the
+    // bounded 300-message trip history, and the API rejects rare collisions.
+    const messageId = Math.floor(Math.random() * 1_000_000_000) + 1;
     const message: ChatMessage = { id: messageId, author: currentMember, text };
     const nextMessages = [...messages, message];
     chatSyncInFlightRef.current = true;
