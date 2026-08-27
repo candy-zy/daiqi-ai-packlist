@@ -6,9 +6,13 @@
 
 **可安装 PWA · 真实账号 · 邀请码组队 · D1 数据库 · 多人同步 · DeepSeek AI**
 
-<p align="center">
-  <img src="docs/assets/daiqi-demo.gif" width="560" alt="带齐完整产品流程演示：创建队伍、个性化清单、AI 补漏、多人分工、聊天识别与出发核对" />
-</p>
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/assets/demo-current-create-team.png" width="260" alt="带齐创建旅行队伍：选择目的地、日期和个人出行偏好"/><br/><sub>建队：地点、日期与个人偏好</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/demo-06-team-collaboration.jpg" width="260" alt="带齐多人协作清单：无人认领、单人认领和多人共同携带"/><br/><sub>协作：一件物品可由一人或多人携带</sub></td>
+    <td align="center" width="33%"><img src="docs/assets/demo-04-ai-assignment.jpg" width="260" alt="带齐从团队聊天识别行李分工并由负责人确认"/><br/><sub>AI：从聊天提取分工，确认后写回清单</sub></td>
+  </tr>
+</table>
 
 <p align="center">
   <a href="https://daiqi-packlist.xuchenyu020412.chatgpt.site/"><b>线上部署</b></a>
@@ -18,9 +22,11 @@
   <a href="docs/PRODUCT_CASE_STUDY.md">产品案例 / PRD</a>
   ·
   <a href="docs/AI_AND_BACKEND_DESIGN.md">AI 与后端方案</a>
+  ·
+  <a href="docs/RESUME_PROJECT_ENTRY.md">AI 产品岗位简历写法</a>
 </p>
 
-当前版本已经从高保真原型升级为可运行的多人协作 MVP：用户可以登录、创建或加入队伍、保存共同清单、与朋友近实时协作，并在两个关键节点调用 AI。默认用「韩国 · 首尔，3 人同行」展示完整产品闭环。
+当前版本已经从高保真原型升级为可运行的多人协作 MVP：用户可以登录、创建或加入队伍、保存共同清单、与朋友近实时协作，并在两个关键节点调用 AI。作品集截图用「韩国 · 首尔，3 人同行」展示完整闭环，系统同时支持境内外目的地与不同个人偏好。
 
 ## 为什么做这个产品
 
@@ -55,11 +61,11 @@
 - 已有设备：相机、拍立得、自拍杆，用于预设相关物品，不替用户认领；
 - 当次行程条件：地点组件返回标准城市与坐标，出发/返程日期自动匹配天气；境外旅行才预设转换插头，并优先提醒当地交通卡、流量卡；境内目的地明确排除这些境外物品，偶发活动不作为长期偏好。
 
-规则生成完成后，DeepSeek 只返回清单里没有、且容易忽略的 **0–2 件物品**。建议支持加入和移出；没有可靠缺口时，AI 卡片自动消失。
+规则生成完成后，DeepSeek 先返回候选物品，服务端再做同义词归一化、与现有清单去重、境内外规则过滤和优先级排序，最终只展示 **Top 2 清单缺口**。建议支持加入和移出；没有可靠缺口时，卡片进入“基础清单已覆盖主要需求”的完成态，不让用户误以为 AI 没有工作。
 
 <table>
   <tr>
-    <td align="center" width="50%"><img src="docs/assets/demo-02-personalization.jpg" width="340" alt="个人中心中的出行偏好、身体情况和已有设备"/><br/><sub>少量高价值问题完成个性化，不把注册做成长问卷</sub></td>
+    <td align="center" width="50%"><img src="docs/assets/demo-current-personalization.png" width="340" alt="当前个人中心中的出行偏好、身体情况和已有设备"/><br/><sub>少量高价值问题完成个性化，不把注册做成长问卷</sub></td>
     <td align="center" width="50%"><img src="docs/assets/demo-03-prepare-list.jpg" width="340" alt="AI 推荐目的地容易漏带的物品"/><br/><sub>AI 结合地点、日期、天气和偏好，只展示 2 个清单缺口</sub></td>
   </tr>
 </table>
@@ -169,7 +175,7 @@ erDiagram
 | 出发核对 | ✅ | 只显示自己的待带物品、逐件确认、一键全选、退回待分工 |
 | 数据库 | ✅ | Cloudflare D1 + Drizzle，11 张业务表和迁移脚本 |
 | 多人同步 | ✅ | 450ms 合并保存、2.5 秒增量轮询、在线心跳、版本乐观锁 |
-| 质量验证 | ✅ | ESLint、TypeScript、生产构建和 22 项自动化回归测试 |
+| 质量验证 | ✅ | ESLint、TypeScript、生产构建和 32 项自动化回归测试 |
 
 ## 主要接口
 
@@ -190,6 +196,7 @@ erDiagram
 - [产品案例与 PRD](docs/PRODUCT_CASE_STUDY.md)：定位、用户旅程、交互规则、指标与迭代思路
 - [AI、后端与数据库方案](docs/AI_AND_BACKEND_DESIGN.md)：Prompt、结构化输出、数据模型、同步、权限和异常处理
 - [个人中心与个性化策略 PRD](docs/PERSONAL_CENTER_PRD.md)：偏好采集、规则矩阵、接口与验收标准
+- [AI 产品岗位简历写法](docs/RESUME_PROJECT_ENTRY.md)：一行版、三条项目经历、面试讲述与可核验口径
 
 ## 技术栈
 

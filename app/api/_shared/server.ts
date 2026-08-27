@@ -157,7 +157,7 @@ function sanitizeTripContext(value: unknown): SharedTripContext | null {
   if (!place?.name || !place.label) return null;
   const rawWeather = source.weather && typeof source.weather === "object" ? source.weather as Record<string, unknown> : null;
   const weatherSource = rawWeather?.source === "forecast" ? "forecast" : rawWeather?.source === "season" ? "season" : null;
-  const weather = rawWeather && weatherSource ? {
+  const weather: SharedTripContext["weather"] = rawWeather && weatherSource ? {
     source: weatherSource,
     summary: textValue(rawWeather.summary, 180),
     ...(finiteValue(rawWeather.minTemp, -100, 70) !== undefined ? { minTemp: finiteValue(rawWeather.minTemp, -100, 70) } : {}),
