@@ -173,6 +173,22 @@ test("AI suggestions use a prompt-first ranked model response and a server-only 
   assert.match(route, /existingItems/);
 });
 
+test("team chat uses an authenticated atomic message endpoint and shared polling", async () => {
+  const [page, route] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trips/[tripId]/messages/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /fetch\(`\/api\/trips\/\$\{activeTripId\}\/messages`/);
+  assert.match(page, /chatSyncInFlightRef/);
+  assert.match(page, /persistedMessages/);
+  assert.match(page, /setInterval\(\(\) => void poll\(\), 2500\)/);
+  assert.match(route, /getMembership/);
+  assert.match(route, /membership\.slotName/);
+  assert.match(route, /messages: \[\.\.\.current\.state\.messages/);
+  assert.match(route, /UPDATE trips SET version = version \+ 1/);
+  assert.match(route, /chat_message_sent/);
+});
+
 test("onboarding resolves weather only after submission and keeps it as hidden AI context", async () => {
   const [page, places, weather, suggestions, shared] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -642,7 +658,7 @@ test("ships authenticated cloud collaboration with invite codes and server-autho
 test("rapid consecutive claims are not overwritten by stale polling responses", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const pollBlock = page.slice(page.indexOf("const poll = async"), page.indexOf("const timer = window.setInterval", page.indexOf("const poll = async")));
-  assert.match(pollBlock, /syncInFlightRef\.current \|\| syncTimerRef\.current !== null \|\| hasPendingCloudChanges\(\)/);
+  assert.match(pollBlock, /syncInFlightRef\.current \|\| chatSyncInFlightRef\.current \|\| syncTimerRef\.current !== null \|\| hasPendingCloudChanges\(\)/);
   assert.ok(pollBlock.match(/hasPendingCloudChanges\(\)/g)?.length >= 2, "poll checks for local changes both before and after the request");
   assert.match(page, /incomingVersion < tripVersionRef\.current/);
   assert.match(page, /pendingSharedStateRef\.current = rebasedState/);

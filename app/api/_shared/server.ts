@@ -271,6 +271,19 @@ export async function loadSnapshot(db: D1Database, tripId: string): Promise<{ st
   try { return { state: JSON.parse(row.stateJson) as SharedTripState, version: row.version }; } catch { return null; }
 }
 
+export async function getCurrentTripPayload(db: D1Database, tripId: string, currentMember: string) {
+  const trip = await db.prepare("SELECT id, name, destination, invite_code AS inviteCode, version FROM trips WHERE id = ?")
+    .bind(tripId).first<{ id: string; name: string; destination: string; inviteCode: string; version: number }>();
+  const snapshot = await loadSnapshot(db, tripId);
+  const members = await getTripMembers(db, tripId);
+  return {
+    trip: trip ? { ...trip, currentMember } : null,
+    state: snapshot?.state ?? null,
+    members,
+    version: snapshot?.version ?? trip?.version ?? 0,
+  };
+}
+
 export async function replaceNormalizedState(db: D1Database, tripId: string, userId: string, state: SharedTripState, version: number) {
   const cleanup: D1PreparedStatement[] = [
     db.prepare("DELETE FROM assignment_proposals WHERE trip_id = ?").bind(tripId),

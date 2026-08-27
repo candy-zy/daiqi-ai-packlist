@@ -603,6 +603,7 @@ export default function Home() {
   const lastSyncedStateRef = useRef("");
   const applyingRemoteRef = useRef(false);
   const syncInFlightRef = useRef(false);
+  const chatSyncInFlightRef = useRef(false);
   const syncTimerRef = useRef<number | null>(null);
   const pendingSharedStateRef = useRef<ServerTripPayload["state"] | null>(null);
   const itemsRef = useRef(seedItems);
@@ -798,7 +799,7 @@ export default function Home() {
     pendingSharedStateRef.current = { items, suggestions, messages, itemNotes, assignmentProposals, tripContext: { startDate, endDate, place: selectedPlace, weather: weatherContext } };
     if (pendingClaimMutationsRef.current > 0) return;
     const serialized = JSON.stringify(pendingSharedStateRef.current);
-    if (serialized === lastSyncedStateRef.current || syncInFlightRef.current || syncTimerRef.current !== null) return;
+    if (serialized === lastSyncedStateRef.current || syncInFlightRef.current || chatSyncInFlightRef.current || syncTimerRef.current !== null) return;
     syncTimerRef.current = window.setTimeout(() => void flushCloudStateRef.current(), 450);
     return () => {
       if (syncTimerRef.current !== null && !syncInFlightRef.current) {
@@ -811,7 +812,7 @@ export default function Home() {
   useEffect(() => {
     if (!activeTripId || !teamReady || !accountReady) return;
     const poll = async () => {
-      if (syncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
+      if (syncInFlightRef.current || chatSyncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
       const requestedTripId = activeTripIdRef.current;
       try {
         const response = await fetch(`/api/trips/${requestedTripId}/state?since=${tripVersionRef.current}`, { cache: "no-store" });
@@ -824,7 +825,7 @@ export default function Home() {
           }
           return;
         }
-        if (syncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
+        if (syncInFlightRef.current || chatSyncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
         applyCloudPayload(payload);
       } catch {
         setSyncStatus("offline");
@@ -1722,10 +1723,11 @@ export default function Home() {
 
   async function sendMessage() {
     const text = draft.trim();
-    if (!text) return;
-    const messageId = Date.now();
+    if (!text || chatSyncInFlightRef.current) return;
+    const messageId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
     const message: ChatMessage = { id: messageId, author: currentMember, text };
     const nextMessages = [...messages, message];
+    chatSyncInFlightRef.current = true;
     setMessages(nextMessages);
     setDraft("");
     const mentionedItem = (item: PackItem) => text.includes(item.name) || text.includes(item.name.slice(0, 2));
@@ -1736,12 +1738,28 @@ export default function Home() {
     } else if (hasClaimIntent(text) && claimedItem) {
       claim(claimedItem.id);
     }
-    if (!activeTripId) return;
+    if (!activeTripId) {
+      chatSyncInFlightRef.current = false;
+      return;
+    }
+    let messagePersisted = false;
     try {
+      const messageResponse = await fetch(`/api/trips/${activeTripId}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: messageId, text }),
+      });
+      const messageResult = await messageResponse.json().catch(() => ({})) as ServerTripPayload & { error?: string };
+      if (!messageResponse.ok || !messageResult.trip || !messageResult.state) {
+        throw new Error(messageResult.error || "消息发送失败");
+      }
+      messagePersisted = true;
+      applyCloudPayload(messageResult);
+      const persistedMessages = messageResult.state.messages ?? nextMessages;
       const response = await fetch(`/api/trips/${activeTripId}/intent`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, items: items.map((item) => ({ id: item.id, name: item.name })) }),
+        body: JSON.stringify({ messages: persistedMessages, items: items.map((item) => ({ id: item.id, name: item.name })) }),
       });
       if (!response.ok) return;
       const result = await response.json() as { assignments?: Array<{ itemId: number; requester: Member; assignee: Member; intent: "claim" | "release" | "request"; confidence: number; evidenceMessageIds: number[] }> };
@@ -1760,8 +1778,15 @@ export default function Home() {
         confidence: intent.confidence,
       }));
       if (proposals.length) setAssignmentProposals((current) => [...current.filter((proposal) => !proposals.some((next) => next.id === proposal.id)), ...proposals]);
-    } catch {
-      // 聊天本身仍可发送；AI 识别失败不会阻塞朋友交流。
+    } catch (error) {
+      if (!messagePersisted) {
+        setMessages((current) => current.filter((entry) => entry.id !== messageId));
+        setDraft(text);
+        setCloudError(error instanceof Error ? error.message : "消息发送失败，请重试");
+        setSyncStatus("offline");
+      }
+    } finally {
+      chatSyncInFlightRef.current = false;
     }
   }
 

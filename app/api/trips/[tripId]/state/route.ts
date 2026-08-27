@@ -1,14 +1,6 @@
-import { ensureUser, getAllowedSlots, getDatabase, getMembership, getRequestUser, getTripMembers, jsonError, loadSnapshot, replaceNormalizedState, sanitizeSharedState, touchMembership, unauthorized } from "../../../_shared/server";
+import { ensureUser, getAllowedSlots, getCurrentTripPayload, getDatabase, getMembership, getRequestUser, getTripMembers, jsonError, loadSnapshot, replaceNormalizedState, sanitizeSharedState, touchMembership, unauthorized } from "../../../_shared/server";
 
 type RouteContext = { params: Promise<{ tripId: string }> };
-
-async function currentPayload(db: D1Database, tripId: string, currentMember: string) {
-  const trip = await db.prepare("SELECT id, name, destination, invite_code AS inviteCode, version FROM trips WHERE id = ?")
-    .bind(tripId).first<{ id: string; name: string; destination: string; inviteCode: string; version: number }>();
-  const snapshot = await loadSnapshot(db, tripId);
-  const members = await getTripMembers(db, tripId);
-  return { trip: trip ? { ...trip, currentMember } : null, state: snapshot?.state ?? null, members, version: snapshot?.version ?? trip?.version ?? 0 };
-}
 
 export async function GET(request: Request, context: RouteContext) {
   const user = getRequestUser(request);
@@ -24,7 +16,7 @@ export async function GET(request: Request, context: RouteContext) {
   if (tripVersion && since === tripVersion.version) {
     return Response.json({ unchanged: true, version: tripVersion.version, currentMember: membership.slotName, members: await getTripMembers(db, tripId) });
   }
-  return Response.json(await currentPayload(db, tripId, membership.slotName));
+  return Response.json(await getCurrentTripPayload(db, tripId, membership.slotName));
 }
 
 export async function PUT(request: Request, context: RouteContext) {
@@ -41,13 +33,13 @@ export async function PUT(request: Request, context: RouteContext) {
   const expectedVersion = Number(body.expectedVersion);
   if (!current) return jsonError("队伍数据不存在", 404);
   if (Number.isFinite(expectedVersion) && expectedVersion !== current.version) {
-    return Response.json({ error: "队伍数据已更新", ...(await currentPayload(db, tripId, membership.slotName)) }, { status: 409 });
+    return Response.json({ error: "队伍数据已更新", ...(await getCurrentTripPayload(db, tripId, membership.slotName)) }, { status: 409 });
   }
   const slots = await getAllowedSlots(db, tripId);
   const state = sanitizeSharedState(body.state, slots, current.state, membership.slotName);
   const updated = await db.prepare("UPDATE trips SET version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND version = ? RETURNING version")
     .bind(tripId, current.version).first<{ version: number }>();
-  if (!updated) return Response.json({ error: "队伍数据已更新", ...(await currentPayload(db, tripId, membership.slotName)) }, { status: 409 });
+  if (!updated) return Response.json({ error: "队伍数据已更新", ...(await getCurrentTripPayload(db, tripId, membership.slotName)) }, { status: 409 });
   await replaceNormalizedState(db, tripId, user.userId, state, updated.version);
   await db.batch([
     db.prepare("UPDATE trip_members SET last_seen_at = CURRENT_TIMESTAMP WHERE trip_id = ? AND user_id = ?").bind(tripId, user.userId),
