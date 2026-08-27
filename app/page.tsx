@@ -1835,7 +1835,7 @@ export default function Home() {
         if (intent.intent === "release") release(intent.itemId);
         if (intent.intent === "claim" && intent.requester === currentMember && intent.evidenceMessageIds.length === 1) claim(intent.itemId);
       });
-      const proposals = detected.filter((intent) => intent.intent === "claim" && intent.assignee === currentMember && intent.requester !== currentMember).map((intent) => ({
+      const proposals = detected.filter((intent) => intent.intent === "request" && intent.assignee === currentMember && intent.requester !== currentMember).map((intent) => ({
         id: `${messageId}:${intent.itemId}:${intent.assignee}`,
         itemId: intent.itemId,
         requester: intent.requester,

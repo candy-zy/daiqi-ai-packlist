@@ -307,7 +307,7 @@ export async function replaceNormalizedState(db: D1Database, tripId: string, use
     .bind(`${tripId}:${note.id}`, tripId, note.itemId, note.author, note.text)));
   state.messages.forEach((message) => statements.push(db.prepare("INSERT INTO chat_messages (id, trip_id, author_slot, body, is_system, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)")
     .bind(`${tripId}:${message.id}`, tripId, message.author, message.text, message.system ? 1 : 0)));
-  state.assignmentProposals.forEach((proposal) => statements.push(db.prepare("INSERT INTO assignment_proposals (id, trip_id, message_id, item_client_id, requester_slot, target_slot, intent, confidence, status) VALUES (?, ?, ?, ?, ?, ?, 'claim', ?, 'pending')")
+  state.assignmentProposals.forEach((proposal) => statements.push(db.prepare("INSERT INTO assignment_proposals (id, trip_id, message_id, item_client_id, requester_slot, target_slot, intent, confidence, status) VALUES (?, ?, ?, ?, ?, ?, 'request', ?, 'pending')")
     .bind(proposal.id ?? createId("proposal"), tripId, String(proposal.afterMessageId), proposal.itemId, proposal.requester, proposal.target, Math.round((proposal.confidence ?? 0.8) * 100))));
   await db.batch(cleanup);
   for (let index = 0; index < statements.length; index += 80) {

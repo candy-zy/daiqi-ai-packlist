@@ -602,6 +602,8 @@ test("chat assignments require the named traveler to confirm before changing the
   assert.match(page, /我来带/);
   assert.match(page, /function resolveAssignmentProposal/);
   assert.match(page, /\/api\/trips\/\$\{activeTripId\}\/assignments/);
+  assert.match(page, /intent\.intent === "request" && intent\.assignee === currentMember/);
+  assert.match(page, /intent\.intent === "claim" && intent\.requester === currentMember/);
   assert.match(page, /可以继续聊天/);
   assert.match(page, /assignmentResolutionFeedback/);
   assert.doesNotMatch(page.match(/async function resolveAssignmentProposal[\s\S]*?function renderAssignmentProposal/)?.[0] ?? "", /setShowChat\(false\)/);
@@ -742,16 +744,23 @@ test("chat fallback recognizes multi-item consent, release, and rejects ambiguou
   ], items, members);
   assert.equal(accepted.length, 2);
   assert.deepEqual(accepted.map((entry) => entry.itemName), ["充电器", "相机"]);
-  assert.ok(accepted.every((entry) => entry.assignee === "我" && entry.intent === "claim"));
+  assert.ok(accepted.every((entry) => entry.assignee === "我" && entry.intent === "request"));
+
+  const explicitClaim = detectAssignmentFallback([
+    { id: 3, author: "我", text: "相机我来带" },
+  ], items, members);
+  assert.equal(explicitClaim.length, 1);
+  assert.equal(explicitClaim[0].intent, "claim");
+  assert.equal(explicitClaim[0].assignee, "我");
 
   const released = detectAssignmentFallback([
-    { id: 3, author: "我", text: "相机我不带了" },
+    { id: 4, author: "我", text: "相机我不带了" },
   ], items, members);
   assert.equal(released.length, 1);
   assert.equal(released[0].intent, "release");
 
   assert.deepEqual(detectAssignmentFallback([
-    { id: 4, author: "小雨", text: "谁带相机？" },
+    { id: 5, author: "小雨", text: "谁带相机？" },
   ], items, members), []);
 
   const validated = validateAssignmentIntents({ assignments: [

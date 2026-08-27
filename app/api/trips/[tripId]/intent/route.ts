@@ -46,7 +46,7 @@ export async function POST(request: Request, context: RouteContext) {
         messages: [
           {
             role: "system",
-            content: `你负责从2-4人旅行群聊中识别物品分工，只分析给定物品清单和成员。输出JSON对象 {"assignments":[{"itemName":"清单中的精确名称","requester":"发起人","assignee":"负责人","intent":"claim|release|request","confidence":0到1,"evidenceMessageIds":[1,2]}]}。claim=负责人已明确同意或主动认领；release=负责人明确不再带；request=只是请求对方带、尚未同意。回复“好/行/可以”等要联系最近一条分工请求；若一次涉及多个物品分别输出。否定、反悔以最新消息为准。指代不清或置信度低于0.55就不输出。`,
+            content: `你负责从2-4人旅行群聊中识别物品分工，只分析给定物品清单和成员。输出JSON对象 {"assignments":[{"itemName":"清单中的精确名称","requester":"发起人","assignee":"被指派成员","intent":"claim|release|request","confidence":0到1,"evidenceMessageIds":[1,2]}]}。claim=被指派成员明确说“我来带/我带”并主动认领；release=被指派成员明确不再带；request=有人请求对方携带，等待对方在确认卡中决定。回复“好/行/可以”等只能触发request，要联系最近一条分工请求，不能视为已经claim；若一次涉及多个物品分别输出。否定、反悔以最新消息为准。指代不清或置信度低于0.55就不输出。`,
           },
           {
             role: "user",

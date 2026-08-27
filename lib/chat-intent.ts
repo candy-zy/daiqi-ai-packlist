@@ -62,7 +62,10 @@ export function detectAssignmentFallback(
       itemName: item.name,
       requester: request.author,
       assignee: latest.author,
-      intent: "claim" as const,
+      // A generic conversational acknowledgement is not yet a structured
+      // ownership change. It should open the confirmation card; only the
+      // explicit card action writes the assignment to the shared list.
+      intent: "request" as const,
       confidence: namedTarget ? 0.96 : 0.88,
       evidenceMessageIds: [request.id, latest.id],
     }));
