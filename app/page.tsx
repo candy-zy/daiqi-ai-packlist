@@ -252,7 +252,7 @@ const defaultProfile: TravelProfile = {
 
 const personalCategories: Category[] = ["证件与钱财类", "衣物鞋帽类"];
 const personalItemNames = new Set([
-  "牙刷", "毛巾", "流量卡",
+  "牙刷", "毛巾", "耳机", "流量卡",
   "卸妆油", "防晒霜", "水乳", "面霜", "面膜",
   "个人慢性病药物", "晕车药", "过敏药", "葡萄糖",
   "运动鞋", "水壶", "护膝", "护膝 / 护腕", "手套", "泳衣 / 潜水服", "泳衣 / 浴衣",
@@ -457,7 +457,7 @@ const seedItems: PackItem[] = [
   { id: 4, name: "现金", icon: "¥", group: "证件与钱财类", owners: [], checked: {} },
 
   { id: 7, name: "充电器", icon: "▰", group: "电子数码类", owners: [], checked: {} },
-  { id: 10, name: "耳机", icon: "◉", group: "电子数码类", owners: ["小雨"], checked: {} },
+  { id: 10, name: "耳机", icon: "◉", group: "电子数码类", owners: [], checked: {} },
 
   { id: 15, name: "上衣", icon: "◫", group: "衣物鞋帽类", owners: [], checked: {} },
   { id: 16, name: "裤子", icon: "▥", group: "衣物鞋帽类", owners: [], checked: {} },
@@ -628,6 +628,15 @@ export default function Home() {
   }, [viewedMember, items]);
   const verifiedCount = verifyItems.length - status.total;
   const myRemaining = items.filter((item) => (isPersonalItem(item) || item.owners.includes(currentMember)) && !item.checked[currentMember]).length;
+  const presenceMembers = useMemo(() => {
+    if (demoMemberMode) {
+      return demoMembers.map((member) => ({ ...member, online: member.name === currentMember }));
+    }
+
+    if (members.some((member) => member.name === currentMember)) return members;
+    const currentMemberFallback = demoMembers.find((member) => member.name === currentMember);
+    return currentMemberFallback ? [...members, { ...currentMemberFallback, online: true }] : members;
+  }, [currentMember, demoMemberMode, members]);
   const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
   const activeItemNotes = activeItem ? itemNotes.filter((note) => note.itemId === activeItem.id) : [];
   const todayValue = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -1764,7 +1773,7 @@ export default function Home() {
 
   function renderItem(item: PackItem) {
     const personal = isPersonalItem(item);
-    const ownerMembers = item.owners.map((owner) => members.find((member) => member.name === owner)).filter(Boolean);
+    const ownerMembers = item.owners.map((owner) => members.find((member) => member.name === owner) ?? demoMembers.find((member) => member.name === owner)).filter((member): member is MemberRecord => Boolean(member));
     const currentWillBring = item.owners.includes(currentMember);
     const packed = Boolean(item.checked[viewedMember]);
     const canCheck = viewedMember === currentMember && (personal || currentWillBring);
@@ -1831,7 +1840,7 @@ export default function Home() {
             {phase === "verify" && <h1>出发前逐件确认</h1>}
             <div className="presence-panel">
               <div className={`member-switch ${phase === "verify" ? "switchable" : ""}`} aria-label={phase === "verify" ? "切换查看成员清单" : "成员在线状态"}>
-                {members.map((member) => phase === "verify" ? <button key={member.name} className={viewedMember === member.name ? "selected" : ""} onClick={() => setViewedMember(member.name)} title={`查看${member.profile}的清单`}><CharacterAvatar member={member.name} />{member.online && <i className="online" />}</button> : <span className="member-presence" key={member.name} title={`${member.profile}${member.online ? "在线" : "离线"}`}><CharacterAvatar member={member.name} />{member.online && <i className="online" />}</span>)}
+                {presenceMembers.map((member) => phase === "verify" ? <button key={member.name} className={viewedMember === member.name ? "selected" : ""} onClick={() => setViewedMember(member.name)} title={`查看${member.profile}的清单`}><CharacterAvatar member={member.name} />{member.online && <i className="online" />}</button> : <span className="member-presence" key={member.name} title={`${member.profile}${member.online ? "在线" : "离线"}`}><CharacterAvatar member={member.name} />{member.online && <i className="online" />}</span>)}
               </div>
               {phase === "prepare" && <button className="invite-friends-button" onClick={() => setShowInvite(true)} aria-label="邀请朋友加入队伍" title="邀请朋友"><Share2 aria-hidden="true" /></button>}
             </div>

@@ -371,6 +371,15 @@ test("owner avatars and the also-bring control share one aligned circle row", as
   assert.match(css, /\.also-bring-button>span \{ width:34px; height:34px; \}/);
 });
 
+test("personal earphones and demo identities keep complete avatar context", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /"牙刷", "毛巾", "耳机", "流量卡"/);
+  assert.match(page, /members\.find\(\(member\) => member\.name === owner\) \?\? demoMembers\.find/);
+  assert.match(page, /const presenceMembers = useMemo/);
+  assert.match(page, /demoMembers\.map\(\(member\) => \(\{ \.\.\.member, online: member\.name === currentMember \}\)\)/);
+  assert.match(page, /presenceMembers\.map/);
+});
+
 test("preparation defaults to the full list, includes unassigned view, and stays collapsible", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
