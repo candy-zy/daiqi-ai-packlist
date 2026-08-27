@@ -1142,6 +1142,29 @@ h1,.setup-content h1,.departure-page h1 {
 .profile-menu-copy b { font-size:var(--type-h3-size); line-height:var(--type-h3-line); font-weight:var(--font-semibold); }
 .profile-menu-copy small { color:#77736a; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
 .profile-menu-arrow { color:#77736a; font-size:var(--type-h1-size); line-height:1; }
+.profile-info-view { display:flex; flex-direction:column; justify-content:center; gap:10px; }
+.profile-info-view h3 { margin:0; font-size:var(--type-h2-size); line-height:var(--type-h2-line); }
+.profile-info-view p { margin:0; color:#77736a; font-size:var(--type-body-size); line-height:var(--type-body-line); }
+.feedback-view textarea { width:100%; min-height:150px; resize:vertical; padding:12px; border:2px solid var(--ink); border-radius:14px; outline:0; background:#fff; font:inherit; font-size:var(--type-body-size); line-height:var(--type-body-line); }
+.feedback-view textarea:focus { box-shadow:0 0 0 4px rgba(207,255,63,.45); }
+.about-mark { width:56px; height:56px; display:grid; place-items:center; border:2px solid var(--ink); border-radius:16px; background:#e9e0ff; box-shadow:3px 4px 0 var(--ink); }
+.about-mark svg { width:28px; height:28px; color:#575b55; }
+.about-view dl { display:grid; gap:10px; margin:6px 0 0; padding-top:14px; border-top:1px dashed #b6b2a7; }
+.about-view dl>div { display:flex; justify-content:space-between; gap:16px; }
+.about-view dt { color:#77736a; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.about-view dd { margin:0; text-align:right; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); font-weight:var(--font-semibold); }
+.demo-switcher { display:grid; gap:9px; margin-top:18px; padding:13px 14px; border:2px dashed #c8c2b4; border-radius:16px; background:#fffdf7; }
+.demo-switcher>div:first-child { display:grid; gap:2px; }
+.demo-switcher b { font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.demo-switcher small { color:#858179; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.demo-switcher-options { display:flex; gap:8px; }
+.demo-switcher-options button { min-width:42px; min-height:36px; padding:5px 10px; border:2px solid #bcb7ad; border-radius:12px; background:#fff; color:#66645d; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); font-weight:var(--font-semibold); cursor:pointer; }
+.demo-switcher-options button.active { border-color:var(--ink); background:var(--lime); color:var(--ink); box-shadow:2px 3px 0 var(--ink); }
+.demo-exit-button { justify-self:start; padding:0; border:0; background:transparent; color:#69665e; text-decoration:underline; cursor:pointer; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.signout-button { width:100%; display:grid; grid-template-columns:22px minmax(0,1fr) auto; align-items:center; gap:10px; margin-top:13px; padding:12px 14px; border:2px solid #e2bdb5; border-radius:14px; background:#fff8f5; color:#ad5547; text-decoration:none; }
+.signout-button svg { width:19px; height:19px; }
+.signout-button span:nth-child(2) { font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); font-weight:var(--font-semibold); }
+.signout-button span:last-child { font-size:var(--type-h2-size); line-height:1; color:#ad5547; }
 .profile-name-field { display:grid; gap:6px; margin-bottom:20px; }
 .profile-name-field>span { color:#66645d; }
 .profile-name-field input { width:100%; padding:11px 12px; border:2px solid var(--ink); border-radius:12px; outline:0; background:#fff; }

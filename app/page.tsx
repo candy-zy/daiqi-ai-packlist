@@ -6,7 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import {
   ArrowLeft, Banknote, BookOpenCheck, Bug, CalendarDays, CupSoda, GlassWater, MapPin, MemoryStick,
-  Check, Menu, MessageCircle, MoonStar, Package, Search, Share2, Sparkles, Trash2, X,
+  Check, LogOut, Menu, MessageCircle, MoonStar, Package, Search, Share2, Sparkles, Trash2, X,
 } from "lucide-react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
@@ -553,7 +553,8 @@ export default function Home() {
   const [showChat, setShowChat] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [profileView, setProfileView] = useState<"home" | "preferences">("home");
+  const [profileView, setProfileView] = useState<"home" | "preferences" | "feedback" | "about">("home");
+  const [feedbackDraft, setFeedbackDraft] = useState("");
   const [profile, setProfile] = useState<TravelProfile>(defaultProfile);
   const [profileDraft, setProfileDraft] = useState<TravelProfile>(defaultProfile);
   const [addCategory, setAddCategory] = useState<Category>("日用杂物类");
@@ -565,6 +566,7 @@ export default function Home() {
   const [assignmentProposals, setAssignmentProposals] = useState<AssignmentProposal[]>([]);
   const [members, setMembers] = useState<MemberRecord[]>(demoMembers);
   const [currentMember, setCurrentMember] = useState<Member>("我");
+  const [demoMemberMode, setDemoMemberMode] = useState(false);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [tripVersion, setTripVersion] = useState(0);
   const [inviteCode, setInviteCode] = useState("");
@@ -592,6 +594,7 @@ export default function Home() {
   const activeTripIdRef = useRef<string | null>(null);
   const tripVersionRef = useRef(0);
   const currentMemberRef = useRef<Member>("我");
+  const cloudMemberRef = useRef<Member>("我");
   const profileRef = useRef<TravelProfile>(defaultProfile);
   const lastSyncedStateRef = useRef("");
   const applyingRemoteRef = useRef(false);
@@ -773,7 +776,7 @@ export default function Home() {
   }, [storageReady]);
 
   useEffect(() => {
-    if (!activeTripId || !teamReady || !accountReady) return;
+    if (!activeTripId || !teamReady || !accountReady || demoMemberMode) return;
     pendingSharedStateRef.current = { items, suggestions, messages, itemNotes, assignmentProposals, tripContext: { startDate, endDate, place: selectedPlace, weather: weatherContext } };
     const serialized = JSON.stringify(pendingSharedStateRef.current);
     if (serialized === lastSyncedStateRef.current || syncInFlightRef.current || syncTimerRef.current !== null) return;
@@ -784,10 +787,10 @@ export default function Home() {
         syncTimerRef.current = null;
       }
     };
-  }, [accountReady, activeTripId, assignmentProposals, endDate, itemNotes, items, messages, selectedPlace, startDate, suggestions, teamReady, weatherContext]);
+  }, [accountReady, activeTripId, assignmentProposals, demoMemberMode, endDate, itemNotes, items, messages, selectedPlace, startDate, suggestions, teamReady, weatherContext]);
 
   useEffect(() => {
-    if (!activeTripId || !teamReady || !accountReady) return;
+    if (!activeTripId || !teamReady || !accountReady || demoMemberMode) return;
     const poll = async () => {
       if (syncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
       const requestedTripId = activeTripIdRef.current;
@@ -808,7 +811,7 @@ export default function Home() {
     };
     const timer = window.setInterval(() => void poll(), 2500);
     return () => window.clearInterval(timer);
-  }, [accountReady, activeTripId, teamReady]);
+  }, [accountReady, activeTripId, demoMemberMode, teamReady]);
 
   useEffect(() => {
     if (!activeTripId || !teamReady || !accountReady) return;
@@ -895,8 +898,11 @@ export default function Home() {
     setMembers(Array.isArray(payload.members) && payload.members.length ? payload.members : demoMembers.slice(0, 1));
     setDestination(payload.trip.destination);
     setInviteCode(payload.trip.inviteCode);
-    setCurrentMember(payload.trip.currentMember);
-    setViewedMember(payload.trip.currentMember);
+    cloudMemberRef.current = payload.trip.currentMember;
+    if (!demoMemberMode) {
+      setCurrentMember(payload.trip.currentMember);
+      setViewedMember(payload.trip.currentMember);
+    }
     setActiveTripId(payload.trip.id);
     activeTripIdRef.current = payload.trip.id;
     setTripVersion(payload.version ?? payload.trip.version);
@@ -917,6 +923,25 @@ export default function Home() {
       throw new Error(body.error || "无法打开队伍");
     }
     applyCloudPayload(await response.json() as ServerTripPayload);
+  }
+
+  function switchDemoMember(member: Member) {
+    setDemoMemberMode(true);
+    setCurrentMember(member);
+    setViewedMember(member);
+    setProfileView("home");
+    setShowProfile(false);
+    notify(`演示身份已切换为${member}`, 1800);
+  }
+
+  async function exitDemoMemberMode() {
+    setDemoMemberMode(false);
+    const member = cloudMemberRef.current;
+    setCurrentMember(member);
+    setViewedMember(member);
+    if (activeTripIdRef.current) {
+      try { await openCloudTripRef.current(activeTripIdRef.current); } catch { /* 保留当前本地状态，稍后轮询恢复 */ }
+    }
   }
 
   async function flushCloudState() {
@@ -1251,6 +1276,36 @@ export default function Home() {
   function renderProfileCenter() {
     if (!showProfile) return null;
     const isPreferences = profileView === "preferences";
+    const isFeedback = profileView === "feedback";
+    const isAbout = profileView === "about";
+    if (isFeedback || isAbout) {
+      return <div className="profile-modal" role="dialog" aria-modal="true" aria-label={isFeedback ? "意见反馈" : "关于带齐"}>
+        <button className="sheet-backdrop" aria-label="关闭个人中心" onClick={() => setShowProfile(false)} />
+        <section className="profile-card">
+          <header className="profile-header">
+            <div className="profile-identity">
+              <button className="profile-subpage-back" onClick={() => setProfileView("home")} aria-label="返回个人中心"><ArrowLeft aria-hidden="true" /></button>
+              <CharacterAvatar member={currentMember} />
+              <div><small>个人中心 / {isFeedback ? "意见反馈" : "关于带齐"}</small><h2>{isFeedback ? "意见反馈" : "关于带齐"}</h2></div>
+            </div>
+            <button className="profile-close" onClick={() => setShowProfile(false)} aria-label="关闭"><X aria-hidden="true" /></button>
+          </header>
+          <div className="profile-scroll profile-info-view">
+            {isFeedback ? <>
+              <h3>告诉我们哪里还可以更好</h3>
+              <p>欢迎反馈使用中的卡顿、误推荐，或你希望和朋友一起准备的功能。</p>
+              <textarea value={feedbackDraft} onChange={(event) => setFeedbackDraft(event.target.value.slice(0, 300))} placeholder="写下你的建议…" aria-label="意见反馈" />
+            </> : <>
+              <div className="about-mark"><Package aria-hidden="true" /></div>
+              <h3>带齐 · 和朋友一起把行李带齐</h3>
+              <p>出发前，把要带的东西列清楚、分清楚，减少遗漏，也少一点临时争论。</p>
+              <dl><div><dt>当前版本</dt><dd>内测版 0.1</dd></div><div><dt>核心功能</dt><dd>共享清单 · AI 补漏 · 协作分工</dd></div></dl>
+            </>}
+          </div>
+          {isFeedback && <footer className="profile-footer"><button onClick={() => { if (!feedbackDraft.trim()) { notify("先写下你的建议吧"); return; } setFeedbackDraft(""); setProfileView("home"); notify("感谢你的反馈"); }}>提交反馈 <span>→</span></button></footer>}
+        </section>
+      </div>;
+    }
     return <div className="profile-modal" role="dialog" aria-modal="true" aria-label="个人中心">
       <button className="sheet-backdrop" aria-label="关闭个人中心" onClick={() => setShowProfile(false)} />
       <section className="profile-card">
@@ -1271,17 +1326,23 @@ export default function Home() {
                 <span className="profile-menu-copy"><b>出行偏好</b><small>选择兴趣与设备，让清单更贴合你</small></span>
                 <span className="profile-menu-arrow" aria-hidden="true">›</span>
               </button>
-              <button className="profile-menu-button" onClick={() => notify("意见反馈功能即将开放", 2200)}>
+              <button className="profile-menu-button" onClick={() => setProfileView("feedback")}>
                 <span className="profile-menu-icon profile-menu-icon-mint"><MessageCircle aria-hidden="true" /></span>
                 <span className="profile-menu-copy"><b>意见反馈</b><small>告诉我们哪里还可以更好</small></span>
                 <span className="profile-menu-arrow" aria-hidden="true">›</span>
               </button>
-              <button className="profile-menu-button" onClick={() => notify("带齐 · 和朋友一起把行李带齐", 2200)}>
+              <button className="profile-menu-button" onClick={() => setProfileView("about")}>
                 <span className="profile-menu-icon profile-menu-icon-lilac"><Package aria-hidden="true" /></span>
                 <span className="profile-menu-copy"><b>关于带齐</b><small>一起准备，少一点遗漏</small></span>
                 <span className="profile-menu-arrow" aria-hidden="true">›</span>
               </button>
             </section>
+            <section className="demo-switcher" aria-label="演示成员切换">
+              <div><b>演示身份</b><small>录制 Demo 时快速模拟队友操作</small></div>
+              <div className="demo-switcher-options">{demoMembers.map((member) => <button key={member.name} className={demoMemberMode && currentMember === member.name ? "active" : ""} onClick={() => switchDemoMember(member.name)}>{member.short}</button>)}</div>
+              {demoMemberMode && <button className="demo-exit-button" onClick={() => void exitDemoMemberMode()}>恢复我的账号</button>}
+            </section>
+            <a className="signout-button" href="/signout-with-chatgpt?return_to=%2F"><LogOut aria-hidden="true" /><span>退出登录</span><span aria-hidden="true">›</span></a>
           </> : <>
           <label className="profile-name-field"><span>昵称</span><input value={profileDraft.displayName} onChange={(event) => setProfileDraft((current) => ({ ...current, displayName: event.target.value.slice(0, 12) }))} placeholder="朋友会看到这个名字" /></label>
 
