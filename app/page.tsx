@@ -40,6 +40,7 @@ type PlaceSelection = {
   longitude: number;
   timezone: string;
   label: string;
+  manual?: boolean;
 };
 
 type WeatherContext = {
@@ -1111,15 +1112,17 @@ export default function Home() {
     }
     const cleanDestination = resolvedPlace.label;
     let resolvedWeather: WeatherContext = { source: "season", summary: "请结合目的地和出行月份判断天气相关物品" };
-    try {
-      const weatherResponse = await fetch("/api/weather", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ latitude: resolvedPlace.latitude, longitude: resolvedPlace.longitude, timezone: resolvedPlace.timezone, startDate, endDate }),
-      });
-      if (weatherResponse.ok) resolvedWeather = await weatherResponse.json() as WeatherContext;
-    } catch {
-      // 天气只是 AI 推荐的补充上下文；失败时静默按目的地和月份降级，不阻塞建队。
+    if (!resolvedPlace.manual) {
+      try {
+        const weatherResponse = await fetch("/api/weather", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ latitude: resolvedPlace.latitude, longitude: resolvedPlace.longitude, timezone: resolvedPlace.timezone, startDate, endDate }),
+        });
+        if (weatherResponse.ok) resolvedWeather = await weatherResponse.json() as WeatherContext;
+      } catch {
+        // 天气只是 AI 推荐的补充上下文；失败时静默按目的地和月份降级，不阻塞建队。
+      }
     }
     setWeatherContext(resolvedWeather);
     const tripContext: TripContext = { startDate, endDate, place: resolvedPlace, weather: resolvedWeather };

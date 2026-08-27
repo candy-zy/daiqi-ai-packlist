@@ -7,6 +7,7 @@ type PlaceResult = {
   longitude: number;
   timezone: string;
   label: string;
+  manual?: boolean;
 };
 
 type KnownPlace = PlaceResult & { aliases: string[] };
@@ -36,6 +37,20 @@ function fallbackSearch(query: string) {
     .filter((place) => normalize(`${place.country}${place.admin1}${place.name}${place.label}${place.aliases.join("")}`).includes(normalized))
     .map(({ id, name, country, admin1, latitude, longitude, timezone, label }) => ({ id, name, country, admin1, latitude, longitude, timezone, label }))
     .slice(0, 6);
+}
+
+function manualPlace(query: string): PlaceResult {
+  return {
+    id: `manual-${encodeURIComponent(query)}`,
+    name: query,
+    country: "",
+    admin1: "",
+    latitude: 0,
+    longitude: 0,
+    timezone: "auto",
+    label: query,
+    manual: true,
+  };
 }
 
 function resultScore(raw: Record<string, unknown>, query: string) {
@@ -95,8 +110,9 @@ export async function GET(request: Request) {
     });
     const preferred = fallbackSearch(query);
     const merged = [...preferred, ...places].filter((place, index, all) => all.findIndex((candidate) => candidate.id === place.id || (candidate.name === place.name && candidate.country === place.country)) === index).slice(0, 6);
-    return Response.json({ places: merged });
+    return Response.json({ places: merged.length ? merged : [manualPlace(query)] });
   } catch {
-    return Response.json({ places: fallbackSearch(query), source: "fallback" });
+    const fallback = fallbackSearch(query);
+    return Response.json({ places: fallback.length ? fallback : [manualPlace(query)], source: "fallback" });
   }
 }

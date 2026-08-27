@@ -5,7 +5,7 @@ export type TripMember = { name: string; short: string; profile: string; classNa
 export type SharedTripContext = {
   startDate: string;
   endDate: string;
-  place: { id: string; name: string; country: string; admin1: string; latitude: number; longitude: number; timezone: string; label: string } | null;
+  place: { id: string; name: string; country: string; admin1: string; latitude: number; longitude: number; timezone: string; label: string; manual?: boolean } | null;
   weather: { source: "forecast" | "season"; summary: string; minTemp?: number; maxTemp?: number; precipitationProbability?: number; snowfall?: number; season?: string } | null;
 };
 export type SharedTripState = {
@@ -122,6 +122,7 @@ function sanitizeTripContext(value: unknown): SharedTripContext | null {
     longitude,
     timezone: textValue(rawPlace.timezone, 80) || "auto",
     label: textValue(rawPlace.label, 120),
+    ...(rawPlace.manual === true ? { manual: true } : {}),
   } : null;
   if (!place?.name || !place.label) return null;
   const rawWeather = source.weather && typeof source.weather === "object" ? source.weather as Record<string, unknown> : null;

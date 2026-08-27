@@ -185,6 +185,7 @@ test("onboarding resolves weather only after submission and keeps it as hidden A
   assert.match(page, /搜索城市或地区，如首尔、北海道/);
   assert.match(page, /async function resolveLocationInput/);
   assert.match(page, /const resolvedPlace = await resolveLocationInput\(\)/);
+  assert.match(page, /if \(!resolvedPlace\.manual\)/);
   assert.doesNotMatch(page, /请从搜索结果中选择一个目的地/);
   assert.match(page, /onClick=\{openPreferences\}/);
   assert.match(page, /type="date"/);
@@ -202,6 +203,8 @@ test("onboarding resolves weather only after submission and keeps it as hidden A
   assert.match(places, /function geocodingQueries/);
   assert.match(places, /variants\.push\(`\$\{query\}市`\)/);
   assert.match(places, /fetchGeocodingResults\(query\)/);
+  assert.match(places, /function manualPlace/);
+  assert.match(places, /merged\.length \? merged : \[manualPlace\(query\)\]/);
   assert.match(places, /resultScore/);
   assert.match(places, /raw\.population/);
   assert.match(places, /featureCode === "PPLC"/);
