@@ -1832,8 +1832,8 @@ export default function Home() {
           {phase === "verify" ? <div className="verify-item-name">
             <span className="item-title-row"><b>{item.name}</b></span>
           </div> : <button className="item-note-trigger" onClick={() => openItemNotes(item.id)} disabled={editMode} aria-label={`打开${item.name}的留言`}>
-            <span className="item-title-row"><b>{item.name}</b>{hasUnreadDiscussion && <i className="unread-dot" aria-label="有未读消息" />}</span>
-            {(hasUnreadDiscussion || noteCount > 0) && <small>{hasUnreadDiscussion ? "有新留言" : "有留言"}</small>}
+            <span className="item-title-row"><b>{item.name}</b></span>
+            {(hasUnreadDiscussion || noteCount > 0) && <small className="item-note-status"><i className="note-presence-dot" aria-hidden="true" />{hasUnreadDiscussion ? "有新留言" : "有留言"}</small>}
           </button>}
           {phase === "prepare" && editMode && <button className="edit-delete-button" onClick={() => removeItem(item)} aria-label={`删除${item.name}`} title="删除"><Trash2 aria-hidden="true" /></button>}
         </div>
