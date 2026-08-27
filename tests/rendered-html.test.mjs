@@ -649,17 +649,22 @@ test("rapid consecutive claims are not overwritten by stale polling responses", 
   assert.match(page, /owners:?,?[\s\S]*remoteItem\.owners\.filter\(\(owner\) => owner !== member\)/);
 });
 
-test("claims are staged immediately and identity switching waits for cloud persistence", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+test("claims use a lightweight item endpoint and identity switching waits for its queue", async () => {
+  const [page, claimRoute] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trips/[tripId]/claims/route.ts", import.meta.url), "utf8"),
+  ]);
   const claimBlock = page.slice(page.indexOf("function claim"), page.indexOf("function togglePacked"));
   const switchBlock = page.slice(page.indexOf("async function switchDemoMember"), page.indexOf("async function exitDemoMemberMode"));
   assert.match(claimBlock, /itemsRef\.current = nextItems/);
-  assert.ok(claimBlock.match(/stageItemsForCloud\(nextItems\)/g)?.length >= 2, "claim and release both stage the latest owner state");
-  assert.match(claimBlock, /pendingSharedStateRef\.current = \{/);
-  assert.match(claimBlock, /window\.setTimeout\(\(\) => void flushCloudStateRef\.current\(\), 40\)/);
-  assert.ok(switchBlock.match(/await waitForCloudSave\(\)/g)?.length >= 2, "identity switching waits for any in-flight save");
+  assert.ok(claimBlock.match(/enqueueClaimMutation\(id, "(claim|release)"\)/g)?.length === 2);
+  assert.match(claimBlock, /\/api\/trips\/\$\{tripId\}\/claims/);
+  assert.match(switchBlock, /await claimMutationQueueRef\.current/);
   assert.match(switchBlock, /if \(hasPendingCloudChanges\(\)\) await flushCloudStateRef\.current\(\)/);
-  assert.match(switchBlock, /认领状态仍在保存，请稍后再切换身份/);
+  assert.match(claimRoute, /UPDATE trips SET version = version \+ 1/);
+  assert.match(claimRoute, /ON CONFLICT\(item_id, member_slot\)/);
+  assert.match(claimRoute, /DELETE FROM item_owners WHERE item_id/);
+  assert.match(claimRoute, /UPDATE trip_snapshots SET state_json/);
 });
 
 test("AI APIs use a server-only DeepSeek key and return structured recommendation and assignment data", async () => {

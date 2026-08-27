@@ -608,6 +608,10 @@ export default function Home() {
   const syncTimerRef = useRef<number | null>(null);
   const pendingSharedStateRef = useRef<ServerTripPayload["state"] | null>(null);
   const itemsRef = useRef(seedItems);
+  const claimMutationQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingClaimMutationsRef = useRef(0);
+  const claimMutationErrorRef = useRef<string | null>(null);
+  const claimReloadTimerRef = useRef<number | null>(null);
   const locationSearchIdRef = useRef(0);
   const refreshedLegacySuggestionsRef = useRef(new Set<string>());
   const openCloudTripRef = useRef(openCloudTrip);
@@ -796,6 +800,7 @@ export default function Home() {
   useEffect(() => {
     if (!activeTripId || !teamReady || !accountReady) return;
     pendingSharedStateRef.current = { items, suggestions, messages, itemNotes, assignmentProposals, tripContext: { startDate, endDate, place: selectedPlace, weather: weatherContext } };
+    if (pendingClaimMutationsRef.current > 0) return;
     const serialized = JSON.stringify(pendingSharedStateRef.current);
     if (serialized === lastSyncedStateRef.current || syncInFlightRef.current || syncTimerRef.current !== null) return;
     syncTimerRef.current = window.setTimeout(() => void flushCloudStateRef.current(), 450);
@@ -946,12 +951,17 @@ export default function Home() {
     setCloudError("");
     try {
       if (activeTripIdRef.current) {
-        await waitForCloudSave();
+        const hadPendingClaims = pendingClaimMutationsRef.current > 0;
+        if (claimReloadTimerRef.current !== null) {
+          window.clearTimeout(claimReloadTimerRef.current);
+          claimReloadTimerRef.current = null;
+        }
+        await claimMutationQueueRef.current;
+        if (claimMutationErrorRef.current) throw new Error(claimMutationErrorRef.current);
+        if (hadPendingClaims && activeTripIdRef.current) await openCloudTripRef.current(activeTripIdRef.current);
+        await waitForCloudSave(12000);
         if (hasPendingCloudChanges()) await flushCloudStateRef.current();
-        await waitForCloudSave();
-        if (hasPendingCloudChanges()) await flushCloudStateRef.current();
-        await waitForCloudSave();
-        if (hasPendingCloudChanges()) throw new Error("认领状态仍在保存，请稍后再切换身份");
+        await waitForCloudSave(12000);
       }
       const response = await fetch("/api/demo-session", {
         method: "POST",
@@ -1586,29 +1596,49 @@ export default function Home() {
     const nextItems = itemsRef.current.map((item) => item.id === id && !isPersonalItem(item) && !item.owners.includes(currentMember) ? { ...item, owners: [...item.owners, currentMember] } : item);
     itemsRef.current = nextItems;
     setItems(nextItems);
-    stageItemsForCloud(nextItems);
+    enqueueClaimMutation(id, "claim");
   }
 
   function release(id: number) {
     const nextItems = itemsRef.current.map((item) => item.id === id && !isPersonalItem(item) ? { ...item, owners: item.owners.filter((member) => member !== currentMember), checked: { ...item.checked, [currentMember]: false } } : item);
     itemsRef.current = nextItems;
     setItems(nextItems);
-    stageItemsForCloud(nextItems);
+    enqueueClaimMutation(id, "release");
   }
 
-  function stageItemsForCloud(nextItems: PackItem[]) {
-    if (!activeTripIdRef.current || !teamReady || !accountReady) return;
-    pendingSharedStateRef.current = {
-      items: nextItems,
-      suggestions,
-      messages,
-      itemNotes,
-      assignmentProposals,
-      tripContext: { startDate, endDate, place: selectedPlace, weather: weatherContext },
-    };
-    if (!syncInFlightRef.current && syncTimerRef.current === null && hasPendingCloudChanges()) {
-      syncTimerRef.current = window.setTimeout(() => void flushCloudStateRef.current(), 40);
-    }
+  function enqueueClaimMutation(itemId: number, action: "claim" | "release") {
+    const tripId = activeTripIdRef.current;
+    if (!tripId || !teamReady || !accountReady) return;
+    claimMutationErrorRef.current = null;
+    pendingClaimMutationsRef.current += 1;
+    const request = claimMutationQueueRef.current.then(async () => {
+      const response = await fetch(`/api/trips/${tripId}/claims`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ itemId, action }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string; version?: number };
+      if (!response.ok) throw new Error(result.error || "认领保存失败");
+      if (typeof result.version === "number") {
+        setTripVersion(result.version);
+        tripVersionRef.current = result.version;
+      }
+    });
+    claimMutationQueueRef.current = request.catch(() => undefined);
+    void request.catch((error) => {
+      const message = error instanceof Error ? error.message : "认领保存失败";
+      claimMutationErrorRef.current = message;
+      setCloudError(message);
+      setSyncStatus("offline");
+    }).finally(() => {
+      pendingClaimMutationsRef.current -= 1;
+      if (pendingClaimMutationsRef.current !== 0 || tripId !== activeTripIdRef.current) return;
+      setSyncStatus("saved");
+      claimReloadTimerRef.current = window.setTimeout(() => {
+        claimReloadTimerRef.current = null;
+        if (tripId === activeTripIdRef.current) void openCloudTripRef.current(tripId).catch(() => setSyncStatus("offline"));
+      }, 120);
+    });
   }
 
   function togglePacked(item: PackItem) {
