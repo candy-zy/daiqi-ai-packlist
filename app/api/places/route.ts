@@ -23,6 +23,7 @@ const FALLBACK_PLACES: KnownPlace[] = [
   { id: "shanghai-cn", name: "上海", country: "中国", admin1: "上海市", latitude: 31.2304, longitude: 121.4737, timezone: "Asia/Shanghai", label: "中国 上海", aliases: ["上海", "shanghai"] },
   { id: "chengdu-cn", name: "成都", country: "中国", admin1: "四川省", latitude: 30.5728, longitude: 104.0668, timezone: "Asia/Shanghai", label: "中国 四川 成都", aliases: ["成都", "chengdu"] },
   { id: "taizhou-zhejiang-cn", name: "台州", country: "中国", admin1: "浙江省", latitude: 28.6564, longitude: 121.4208, timezone: "Asia/Shanghai", label: "中国 浙江 台州", aliases: ["台州", "taizhou", "浙江台州"] },
+  { id: "wenzhou-cn", name: "温州", country: "中国", admin1: "浙江省", latitude: 27.9994, longitude: 120.6668, timezone: "Asia/Shanghai", label: "中国 浙江 温州", aliases: ["温州", "温州市", "wenzhou", "浙江温州"] },
 ];
 
 function normalize(value: string) {
@@ -45,6 +46,33 @@ function resultScore(raw: Record<string, unknown>, query: string) {
   return (exactName ? 1_000_000_000 : 0) + capitalBonus + (Number.isFinite(population) ? population : 0);
 }
 
+function geocodingQueries(query: string) {
+  const variants = [query];
+  // Open-Meteo can resolve many Chinese prefecture-level cities only when the
+  // administrative suffix is present (for example “温州市”, not “温州”). Keep
+  // the user's natural input in the UI and retry the normalized city form only
+  // on the server.
+  if (/^[\u3400-\u9fff]{2,12}$/.test(query) && !/[市区县省国岛道]$/.test(query)) {
+    variants.push(`${query}市`);
+  }
+  return variants;
+}
+
+async function fetchGeocodingResults(query: string) {
+  for (const candidate of geocodingQueries(query)) {
+    const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
+    url.searchParams.set("name", candidate);
+    url.searchParams.set("count", "6");
+    url.searchParams.set("language", "zh");
+    url.searchParams.set("format", "json");
+    const response = await fetch(url, { headers: { accept: "application/json" } });
+    if (!response.ok) throw new Error(`Geocoding returned ${response.status}`);
+    const payload = await response.json() as { results?: Array<Record<string, unknown>> };
+    if (payload.results?.length) return payload.results;
+  }
+  return [];
+}
+
 export async function GET(request: Request) {
   if (!request.headers.get("oai-authenticated-user-id") || !request.headers.get("oai-authenticated-user-email")) {
     return Response.json({ error: "请先登录", signInPath: "/signin-with-chatgpt?return_to=%2F" }, { status: 401 });
@@ -53,15 +81,7 @@ export async function GET(request: Request) {
   if (query.length < 2) return Response.json({ places: [] });
 
   try {
-    const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
-    url.searchParams.set("name", query);
-    url.searchParams.set("count", "6");
-    url.searchParams.set("language", "zh");
-    url.searchParams.set("format", "json");
-    const response = await fetch(url, { headers: { accept: "application/json" } });
-    if (!response.ok) throw new Error(`Geocoding returned ${response.status}`);
-    const payload = await response.json() as { results?: Array<Record<string, unknown>> };
-    const rankedResults = [...(payload.results ?? [])].sort((a, b) => resultScore(b, query) - resultScore(a, query));
+    const rankedResults = [...await fetchGeocodingResults(query)].sort((a, b) => resultScore(b, query) - resultScore(a, query));
     const places = rankedResults.flatMap((raw) => {
       const name = typeof raw.name === "string" ? raw.name.trim() : "";
       const country = typeof raw.country === "string" ? raw.country.trim() : "";

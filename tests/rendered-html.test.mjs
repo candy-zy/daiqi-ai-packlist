@@ -197,7 +197,11 @@ test("onboarding resolves weather only after submission and keeps it as hidden A
   assert.match(places, /geocoding-api\.open-meteo\.com\/v1\/search/);
   assert.match(places, /id: "london-gb"/);
   assert.match(places, /id: "taizhou-zhejiang-cn"/);
+  assert.match(places, /id: "wenzhou-cn"/);
   assert.match(places, /aliases: \["伦敦", "london", "英国伦敦", "英格兰伦敦"\]/);
+  assert.match(places, /function geocodingQueries/);
+  assert.match(places, /variants\.push\(`\$\{query\}市`\)/);
+  assert.match(places, /fetchGeocodingResults\(query\)/);
   assert.match(places, /resultScore/);
   assert.match(places, /raw\.population/);
   assert.match(places, /featureCode === "PPLC"/);
