@@ -8,9 +8,10 @@
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/assets/demo-current-create-team-card.jpg" width="260" alt="带齐创建旅行队伍：选择目的地、日期和个人出行偏好"/><br/><sub>建队：地点、日期与个人偏好</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/demo-06-team-collaboration.jpg" width="260" alt="带齐多人协作清单：无人认领、单人认领和多人共同携带"/><br/><sub>协作：一件物品可由一人或多人携带</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/demo-04-ai-assignment.jpg" width="260" alt="带齐从团队聊天识别行李分工并由负责人确认"/><br/><sub>AI：从聊天提取分工，确认后写回清单</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/demo-current-create-team-card.jpg" width="220" alt="带齐创建旅行队伍：选择目的地、日期和个人出行偏好"/><br/><sub>建队：地点、日期与个人偏好</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/demo-03-prepare-list.jpg" width="220" alt="带齐根据目的地、天气和个人偏好推荐清单中尚未包含的物品"/><br/><sub>AI 补漏：推荐清单外最值得带的 2 件物品</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/demo-06-team-collaboration.jpg" width="220" alt="带齐多人协作清单：无人认领、单人认领和多人共同携带"/><br/><sub>协作：一件物品可由一人或多人携带</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/demo-04-ai-assignment.jpg" width="220" alt="带齐从团队聊天识别行李分工并由负责人确认"/><br/><sub>AI 分工：从聊天提取分工，确认后写回清单</sub></td>
   </tr>
 </table>
 
