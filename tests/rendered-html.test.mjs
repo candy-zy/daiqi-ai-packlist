@@ -649,6 +649,19 @@ test("rapid consecutive claims are not overwritten by stale polling responses", 
   assert.match(page, /owners:?,?[\s\S]*remoteItem\.owners\.filter\(\(owner\) => owner !== member\)/);
 });
 
+test("claims are staged immediately and identity switching waits for cloud persistence", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const claimBlock = page.slice(page.indexOf("function claim"), page.indexOf("function togglePacked"));
+  const switchBlock = page.slice(page.indexOf("async function switchDemoMember"), page.indexOf("async function exitDemoMemberMode"));
+  assert.match(claimBlock, /itemsRef\.current = nextItems/);
+  assert.ok(claimBlock.match(/stageItemsForCloud\(nextItems\)/g)?.length >= 2, "claim and release both stage the latest owner state");
+  assert.match(claimBlock, /pendingSharedStateRef\.current = \{/);
+  assert.match(claimBlock, /window\.setTimeout\(\(\) => void flushCloudStateRef\.current\(\), 40\)/);
+  assert.ok(switchBlock.match(/await waitForCloudSave\(\)/g)?.length >= 2, "identity switching waits for any in-flight save");
+  assert.match(switchBlock, /if \(hasPendingCloudChanges\(\)\) await flushCloudStateRef\.current\(\)/);
+  assert.match(switchBlock, /认领状态仍在保存，请稍后再切换身份/);
+});
+
 test("AI APIs use a server-only DeepSeek key and return structured recommendation and assignment data", async () => {
   const [envExample, suggestions, intent, fallback, page] = await Promise.all([
     readFile(new URL("../.env.example", import.meta.url), "utf8"),

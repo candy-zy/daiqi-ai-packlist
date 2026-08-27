@@ -607,11 +607,13 @@ export default function Home() {
   const syncInFlightRef = useRef(false);
   const syncTimerRef = useRef<number | null>(null);
   const pendingSharedStateRef = useRef<ServerTripPayload["state"] | null>(null);
+  const itemsRef = useRef(seedItems);
   const locationSearchIdRef = useRef(0);
   const refreshedLegacySuggestionsRef = useRef(new Set<string>());
   const openCloudTripRef = useRef(openCloudTrip);
   const flushCloudStateRef = useRef(flushCloudState);
   profileRef.current = profile;
+  itemsRef.current = items;
 
   const myItems = [
     ...items.filter((item) => !isPersonalItem(item) && item.owners.includes(currentMember)),
@@ -941,9 +943,16 @@ export default function Home() {
 
   async function switchDemoMember(member: Member) {
     if (member === demoIdentity) return;
-    if (activeTripIdRef.current && hasPendingCloudChanges()) await flushCloudStateRef.current();
     setCloudError("");
     try {
+      if (activeTripIdRef.current) {
+        await waitForCloudSave();
+        if (hasPendingCloudChanges()) await flushCloudStateRef.current();
+        await waitForCloudSave();
+        if (hasPendingCloudChanges()) await flushCloudStateRef.current();
+        await waitForCloudSave();
+        if (hasPendingCloudChanges()) throw new Error("认领状态仍在保存，请稍后再切换身份");
+      }
       const response = await fetch("/api/demo-session", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -990,6 +999,14 @@ export default function Home() {
 
   async function exitDemoMemberMode() {
     await switchDemoMember("我");
+  }
+
+  async function waitForCloudSave(timeoutMs = 6000) {
+    const startedAt = Date.now();
+    while (syncInFlightRef.current) {
+      if (Date.now() - startedAt > timeoutMs) throw new Error("保存超时，请检查网络后重试");
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
+    }
   }
 
   async function flushCloudState() {
@@ -1566,11 +1583,32 @@ export default function Home() {
   }
 
   function claim(id: number) {
-    setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) && !item.owners.includes(currentMember) ? { ...item, owners: [...item.owners, currentMember] } : item));
+    const nextItems = itemsRef.current.map((item) => item.id === id && !isPersonalItem(item) && !item.owners.includes(currentMember) ? { ...item, owners: [...item.owners, currentMember] } : item);
+    itemsRef.current = nextItems;
+    setItems(nextItems);
+    stageItemsForCloud(nextItems);
   }
 
   function release(id: number) {
-    setItems((current) => current.map((item) => item.id === id && !isPersonalItem(item) ? { ...item, owners: item.owners.filter((member) => member !== currentMember), checked: { ...item.checked, [currentMember]: false } } : item));
+    const nextItems = itemsRef.current.map((item) => item.id === id && !isPersonalItem(item) ? { ...item, owners: item.owners.filter((member) => member !== currentMember), checked: { ...item.checked, [currentMember]: false } } : item);
+    itemsRef.current = nextItems;
+    setItems(nextItems);
+    stageItemsForCloud(nextItems);
+  }
+
+  function stageItemsForCloud(nextItems: PackItem[]) {
+    if (!activeTripIdRef.current || !teamReady || !accountReady) return;
+    pendingSharedStateRef.current = {
+      items: nextItems,
+      suggestions,
+      messages,
+      itemNotes,
+      assignmentProposals,
+      tripContext: { startDate, endDate, place: selectedPlace, weather: weatherContext },
+    };
+    if (!syncInFlightRef.current && syncTimerRef.current === null && hasPendingCloudChanges()) {
+      syncTimerRef.current = window.setTimeout(() => void flushCloudStateRef.current(), 40);
+    }
   }
 
   function togglePacked(item: PackItem) {
