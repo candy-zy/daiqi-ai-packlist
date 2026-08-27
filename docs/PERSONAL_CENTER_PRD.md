@@ -4,8 +4,8 @@
 
 | 字段 | 内容 |
 |---|---|
-| 文档版本 | V1.0 |
-| 产品阶段 | MVP 开发基线 |
+| 文档版本 | V1.1 |
+| 产品阶段 | 已实现 MVP + 后续演进基线 |
 | 适用产品 | 2–4 人朋友结伴旅行物品协作 App |
 | 核心模块 | 个人中心、出行偏好、设备库、清单个性化、条件预设 |
 | 目标读者 | 产品、设计、前端、后端、算法、测试 |
@@ -14,10 +14,10 @@
 
 ### 0.1 当前实现边界
 
-- 已实现个人中心、偏好选择、设备选择、影响结果预览和跨设备保存；登录身份与资料均由服务端校验并写入 D1。
+- 已实现包含三个入口的个人中心首页（出行偏好、意见反馈、关于带齐）、偏好与设备选择、跨设备保存；登录身份与资料均由服务端校验并写入 D1。
 - 保存偏好后会补充缺失的关联物品，但不会自动认领团队物品；取消健康偏好时，只清理由该偏好生成的药物提醒。
 - 健康偏好只影响本人清单；设备信息可用于预设物品，不等同于携带承诺。
-- 当前采用 2.5 秒增量同步；通知推送、历史偏好学习和后台物品目录仍属于后续增强项。
+- 队伍协作已采用 SSE 变更通知，并保留 2.5 秒版本轮询兜底；个人偏好本身不广播给队友。历史偏好学习和后台物品目录仍属于后续增强项。
 
 ---
 
@@ -118,30 +118,42 @@
 
 ```text
 注册/登录
-  → 创建旅行前页面
+  → 队伍列表
+  → 新建队伍
   → “我的出行偏好”卡片
-  → 个人中心弹窗
+  → 直接进入出行偏好页
   → 保存
-  → 输入目的地
+  → 输入目的地与日期
   → 生成清单
 ```
 
 首次偏好设置可跳过。跳过时使用基础清单，不阻断创建旅行。
 
-### 6.2 已进入旅行
+### 6.2 主要入口
 
-- 准备清单页：点击右上角自己的头像进入个人中心。
-- 出发核对页：头像仍用于切换查看成员清单，不进入个人中心，避免一个入口承担两个动作。
-- 正式 App 的全局“我的”页可作为二级入口，但 MVP 不增加底部导航。
+- 队伍列表页：右上角个人头像进入“我的设置”。
+- 我的设置：首页只展示“出行偏好、意见反馈、关于带齐”，退出登录作为独立操作；点击“出行偏好”后再进入具体选项。
+- 新建队伍页：“我的出行偏好”卡片直接打开具体偏好页，返回后继续填写目的地与日期。
+- 准备清单页：右上角只展示全队成员头像与在线状态，不进入个人设置，避免把“团队在线”与“个人设置”混成同一入口。
+- 出发核对页：成员头像用于切换查看成员清单，不能替队友完成核对。
 
-### 6.3 个人中心页面结构
+### 6.3 页面结构
+
+个人中心首页：
 
 1. 头像与昵称。
+2. 出行偏好。
+3. 意见反馈。
+4. 关于带齐。
+5. 退出登录。
+
+出行偏好二级页：
+
+1. 昵称。
 2. 旅行中的稳定偏好。
 3. 出行时容易出现的身体情况。
 4. 我有这些设备。
-5. 隐私说明。
-6. 保存并更新清单。
+5. 隐私说明与“保存并更新清单”。
 
 ---
 
@@ -409,9 +421,9 @@
 |---|---|
 | 初次进入 | 使用登录昵称，所有选项未选；展示“可跳过” |
 | 已有偏好 | 已选项使用绿色勾选和描边，顶部显示已选数量 |
-| 无任何选择 | 影响预览显示“暂不增加个性化提醒” |
+| 无任何选择 | 不展示额外影响摘要，保存后使用基础清单 |
 | 保存中 | 主按钮 loading，禁止重复提交 |
-| 保存成功 | 关闭弹窗，展示 3 秒结果摘要，可撤销本次新增 |
+| 保存成功 | 保存服务端资料并关闭二级页；当前队伍按规则补充缺失项 |
 | 保存失败 | 保留用户选择，按钮恢复，提示重试 |
 | 网络离线 | 保存为本地草稿，不显示为已同步；恢复网络后主动确认同步 |
 
@@ -427,60 +439,51 @@
 
 ## 13. 数据模型
 
+以下先记录**当前 MVP 已落库结构**。偏好拆表、设备目录和更细的来源解释属于后续演进，不混写为已实现能力。
+
 ### 13.1 `users`
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `id` | text PK | 平台稳定用户 ID |
+| `email` | text unique | 托管账号邮箱 |
 | `display_name` | text | 展示昵称 |
-| `avatar_url` | text null | 头像 |
-| `created_at` | integer | Unix ms |
-| `updated_at` | integer | Unix ms |
+| `created_at` | text | 创建时间 |
+| `updated_at` | text | 更新时间 |
 
-### 13.2 `user_preferences`
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `user_id` | text FK | 用户 |
-| `preference_key` | text | 枚举键 |
-| `enabled` | integer | 0/1 |
-| `visibility` | text | `private` / `team` |
-| `updated_at` | integer | 更新时间 |
-
-唯一索引：`(user_id, preference_key)`。
-
-### 13.3 `user_inventory`
+### 13.2 `profiles`
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `id` | text PK | 设备记录 |
-| `user_id` | text FK | 所有者 |
-| `catalog_item_id` | text FK | 目录物品 |
-| `owned` | integer | 是否拥有 |
-| `default_available` | integer | 默认是否可用于旅行 |
-| `note` | text null | 例如“自拍杆较短” |
-| `updated_at` | integer | 更新时间 |
+| `user_id` | text PK / FK | 用户 |
+| `display_name` | text | 用户可编辑昵称 |
+| `habits_json` | text | 稳定偏好与身体情况键数组 |
+| `gear_json` | text | 已有设备键数组 |
+| `updated_at` | text | 更新时间 |
 
-### 13.4 旅行与清单核心表
+MVP 将少量枚举键保存为 JSON，降低早期模型复杂度；API 只向本人返回该资料。若后续增加推荐解释、版本审计和单项统计，再迁移为规范化 `user_preferences` / `user_inventory` 表。
 
-- `trips(id, owner_user_id, destination, start_date, end_date, status, created_at)`
-- `trip_members(trip_id, user_id, role, joined_at)`
-- `catalog_items(id, canonical_name, category, default_scope, aliases_json, active)`
-- `trip_items(id, trip_id, catalog_item_id, custom_name, category, scope, source_type, reason_codes_json, deleted_at)`
-- `item_assignments(id, trip_item_id, user_id, status, source, confirmed_at)`
-- `item_checks(trip_item_id, user_id, checked, checked_at)`
-- `item_notes(id, trip_item_id, user_id, content, created_at)`
-- `messages(id, trip_id, user_id, content, created_at)`
-- `ai_suggestions(id, trip_id, user_id, payload_json, status, created_at)`
-- `ai_action_candidates(id, trip_id, action, item_id, target_user_id, evidence_json, confidence, status, created_at)`
+### 13.3 旅行与清单核心表
 
-### 13.5 数据约束
+- `trips`：队伍名称、目的地、创建者、邀请码和版本号。
+- `trip_members`：成员、owner/member 角色、队内头像槽位和在线心跳。
+- `trip_snapshots`：完整页面状态 JSON、版本、更新人和时间。
+- `trip_items`：物品名称、图标、分类、排序和 AI 来源理由。
+- `item_owners`：物品 × 成员的认领与核对状态；联合主键支持多人同带。
+- `item_notes`：绑定物品的按时间留言。
+- `chat_messages`：团队聊天消息。
+- `assignment_proposals`：AI 分工候选、置信度和确认状态。
+- `trip_events`：队伍版本变更审计。
+
+数据库共 11 张表：`users`、`profiles` 与上述 9 张旅行协作表。日期、天气、偏好应用结果等当前保存在权威快照的 `tripContext` 中。
+
+### 13.4 数据约束
 
 - 所有旅行写操作必须校验当前用户属于 `trip_members`。
 - `item_checks` 只能由对应 `user_id` 修改。
-- 设备库默认仅本人可读；团队只读取由其产生的清单物品，不读取设备原始记录。
+- `profiles` 只由本人读写；团队只读取由偏好产生的清单物品，不读取偏好和设备原始值。
 - 健康偏好不返回给队友 API。
-- 删除物品使用软删除，保留撤销和审计能力。
+- 删除后的短时撤回由客户端保留最近删除项完成；服务端保存最终快照与事件审计。
 
 ---
 
@@ -490,13 +493,12 @@
 |---|---|---|
 | GET | `/api/profile` | 获取个人资料、偏好和设备库 |
 | PUT | `/api/profile` | 更新昵称、偏好和设备库，返回保存结果 |
-| POST | `/api/trips` | 创建旅行并生成基础清单 |
-| POST | `/api/trips/:id/personalize` | 将最新偏好增量应用到当前旅行 |
-| GET | `/api/trips/:id/items` | 获取有权限的清单 |
-| POST | `/api/trips/:id/ai-suggestions` | 获取最多 2 条 AI 缺口建议 |
-| POST | `/api/trips/:id/messages` | 发送团队聊天消息 |
-| POST | `/api/trips/:id/ai-actions/extract` | 从增量消息识别动作候选 |
-| POST | `/api/ai-actions/:id/resolve` | 接受或拒绝候选动作 |
+| GET / POST | `/api/trips` | 获取队伍列表或创建旅行并生成基础清单 |
+| POST | `/api/trips/join` | 使用 6 位邀请码加入队伍 |
+| GET / PUT | `/api/trips/:tripId/state` | 读取与保存权威协作快照 |
+| GET | `/api/trips/:tripId/events` | 建立 SSE 连接，接收变更通知与心跳 |
+| POST | `/api/suggestions` | 获取最多 2 条 AI 缺口建议 |
+| POST | `/api/trips/:tripId/intent` | 从团队聊天识别分工候选 |
 
 ### 14.1 更新个人资料请求
 
@@ -512,27 +514,23 @@
 
 ```json
 {
-  "profile_version": 8,
-  "impact": {
-    "added_items": ["自拍杆", "手机稳定器", "三脚架", "水乳", "面霜", "面膜", "晕车药", "相机", "内存卡"],
-    "unchanged_items": [],
-    "removed_items": []
+  "profile": {
+    "displayName": "小林",
+    "habits": ["photo", "skincare", "motion"],
+    "gear": ["camera"]
   }
 }
 ```
 
-服务端必须以 `profile_version` 或 ETag 处理并发更新，避免多设备覆盖。
+当前资料更新为整份 PUT；未来支持更高频多端编辑时，再增加 `profile_version` 或 ETag，避免多设备覆盖。
 
 ---
 
 ## 15. 实时同步
 
-偏好与设备信息不广播给队友；只广播它们产生的团队可见清单结果：
+偏好与设备信息不广播给队友。偏好应用到当前清单后，只通过 SSE 发送“队伍版本已变化”的轻量通知；客户端再按成员权限读取 D1 最新快照。
 
-- `trip_item.created`：新增团队候选物品。
-- `assignment.updated`：用户主动认领、确认聊天分工或取消携带。
-
-健康和私密习惯不得进入 WebSocket/实时事件的公共 payload。
+SSE 公共 payload 仅包含 `tripId`、`version` 和变更原因，不包含健康情况、设备信息、具体偏好或完整清单。2.5 秒版本轮询作为断线和跨实例兜底。
 
 ---
 
@@ -578,8 +576,9 @@
 
 ### 18.1 个人中心
 
-- [ ] 首次创建旅行前可打开个人中心，未设置也可继续。
-- [ ] 准备清单页点击自己的头像可再次打开。
+- [ ] 队伍列表右上角头像可打开个人中心首页，首页只展示出行偏好、意见反馈、关于带齐和退出登录。
+- [ ] 新建队伍页点击“我的出行偏好”直接打开偏好二级页，未设置也可继续。
+- [ ] 准备清单页右上角只显示全队成员和在线状态，不进入个人设置。
 - [ ] 出发核对页头像保持成员清单切换功能。
 - [ ] 昵称限制 1–20 字，空值保存时回退登录昵称。
 - [ ] 习惯和设备均支持多选、取消和键盘操作。
@@ -625,29 +624,25 @@
 
 ## 20. 开发拆分建议
 
-### Sprint 1：个人中心基础
+### 已完成：MVP 基础
 
 - 登录身份接入。
-- `users`、`user_preferences`、`user_inventory` 表与迁移。
+- `users`、`profiles` 表与迁移；偏好和设备以受控枚举 JSON 持久化。
 - 个人中心读取、编辑、保存和权限测试。
 
-### Sprint 2：个性化规则引擎
+### 已完成：个性化规则与协作
 
 - 物品目录和同义词。
 - 基础模板、旅行条件、偏好映射、去重。
-- 应用到新旅行和当前旅行的影响摘要。
-
-### Sprint 3：实时协作与分工
-
 - 设备预设规则与来源解释。
 - 主动认领和聊天分工确认卡。
-- 实时事件、在线状态和并发一致性。
+- SSE 变更通知、在线状态、轮询兜底和版本冲突治理。
 
-### Sprint 4：AI 工程化
+### 后续增强
 
-- AI 缺口推荐接入真实密钥、缓存、限流、质量评估。
-- 聊天动作结构化接口、幂等和审计。
-- 模型失败降级与监控。
+- 将高增长偏好迁移为规范化表并增加单项版本审计。
+- AI 请求缓存、限流和线上质量评估面板。
+- 跨 Worker 实例亚秒广播与更系统的多人压测。
 
 ---
 
