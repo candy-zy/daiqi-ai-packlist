@@ -37,9 +37,7 @@ async function fetchForecast(url: URL) {
 }
 
 export async function POST(request: Request) {
-  if (!request.headers.get("oai-authenticated-user-id") || !request.headers.get("oai-authenticated-user-email")) {
-    return Response.json({ error: "请先登录", signInPath: "/signin-with-chatgpt?return_to=%2F" }, { status: 401 });
-  }
+  if (!getRequestUser(request)) return unauthorized();
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const startDate = dateValue(body?.startDate);
   const endDate = dateValue(body?.endDate);
@@ -99,3 +97,4 @@ export async function POST(request: Request) {
     return Response.json(result);
   }
 }
+import { getRequestUser, unauthorized } from "../_shared/server";

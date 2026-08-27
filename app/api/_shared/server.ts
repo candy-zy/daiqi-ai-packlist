@@ -20,7 +20,22 @@ export type SharedTripState = {
 const MEMBER_SLOTS = ["我", "阿哲", "小雨", "小安"];
 const AVATAR_CLASSES = ["member-me", "member-zhe", "member-yu", "member-an"];
 const DEMO_IDENTITY_COOKIE = "daiqi_demo_identity";
-const DEMO_IDENTITIES = new Set(["阿哲", "小雨"]);
+const PRESET_ACCOUNT_COOKIE = "daiqi_preset_account";
+const PRESET_ACCOUNTS = {
+  xiaolin: { password: "daiqi2026", userId: "preset:xiaolin", email: "xiaolin@daiqi.demo", displayName: "小林" },
+  azhe: { password: "daiqi2026", userId: "preset:azhe", email: "azhe@daiqi.demo", displayName: "阿哲", demoIdentity: "阿哲" as const },
+  xiaoyu: { password: "daiqi2026", userId: "preset:xiaoyu", email: "xiaoyu@daiqi.demo", displayName: "小雨", demoIdentity: "小雨" as const },
+} satisfies Record<string, AuthenticatedUser & { password: string }>;
+
+function publicPresetUser(account: keyof typeof PRESET_ACCOUNTS): AuthenticatedUser {
+  const preset = PRESET_ACCOUNTS[account];
+  return {
+    userId: preset.userId,
+    email: preset.email,
+    displayName: preset.displayName,
+    ...(preset.demoIdentity ? { demoIdentity: preset.demoIdentity } : {}),
+  };
+}
 
 export function getDatabase(): D1Database {
   if (!env.DB) throw new Error("DATABASE_UNAVAILABLE");
@@ -51,17 +66,20 @@ function cookieValue(request: Request, name: string) {
 }
 
 export function getRequestUser(request: Request): AuthenticatedUser | null {
-  const base = getBaseRequestUser(request);
-  if (!base) return null;
-  const demoIdentity = cookieValue(request, DEMO_IDENTITY_COOKIE);
-  if (!DEMO_IDENTITIES.has(demoIdentity)) return base;
-  const identity = demoIdentity as "阿哲" | "小雨";
-  return {
-    userId: `${base.userId}:demo:${identity}`,
-    email: `${encodeURIComponent(base.userId)}.${encodeURIComponent(identity)}@demo.daiqi.local`,
-    displayName: identity,
-    demoIdentity: identity,
-  };
+  const presetAccount = cookieValue(request, PRESET_ACCOUNT_COOKIE) as keyof typeof PRESET_ACCOUNTS;
+  if (PRESET_ACCOUNTS[presetAccount]) return publicPresetUser(presetAccount);
+  return null;
+}
+
+export function authenticatePresetAccount(account: string, password: string): AuthenticatedUser | null {
+  const accountId = account as keyof typeof PRESET_ACCOUNTS;
+  const preset = PRESET_ACCOUNTS[accountId];
+  if (!preset || preset.password !== password) return null;
+  return publicPresetUser(accountId);
+}
+
+export function presetAccountCookieName() {
+  return PRESET_ACCOUNT_COOKIE;
 }
 
 export function demoIdentityCookieName() {
@@ -69,7 +87,7 @@ export function demoIdentityCookieName() {
 }
 
 export function unauthorized() {
-  return Response.json({ error: "请先登录", signInPath: "/signin-with-chatgpt?return_to=%2F" }, { status: 401 });
+  return Response.json({ error: "请先登录", signInPath: "/login?return_to=%2F" }, { status: 401 });
 }
 
 export function jsonError(error: string, status = 400) {

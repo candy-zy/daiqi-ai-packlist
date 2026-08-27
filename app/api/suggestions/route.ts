@@ -112,9 +112,7 @@ function chooseUnseenSuggestions(rankedItems: RankedItem[], existingItems: strin
 }
 
 export async function POST(request: Request) {
-  if (!request.headers.get("oai-authenticated-user-id") || !request.headers.get("oai-authenticated-user-email")) {
-    return Response.json({ error: "请先登录", signInPath: "/signin-with-chatgpt?return_to=%2F" }, { status: 401 });
-  }
+  if (!getRequestUser(request)) return unauthorized();
   let body: { destination?: unknown; existingItems?: unknown; preferences?: unknown; startDate?: unknown; endDate?: unknown; weather?: unknown; international?: unknown };
   try {
     body = await request.json() as { destination?: unknown; existingItems?: unknown; preferences?: unknown; startDate?: unknown; endDate?: unknown; weather?: unknown; international?: unknown };
@@ -178,3 +176,4 @@ export async function POST(request: Request) {
     return Response.json({ suggestions: fallback, source: "fallback" satisfies SuggestionSource });
   }
 }
+import { getRequestUser, unauthorized } from "../_shared/server";

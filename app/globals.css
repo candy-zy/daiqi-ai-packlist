@@ -1397,3 +1397,25 @@ h1,.setup-content h1,.departure-page h1 {
 .auth-fallback-login span { margin-left:7px; }
 .auth-fallback-home { width:100%; margin-top:20px; padding:13px 16px; border:3px solid var(--ink); border-radius:15px; color:var(--ink); background:var(--lime); box-shadow:3px 4px 0 var(--ink); font-size:var(--type-body-size); line-height:var(--type-body-line); font-weight:var(--font-semibold); text-decoration:none; }
 @media(max-width:370px) { .team-list-content { padding-inline:18px; } .team-list-heading h1 { font-size:var(--type-h1-size); } .team-empty-art>.character-avatar { width:64px; height:64px; } }
+.preset-login-shell { min-height:100dvh; }
+.preset-login-frame { min-height:min(100dvh, 820px); }
+.preset-login-content { display:flex; flex-direction:column; gap:28px; padding:42px 28px 36px; }
+.preset-login-content>div>small { color:#7b786f; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); font-weight:var(--font-semibold); }
+.preset-login-content h1 { margin:8px 0 12px; font-size:var(--type-display-size); line-height:var(--type-display-line); }
+.preset-login-content>div>p { margin:0; color:#67645d; font-size:var(--type-body-size); line-height:var(--type-body-line); }
+.preset-login-content form { display:flex; flex-direction:column; gap:18px; }
+.preset-login-content fieldset { margin:0; padding:0; border:0; }
+.preset-login-content legend,.preset-password-field>span { display:block; margin-bottom:9px; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); font-weight:var(--font-semibold); }
+.preset-account-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.preset-account-grid button { min-width:0; padding:13px 7px 12px; border:2px solid #cfccc3; border-radius:18px; background:#fff; box-shadow:0 5px 0 #111; color:#111; }
+.preset-account-grid button.active { border-color:#111; background:#efffc2; }
+.preset-account-grid button>span { display:grid; width:38px; height:38px; margin:0 auto 7px; place-items:center; border:2px solid #111; border-radius:50%; background:#cbff36; font-weight:var(--font-semibold); }
+.preset-account-grid button b,.preset-account-grid button small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.preset-account-grid button b { font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.preset-account-grid button small { margin-top:2px; color:#77736a; font-size:var(--type-caption-size); line-height:var(--type-caption-line); font-weight:var(--font-regular); }
+.preset-password-field input { width:100%; padding:15px 16px; border:2px solid #111; border-radius:17px; background:#fff; box-shadow:0 6px 0 #111; font:inherit; font-size:var(--type-body-size); line-height:var(--type-body-line); }
+.preset-password-hint { margin:-3px 0 0; color:#77736a; font-size:var(--type-caption-size); line-height:var(--type-caption-line); }
+.preset-login-error { margin:0; color:#b64f42; font-size:var(--type-secondary-size); line-height:var(--type-secondary-line); }
+.preset-login-submit { display:flex; justify-content:center; gap:12px; width:100%; padding:16px; border:2px solid #111; border-radius:18px; background:#cbff36; box-shadow:0 7px 0 #111; color:#111; font-size:var(--type-body-size); line-height:var(--type-body-line); font-weight:var(--font-semibold); }
+.preset-login-submit:disabled { opacity:.6; }
+@media (max-width:520px) { .preset-login-content { padding:32px 20px; } .preset-account-grid { gap:7px; } }

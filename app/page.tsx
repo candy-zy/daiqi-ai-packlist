@@ -571,8 +571,6 @@ export default function Home() {
   const [assignmentProposals, setAssignmentProposals] = useState<AssignmentProposal[]>([]);
   const [members, setMembers] = useState<MemberRecord[]>(demoMembers);
   const [currentMember, setCurrentMember] = useState<Member>("我");
-  const [demoMemberMode, setDemoMemberMode] = useState(false);
-  const [demoIdentity, setDemoIdentity] = useState<Member>("我");
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [tripVersion, setTripVersion] = useState(0);
   const [inviteCode, setInviteCode] = useState("");
@@ -763,8 +761,6 @@ export default function Home() {
         if (cancelled) return;
         const trips = Array.isArray(session.trips) ? session.trips : [];
         const activeIdentity = session.user?.demoIdentity ?? "我";
-        setDemoIdentity(activeIdentity);
-        setDemoMemberMode(activeIdentity !== "我");
         setCurrentMember(activeIdentity);
         setViewedMember(activeIdentity);
         setAvailableTrips(trips);
@@ -944,79 +940,6 @@ export default function Home() {
       throw new Error(body.error || "无法打开队伍");
     }
     applyCloudPayload(await response.json() as ServerTripPayload);
-  }
-
-  async function switchDemoMember(member: Member) {
-    if (member === demoIdentity) return;
-    setCloudError("");
-    try {
-      if (activeTripIdRef.current) {
-        const hadPendingClaims = pendingClaimMutationsRef.current > 0;
-        if (claimReloadTimerRef.current !== null) {
-          window.clearTimeout(claimReloadTimerRef.current);
-          claimReloadTimerRef.current = null;
-        }
-        await claimMutationQueueRef.current;
-        if (claimMutationErrorRef.current) throw new Error(claimMutationErrorRef.current);
-        if (hadPendingClaims && activeTripIdRef.current) await openCloudTripRef.current(activeTripIdRef.current);
-        await waitForCloudSave(12000);
-        if (hasPendingCloudChanges()) await flushCloudStateRef.current();
-        await waitForCloudSave(12000);
-      }
-      const response = await fetch("/api/demo-session", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ identity: member }),
-      });
-      if (!response.ok) throw new Error("身份切换失败");
-      const sessionResponse = await fetch("/api/session", { cache: "no-store" });
-      if (!sessionResponse.ok) throw new Error("无法读取该身份的队伍");
-      const session = await sessionResponse.json() as { trips?: TripSummary[] };
-      const profileResponse = await fetch("/api/profile", { cache: "no-store" });
-      if (profileResponse.ok) {
-        const result = await profileResponse.json() as { profile?: Partial<TravelProfile> };
-        if (result.profile) {
-          const nextProfile = normalizeTravelProfile(result.profile);
-          profileRef.current = nextProfile;
-          setProfile(nextProfile);
-          setProfileDraft(nextProfile);
-        }
-      } else {
-        profileRef.current = defaultProfile;
-        setProfile(defaultProfile);
-        setProfileDraft(defaultProfile);
-      }
-      setDemoIdentity(member);
-      setDemoMemberMode(member !== "我");
-      setCurrentMember(member);
-      setViewedMember(member);
-      setAvailableTrips(Array.isArray(session.trips) ? session.trips : []);
-      setActiveTripId(null);
-      activeTripIdRef.current = null;
-      setTripVersion(0);
-      tripVersionRef.current = 0;
-      pendingSharedStateRef.current = null;
-      lastSyncedStateRef.current = "";
-      window.localStorage.removeItem(cloudTripKey);
-      setTeamReady(false);
-      setProfileView("home");
-      setShowProfile(false);
-      notify(member === "我" ? "已恢复我的账号" : `已切换为${member}的独立测试账号`, 2200);
-    } catch (error) {
-      setCloudError(error instanceof Error ? error.message : "身份切换失败");
-    }
-  }
-
-  async function exitDemoMemberMode() {
-    await switchDemoMember("我");
-  }
-
-  async function waitForCloudSave(timeoutMs = 6000) {
-    const startedAt = Date.now();
-    while (syncInFlightRef.current) {
-      if (Date.now() - startedAt > timeoutMs) throw new Error("保存超时，请检查网络后重试");
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
-    }
   }
 
   async function flushCloudState() {
@@ -1267,7 +1190,7 @@ export default function Home() {
   function startCreateTrip() {
     if (!accountReady) return;
     if (needsSignIn) {
-      window.location.href = "/signin-with-chatgpt?return_to=%2F";
+      window.location.href = "/login?return_to=%2F";
       return;
     }
     setSetupError("");
@@ -1277,7 +1200,7 @@ export default function Home() {
   function startJoinTrip() {
     if (!accountReady) return;
     if (needsSignIn) {
-      window.location.href = "/signin-with-chatgpt?return_to=%2F";
+      window.location.href = "/login?return_to=%2F";
       return;
     }
     setShowJoin((current) => !current);
@@ -1421,12 +1344,7 @@ export default function Home() {
                 <span className="profile-menu-arrow" aria-hidden="true">›</span>
               </button>
             </section>
-            <section className="demo-switcher" aria-label="演示成员切换">
-              <div><b>演示身份</b><small>录制 Demo 时快速模拟队友操作</small></div>
-              <div className="demo-switcher-options">{demoMembers.map((member) => <button key={member.name} className={demoIdentity === member.name ? "active" : ""} onClick={() => void switchDemoMember(member.name)}>{member.short}</button>)}</div>
-              {demoMemberMode && <button className="demo-exit-button" onClick={() => void exitDemoMemberMode()}>恢复我的账号</button>}
-            </section>
-            <a className="signout-button" href="/signout-with-chatgpt?return_to=%2F"><LogOut aria-hidden="true" /><span>退出登录</span><span aria-hidden="true">›</span></a>
+            <a className="signout-button" href="/api/preset-session"><LogOut aria-hidden="true" /><span>退出登录</span><span aria-hidden="true">›</span></a>
           </> : <>
           <label className="profile-name-field"><span>昵称</span><input value={profileDraft.displayName} onChange={(event) => setProfileDraft((current) => ({ ...current, displayName: event.target.value.slice(0, 12) }))} placeholder="朋友会看到这个名字" /></label>
 
@@ -1557,7 +1475,7 @@ export default function Home() {
             </fieldset>
             {setupError && <p className="setup-error" role="alert">{setupError}</p>}
             {cloudError && <p className="cloud-error" role="alert">{cloudError}</p>}
-            {needsSignIn ? <a className="setup-submit setup-signin" href="/signin-with-chatgpt?return_to=%2F">登录后创建或加入队伍 <span>→</span></a> : <button className="setup-submit" onClick={createTeam} disabled={!accountReady || isGeneratingTeam} aria-busy={isGeneratingTeam}>{isGeneratingTeam ? "正在生成清单…" : "生成清单"} <span>→</span></button>}
+            {needsSignIn ? <a className="setup-submit setup-signin" href="/login?return_to=%2F">登录后创建或加入队伍 <span>→</span></a> : <button className="setup-submit" onClick={createTeam} disabled={!accountReady || isGeneratingTeam} aria-busy={isGeneratingTeam}>{isGeneratingTeam ? "正在生成清单…" : "生成清单"} <span>→</span></button>}
           </div>
           {renderProfileCenter()}
         </section>

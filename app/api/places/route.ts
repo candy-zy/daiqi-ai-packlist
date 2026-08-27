@@ -89,9 +89,7 @@ async function fetchGeocodingResults(query: string) {
 }
 
 export async function GET(request: Request) {
-  if (!request.headers.get("oai-authenticated-user-id") || !request.headers.get("oai-authenticated-user-email")) {
-    return Response.json({ error: "请先登录", signInPath: "/signin-with-chatgpt?return_to=%2F" }, { status: 401 });
-  }
+  if (!getRequestUser(request)) return unauthorized();
   const query = new URL(request.url).searchParams.get("q")?.trim().slice(0, 60) ?? "";
   if (query.length < 2) return Response.json({ places: [] });
 
@@ -116,3 +114,4 @@ export async function GET(request: Request) {
     return Response.json({ places: fallback.length ? fallback : [manualPlace(query)], source: "fallback" });
   }
 }
+import { getRequestUser, unauthorized } from "../_shared/server";
