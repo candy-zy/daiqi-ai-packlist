@@ -154,6 +154,10 @@ function mergeUniqueByKey<T>(remote: T[], pending: T[], keyFor: (entry: T) => st
   return merged;
 }
 
+function normalizePlaceTerm(value: string) {
+  return value.toLowerCase().replace(/[\s·・—_\-/（）()]/g, "");
+}
+
 function rebasePendingMemberState(
   remote: ServerTripPayload["state"],
   pending: ServerTripPayload["state"],
@@ -1055,39 +1059,34 @@ export default function Home() {
     setSetupError("");
   }
 
-  function updateLocationQuery(value: string) {
-    locationSearchIdRef.current += 1;
-    setLocationQuery(value);
-    setDestination("");
-    setSelectedPlace(null);
-    if (value.trim().length < 2) setLocationResults([]);
-    setLocationLoading(false);
-    setWeatherContext(null);
-    setSetupError("");
-  }
+  async function resolveLocationInput() {
+    if (selectedPlace) return selectedPlace;
+    const query = locationQuery.trim();
+    if (query.length < 2) return null;
 
-  function choosePlace(place: PlaceSelection) {
-    locationSearchIdRef.current += 1;
-    setSelectedPlace(place);
-    setLocationQuery(place.label);
-    setDestination(place.label);
-    setLocationResults([]);
-    setShowLocationResults(false);
-    setLocationLoading(false);
-    setWeatherContext(null);
-    setSetupError("");
-  }
+    const normalizedQuery = normalizePlaceTerm(query);
+    const chooseBestMatch = (places: PlaceSelection[]) => places.find((place) =>
+      normalizePlaceTerm(place.name) === normalizedQuery || normalizePlaceTerm(place.label) === normalizedQuery,
+    ) ?? places[0] ?? null;
 
-  function updateStartDate(value: string) {
-    setStartDate(value);
-    if (endDate && endDate < value) setEndDate("");
-    setWeatherContext(null);
-    setSetupError("");
+    let place = chooseBestMatch(locationResults);
+    if (!place) {
+      try {
+        const response = await fetch(`/api/places?q=${encodeURIComponent(query)}`, { cache: "no-store" });
+        if (!response.ok) return null;
+        const result = await response.json() as { places?: PlaceSelection[] };
+        place = chooseBestMatch(Array.isArray(result.places) ? result.places : []);
+      } catch {
+        return null;
+      }
+    }
+    if (place) choosePlace(place);
+    return place;
   }
 
   async function createTeam() {
-    if (!selectedPlace) {
-      setSetupError("请从搜索结果中选择一个目的地");
+    if (locationQuery.trim().length < 2) {
+      setSetupError("请输入要去的城市或地区");
       return;
     }
     if (!startDate || !endDate || endDate < startDate) {
@@ -1095,20 +1094,26 @@ export default function Home() {
       return;
     }
     setIsGeneratingTeam(true);
-    const cleanDestination = selectedPlace.label;
+    const resolvedPlace = await resolveLocationInput();
+    if (!resolvedPlace) {
+      setSetupError("暂时没找到这个地点，请换个城市名试试");
+      setIsGeneratingTeam(false);
+      return;
+    }
+    const cleanDestination = resolvedPlace.label;
     let resolvedWeather: WeatherContext = { source: "season", summary: "请结合目的地和出行月份判断天气相关物品" };
     try {
       const weatherResponse = await fetch("/api/weather", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ latitude: selectedPlace.latitude, longitude: selectedPlace.longitude, timezone: selectedPlace.timezone, startDate, endDate }),
+        body: JSON.stringify({ latitude: resolvedPlace.latitude, longitude: resolvedPlace.longitude, timezone: resolvedPlace.timezone, startDate, endDate }),
       });
       if (weatherResponse.ok) resolvedWeather = await weatherResponse.json() as WeatherContext;
     } catch {
       // 天气只是 AI 推荐的补充上下文；失败时静默按目的地和月份降级，不阻塞建队。
     }
     setWeatherContext(resolvedWeather);
-    const tripContext: TripContext = { startDate, endDate, place: selectedPlace, weather: resolvedWeather };
+    const tripContext: TripContext = { startDate, endDate, place: resolvedPlace, weather: resolvedWeather };
     const preparedItems = applyPresetItems(seedItems, profile, cleanDestination);
     const cleanItems = preparedItems.map((item) => ({ ...item, owners: item.owners.filter((owner) => owner === "我"), checked: {} }));
     setSuggestionStatus("loading");
@@ -1120,7 +1125,7 @@ export default function Home() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           destination: cleanDestination,
-          name: `${selectedPlace.name}小队`,
+          name: `${resolvedPlace.name}小队`,
           state: { items: cleanItems, suggestions: seedSuggestions, messages: [], itemNotes: [], assignmentProposals: [], tripContext },
         }),
       });
@@ -1177,6 +1182,12 @@ export default function Home() {
   function openProfile() {
     setProfileDraft({ ...profile, habits: [...profile.habits], gear: [...profile.gear] });
     setProfileView("home");
+    setShowProfile(true);
+  }
+
+  function openPreferences() {
+    setProfileDraft({ ...profile, habits: [...profile.habits], gear: [...profile.gear] });
+    setProfileView("preferences");
     setShowProfile(true);
   }
 
@@ -1436,7 +1447,7 @@ export default function Home() {
             <div className="setup-illustration"><CharacterAvatar member="我" /><CharacterAvatar member="阿哲" /><CharacterAvatar member="小雨" /></div>
             <h1>和朋友一起，<br />把行李带齐。</h1>
             <p className="setup-intro">选好地点和日期，马上生成一份可以共同认领的清单。</p>
-            <button className="setup-profile-entry" onClick={openProfile}>
+            <button className="setup-profile-entry" onClick={openPreferences}>
               <CharacterAvatar member="我" />
               <span><b>我的出行偏好</b><small>已设置 {profile.habits.length + profile.gear.length} 项，点击调整</small></span>
               <span aria-hidden="true">›</span>

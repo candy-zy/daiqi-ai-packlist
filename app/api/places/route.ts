@@ -22,6 +22,7 @@ const FALLBACK_PLACES: KnownPlace[] = [
   { id: "osaka-jp", name: "大阪", country: "日本", admin1: "大阪府", latitude: 34.6937, longitude: 135.5023, timezone: "Asia/Tokyo", label: "日本 大阪", aliases: ["大阪", "osaka"] },
   { id: "shanghai-cn", name: "上海", country: "中国", admin1: "上海市", latitude: 31.2304, longitude: 121.4737, timezone: "Asia/Shanghai", label: "中国 上海", aliases: ["上海", "shanghai"] },
   { id: "chengdu-cn", name: "成都", country: "中国", admin1: "四川省", latitude: 30.5728, longitude: 104.0668, timezone: "Asia/Shanghai", label: "中国 四川 成都", aliases: ["成都", "chengdu"] },
+  { id: "taizhou-zhejiang-cn", name: "台州", country: "中国", admin1: "浙江省", latitude: 28.6564, longitude: 121.4208, timezone: "Asia/Shanghai", label: "中国 浙江 台州", aliases: ["台州", "taizhou", "浙江台州"] },
 ];
 
 function normalize(value: string) {

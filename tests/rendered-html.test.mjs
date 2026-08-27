@@ -183,6 +183,10 @@ test("onboarding resolves weather only after submission and keeps it as hidden A
   ]);
   assert.match(page, /role="combobox"/);
   assert.match(page, /搜索城市或地区，如首尔、北海道/);
+  assert.match(page, /async function resolveLocationInput/);
+  assert.match(page, /const resolvedPlace = await resolveLocationInput\(\)/);
+  assert.doesNotMatch(page, /请从搜索结果中选择一个目的地/);
+  assert.match(page, /onClick=\{openPreferences\}/);
   assert.match(page, /type="date"/);
   const createTeamBlock = page.slice(page.indexOf("async function createTeam"), page.indexOf("function openProfile"));
   assert.match(createTeamBlock, /fetch\("\/api\/weather"/);
@@ -192,6 +196,7 @@ test("onboarding resolves weather only after submission and keeps it as hidden A
   assert.match(page, /applyPresetItems\(seedItems, profile, cleanDestination\)/);
   assert.match(places, /geocoding-api\.open-meteo\.com\/v1\/search/);
   assert.match(places, /id: "london-gb"/);
+  assert.match(places, /id: "taizhou-zhejiang-cn"/);
   assert.match(places, /aliases: \["伦敦", "london", "英国伦敦", "英格兰伦敦"\]/);
   assert.match(places, /resultScore/);
   assert.match(places, /raw\.population/);
