@@ -8,12 +8,12 @@
 
 <table>
   <tr>
-    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-06-team-collaboration.jpg" width="340" alt="带齐多人协作清单：无人认领、单人认领和多人同时携带"/><br/><sub>队友的携带选择直接可见，按需决定我是否也带</sub></td>
-    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-04-ai-assignment.jpg" width="340" alt="带齐从团队聊天识别行李分工并由对应成员本人确认"/><br/><sub>从团队聊天识别分工，由对应成员本人确认</sub></td>
+    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-current-create-team-card.jpg" width="340" alt="带齐创建旅行队伍：选择目的地、日期和个人出行偏好"/><br/><b>01 创建旅行队伍</b><br/><sub>选择目的地与日期，邀请同行成员加入</sub></td>
+    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-03-prepare-list.jpg" width="340" alt="带齐根据目的地、天气和个人偏好推荐清单中尚未包含的物品"/><br/><b>02 AI 补充物品</b><br/><sub>结合行程与偏好，从现有清单之外推荐 Top 2</sub></td>
   </tr>
   <tr>
-    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-current-create-team-card.jpg" width="340" alt="带齐创建旅行队伍：选择目的地、日期和个人出行偏好"/><br/><sub>选择地点和日期，创建可邀请朋友加入的队伍</sub></td>
-    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-03-prepare-list.jpg" width="340" alt="带齐根据目的地、天气和个人偏好推荐清单中尚未包含的物品"/><br/><sub>AI 只补充当前清单尚未覆盖的物品</sub></td>
+    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-06-team-collaboration.jpg" width="340" alt="带齐多人协作清单：无人认领、单人认领和多人同时携带"/><br/><b>03 多人协作认领</b><br/><sub>同一物品支持无人、单人或多人携带</sub></td>
+    <td align="center" valign="top" width="50%"><img src="docs/assets/demo-04-ai-assignment.jpg" width="340" alt="带齐从团队聊天识别行李分工并由对应成员本人确认"/><br/><b>04 AI 识别聊天分工</b><br/><sub>识别口头约定，由被指派成员确认写入</sub></td>
   </tr>
 </table>
 
