@@ -841,20 +841,59 @@ export default function Home() {
         setSyncStatus("offline");
       }
     };
-    const events = typeof EventSource === "undefined" ? null : new EventSource(`/api/trips/${activeTripId}/events`);
-    events?.addEventListener("trip-update", (rawEvent) => {
-      try {
-        const event = JSON.parse((rawEvent as MessageEvent<string>).data) as { version?: number };
-        if (typeof event.version === "number" && event.version <= tripVersionRef.current) return;
-      } catch {
-        // A malformed notification is harmless: the safety poll will recover.
-      }
-      void poll();
-    });
+    let socket: WebSocket | null = null;
+    let reconnectTimer: number | null = null;
+    let heartbeatTimer: number | null = null;
+    let reconnectAttempt = 0;
+    const clearHeartbeat = () => {
+      if (heartbeatTimer !== null) window.clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    };
+    const scheduleReconnect = () => {
+      if (disposed || reconnectTimer !== null) return;
+      const delay = Math.min(15_000, 1000 * (2 ** reconnectAttempt));
+      reconnectAttempt = Math.min(reconnectAttempt + 1, 4);
+      reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = null;
+        connectWebSocket();
+      }, delay);
+    };
+    const connectWebSocket = () => {
+      if (disposed || typeof WebSocket === "undefined") return;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const nextSocket = new WebSocket(`${protocol}//${window.location.host}/api/trips/${activeTripId}/events`);
+      socket = nextSocket;
+      nextSocket.addEventListener("open", () => {
+        reconnectAttempt = 0;
+        clearHeartbeat();
+        heartbeatTimer = window.setInterval(() => {
+          if (nextSocket.readyState === WebSocket.OPEN) nextSocket.send("ping");
+        }, 20_000);
+      });
+      nextSocket.addEventListener("message", (rawEvent) => {
+        try {
+          const event = JSON.parse(String(rawEvent.data)) as { type?: string; version?: number };
+          if (event.type !== "trip_updated") return;
+          if (typeof event.version === "number" && event.version <= tripVersionRef.current) return;
+        } catch {
+          // A malformed notification is harmless: the safety poll will recover.
+        }
+        void poll();
+      });
+      nextSocket.addEventListener("close", () => {
+        clearHeartbeat();
+        if (socket === nextSocket) socket = null;
+        scheduleReconnect();
+      });
+      nextSocket.addEventListener("error", () => nextSocket.close());
+    };
+    connectWebSocket();
     const timer = window.setInterval(() => void poll(), 2500);
     return () => {
       disposed = true;
-      events?.close();
+      clearHeartbeat();
+      if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
+      socket?.close(1000, "trip changed");
       window.clearInterval(timer);
     };
   }, [accountReady, activeTripId, teamReady]);

@@ -173,7 +173,7 @@ test("AI suggestions use a prompt-first ranked model response and a server-only 
   assert.match(route, /existingItems/);
 });
 
-test("team chat uses an authenticated atomic endpoint, realtime events, and polling fallback", async () => {
+test("team chat uses an authenticated atomic endpoint, WebSocket events, and polling fallback", async () => {
   const [page, route, eventsRoute, realtime] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trips/[tripId]/messages/route.ts", import.meta.url), "utf8"),
@@ -184,8 +184,10 @@ test("team chat uses an authenticated atomic endpoint, realtime events, and poll
   assert.match(page, /chatSyncInFlightRef/);
   assert.match(page, /Math\.floor\(Math\.random\(\) \* 1_000_000_000\) \+ 1/);
   assert.match(page, /persistedMessages/);
-  assert.match(page, /new EventSource\(`\/api\/trips\/\$\{activeTripId\}\/events`\)/);
-  assert.match(page, /addEventListener\("trip-update"/);
+  assert.match(page, /new WebSocket\(`\$\{protocol\}\/\/\$\{window\.location\.host\}\/api\/trips\/\$\{activeTripId\}\/events`\)/);
+  assert.match(page, /event\.type !== "trip_updated"/);
+  assert.match(page, /scheduleReconnect/);
+  assert.match(page, /nextSocket\.send\("ping"\)/);
   assert.match(page, /setInterval\(\(\) => void poll\(\), 2500\)/);
   assert.match(route, /getMembership/);
   assert.match(route, /membership\.slotName/);
@@ -193,9 +195,13 @@ test("team chat uses an authenticated atomic endpoint, realtime events, and poll
   assert.match(route, /UPDATE trips SET version = version \+ 1/);
   assert.match(route, /chat_message_sent/);
   assert.match(route, /publishTripEvent/);
-  assert.match(eventsRoute, /text\/event-stream/);
-  assert.match(eventsRoute, /subscribeToTrip/);
-  assert.match(realtime, /__daiqiTripRealtimeListeners/);
+  assert.match(eventsRoute, /new WebSocketPair\(\)/);
+  assert.match(eventsRoute, /status: 101/);
+  assert.match(eventsRoute, /registerTripSocket/);
+  assert.match(eventsRoute, /SELECT version FROM trips WHERE id = \?/);
+  assert.match(eventsRoute, /}, 1000\)/);
+  assert.match(realtime, /__daiqiTripRealtimeSockets/);
+  assert.match(realtime, /socket\.send\(payload\)/);
 });
 
 test("onboarding resolves weather only after submission and keeps it as hidden AI context", async () => {

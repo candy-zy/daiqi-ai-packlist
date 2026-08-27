@@ -5,28 +5,37 @@ export type TripRealtimeEvent = {
   reason: "state" | "message" | "claim" | "assignment" | "member";
 };
 
-type TripRealtimeListener = (event: TripRealtimeEvent) => void;
 type RealtimeGlobal = typeof globalThis & {
-  __daiqiTripRealtimeListeners?: Map<string, Set<TripRealtimeListener>>;
+  __daiqiTripRealtimeSockets?: Map<string, Set<WebSocket>>;
 };
 
-// The registry lives for the lifetime of the Worker isolate. It gives users
-// connected to the same edge instance an immediate push path. D1 version
-// polling remains the cross-isolate and reconnect safety net.
+// WebSocket connections are intentionally only a notification channel. D1 is
+// still the source of truth, so reconnects and cross-isolate misses are safely
+// recovered by the client's version poll.
 const realtimeGlobal = globalThis as RealtimeGlobal;
-const listeners = realtimeGlobal.__daiqiTripRealtimeListeners
-  ?? (realtimeGlobal.__daiqiTripRealtimeListeners = new Map());
+const sockets = realtimeGlobal.__daiqiTripRealtimeSockets
+  ?? (realtimeGlobal.__daiqiTripRealtimeSockets = new Map());
 
-export function subscribeToTrip(tripId: string, listener: TripRealtimeListener) {
-  const tripListeners = listeners.get(tripId) ?? new Set<TripRealtimeListener>();
-  tripListeners.add(listener);
-  listeners.set(tripId, tripListeners);
+export function registerTripSocket(tripId: string, socket: WebSocket) {
+  const tripSockets = sockets.get(tripId) ?? new Set<WebSocket>();
+  tripSockets.add(socket);
+  sockets.set(tripId, tripSockets);
   return () => {
-    tripListeners.delete(listener);
-    if (tripListeners.size === 0) listeners.delete(tripId);
+    tripSockets.delete(socket);
+    if (tripSockets.size === 0) sockets.delete(tripId);
   };
 }
 
 export function publishTripEvent(event: TripRealtimeEvent) {
-  listeners.get(event.tripId)?.forEach((listener) => listener(event));
+  const tripSockets = sockets.get(event.tripId);
+  if (!tripSockets) return;
+  const payload = JSON.stringify(event);
+  tripSockets.forEach((socket) => {
+    try {
+      socket.send(payload);
+    } catch {
+      tripSockets.delete(socket);
+    }
+  });
+  if (tripSockets.size === 0) sockets.delete(event.tripId);
 }

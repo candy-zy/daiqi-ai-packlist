@@ -144,7 +144,7 @@ flowchart LR
 - 6 位邀请码建队 / 加队，面向 2–4 人协作、成员上限 4 人；
 - Cloudflare D1 + Drizzle，共 11 张业务表；
 - 物品、认领、留言、聊天、核对状态、AI 候选和事件日志持久化；
-- 客户端修改后 450ms 合并保存；服务端通过 SSE 推送队伍变更通知，客户端收到后立即拉取最新快照；
+- 客户端修改后 450ms 合并保存；服务端通过 WebSocket 推送轻量队伍变更通知，并以约 1 秒 D1 版本监听覆盖不同 Worker 实例；客户端收到后立即拉取最新快照；
 - 每 2.5 秒的版本增量轮询作为断线重连和跨实例兜底，D1 始终是权威数据源；
 - 乐观锁防止覆盖更新，冲突时刷新并提示；
 - 非队员不能读取队伍，消息作者由服务端账号绑定；
@@ -176,7 +176,7 @@ erDiagram
 | AI 聊天分工 | ✅ | 结构化抽取、即时确认卡、反悔处理、用户确认后写入 |
 | 出发核对 | ✅ | 只显示自己的待带物品、逐件确认、一键全选、退回待分工 |
 | 数据库 | ✅ | Cloudflare D1 + Drizzle，11 张业务表和迁移脚本 |
-| 多人同步 | ✅ | SSE 变更推送、2.5 秒轮询兜底、在线心跳、版本乐观锁 |
+| 多人同步 | ✅ | WebSocket 变更推送、自动重连、2.5 秒轮询兜底、在线心跳、版本乐观锁 |
 
 ## 主要接口
 
@@ -189,7 +189,7 @@ erDiagram
 | GET / POST | `/api/trips` | 获取队伍或创建新队伍 |
 | POST | `/api/trips/join` | 使用邀请码加入队伍 |
 | GET / PUT | `/api/trips/:tripId/state` | 增量读取与乐观锁保存共同状态 |
-| GET | `/api/trips/:tripId/events` | 建立 SSE 连接，接收队伍变更通知和心跳 |
+| GET (Upgrade) | `/api/trips/:tripId/events` | 升级为 WebSocket，接收队伍变更通知并处理 ping / pong 心跳 |
 | POST | `/api/suggestions` | 生成目的地物品补漏建议 |
 | POST | `/api/trips/:tripId/intent` | 从聊天中识别分工候选 |
 

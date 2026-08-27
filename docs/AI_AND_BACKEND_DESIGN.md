@@ -10,7 +10,7 @@
 | 队伍与邀请码 | 已实现 | 6 位邀请码，2–4 人，owner / member 权限 |
 | 数据库 | 已实现 | Cloudflare D1 + Drizzle，11 张表和迁移 |
 | 清单持久化 | 已实现 | 认领、删除、排序、留言、聊天和核对状态写服务端 |
-| 多人同步 | 已实现 | SSE 变更通知、2.5 秒版本轮询兜底、在线心跳、乐观锁和冲突提示 |
+| 多人同步 | 已实现 | WebSocket 变更通知、自动重连、2.5 秒版本轮询兜底、在线心跳、乐观锁和冲突提示 |
 | 目的地 AI 补漏 | 已实现 | 服务端 DeepSeek API，最多 2 条、去重、校验和回退 |
 | 聊天分工识别 | 已实现 | 服务端 DeepSeek 结构化抽取 + 本地规则回退 |
 | PWA 安装 | 已实现 | iOS / Android 添加到主屏幕，WebP 资源预加载 |
@@ -25,8 +25,8 @@ flowchart LR
   API --> AUTH[身份与队伍权限]
   API --> D1[(Cloudflare D1)]
   API --> DS[DeepSeek Chat Completions]
-  API --> SSE[SSE 变更通知 + 心跳]
-  SSE --> U
+  API --> WS[WebSocket 变更通知 + ping/pong]
+  WS --> U
   D1 --> POLL[2.5 秒版本轮询兜底]
   POLL --> U
 ```
@@ -76,11 +76,11 @@ flowchart LR
 1. 版本一致：保存，版本 `+1`，返回新快照。
 2. 版本过期：返回 `409 + 最新快照`。
 3. 客户端加载最新内容，并明确提示“朋友刚更新了清单，请重试刚才的操作”，不会静默覆盖。
-4. 保存成功后，服务端发布只包含 `tripId`、`version` 和 `reason` 的 SSE 变更通知，不在事件中广播完整清单或私密偏好。
-5. 已连接客户端收到通知后立即请求最新状态；SSE 连接每 15 秒发送心跳，浏览器断线后自动重连。
+4. 保存成功后，服务端通过 WebSocket 发布只包含 `tripId`、`version` 和 `reason` 的轻量变更通知，不在事件中广播完整清单或私密偏好。
+5. 已连接客户端收到通知后立即请求最新状态；WebSocket 服务端约每 1 秒检查一次 D1 版本以覆盖不同 Worker 实例，客户端每 20 秒发送 `ping`，服务端回复 `pong`，断线后以 1–15 秒指数退避自动重连。
 6. 每 2.5 秒版本轮询作为安全网：处理断线重连、休眠恢复及不同 Worker 实例间事件无法直达的情况；版本未变化时不重复传输整张清单。
 
-当前采用的是 **SSE 单向事件通知 + 状态拉取**，不是 WebSocket 双向传输。它适合“服务端通知发生变化、客户端再读取 D1 最新快照”的协作模型；如果未来需要跨实例亚秒广播或更高并发，再引入 Durable Objects / WebSocket，而无需改变现有 D1 表结构和版本控制逻辑。
+当前采用 **WebSocket 轻量事件通知 + D1 状态拉取**：WebSocket 负责低延迟提醒“队伍版本已变化”，D1 仍是唯一权威数据源，避免把完整清单长期放在连接内存中。当前 Sites 配置没有 Durable Object 绑定，因此同一 Worker 实例内直接广播；不同实例由 WebSocket 服务端约 1 秒的 D1 版本监听发现，客户端 2.5 秒版本轮询继续覆盖浏览器休眠与断线窗口。未来若引入 Durable Object 做跨实例连接协调，不需要修改现有 D1 表结构和版本控制逻辑。
 
 ## 5. AI 功能一：目的地清单补漏
 
@@ -193,7 +193,7 @@ flowchart LR
 | GET / POST | `/api/trips` | 队伍列表、创建队伍 |
 | POST | `/api/trips/join` | 使用邀请码加入 |
 | GET / PUT | `/api/trips/:tripId/state` | 获取、保存、同步完整协作状态 |
-| GET | `/api/trips/:tripId/events` | 建立 SSE 连接，接收队伍版本变更和心跳 |
+| GET (Upgrade) | `/api/trips/:tripId/events` | 升级为 WebSocket，接收队伍版本变更并处理 ping / pong 心跳 |
 | POST | `/api/suggestions` | AI 目的地物品补漏 |
 | POST | `/api/trips/:tripId/intent` | AI 聊天分工识别 |
 
