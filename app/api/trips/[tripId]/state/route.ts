@@ -1,4 +1,5 @@
 import { ensureUser, getAllowedSlots, getCurrentTripPayload, getDatabase, getMembership, getRequestUser, getTripMembers, jsonError, loadSnapshot, replaceNormalizedState, sanitizeSharedState, touchMembership, unauthorized } from "../../../_shared/server";
+import { publishTripEvent } from "../../../_shared/realtime";
 
 type RouteContext = { params: Promise<{ tripId: string }> };
 
@@ -45,5 +46,6 @@ export async function PUT(request: Request, context: RouteContext) {
     db.prepare("UPDATE trip_members SET last_seen_at = CURRENT_TIMESTAMP WHERE trip_id = ? AND user_id = ?").bind(tripId, user.userId),
     db.prepare("INSERT INTO trip_events (trip_id, actor_id, event_type, version) VALUES (?, ?, 'state_updated', ?)").bind(tripId, user.userId, updated.version),
   ]);
+  publishTripEvent({ type: "trip_updated", tripId, version: updated.version, reason: "state" });
   return Response.json({ ok: true, version: updated.version, state });
 }

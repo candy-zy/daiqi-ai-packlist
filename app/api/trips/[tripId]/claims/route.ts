@@ -1,4 +1,5 @@
 import { ensureUser, getDatabase, getMembership, getRequestUser, jsonError, loadSnapshot, touchMembership, unauthorized } from "../../../_shared/server";
+import { publishTripEvent } from "../../../_shared/realtime";
 
 type RouteContext = { params: Promise<{ tripId: string }> };
 type ClaimAction = "claim" | "release";
@@ -54,6 +55,7 @@ export async function POST(request: Request, context: RouteContext) {
         .bind(tripId, user.userId, updated.version),
     ]);
     await touchMembership(db, tripId, user.userId);
+    publishTripEvent({ type: "trip_updated", tripId, version: updated.version, reason: "claim" });
     return Response.json({ ok: true, version: updated.version, itemId, action, member: membership.slotName });
   }
 

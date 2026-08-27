@@ -1,4 +1,5 @@
 import { ensureUser, getDatabase, getRequestUser, getTripMembers, jsonError, loadSnapshot, nextMemberSlot, unauthorized } from "../../_shared/server";
+import { publishTripEvent } from "../../_shared/realtime";
 
 export async function POST(request: Request) {
   const user = getRequestUser(request);
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
       .bind(trip.id, user.userId, currentMember).run();
     await db.prepare("INSERT INTO trip_events (trip_id, actor_id, event_type, version) VALUES (?, ?, 'member_joined', ?)")
       .bind(trip.id, user.userId, trip.version).run();
+    publishTripEvent({ type: "trip_updated", tripId: trip.id, version: trip.version, reason: "member" });
   }
   const snapshot = await loadSnapshot(db, trip.id);
   const members = await getTripMembers(db, trip.id);

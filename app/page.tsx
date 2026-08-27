@@ -820,6 +820,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!activeTripId || !teamReady || !accountReady) return;
+    let disposed = false;
     const poll = async () => {
       if (syncInFlightRef.current || chatSyncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
       const requestedTripId = activeTripIdRef.current;
@@ -827,7 +828,7 @@ export default function Home() {
         const response = await fetch(`/api/trips/${requestedTripId}/state?since=${tripVersionRef.current}`, { cache: "no-store" });
         if (!response.ok) return;
         const payload = await response.json() as ServerTripPayload & { unchanged?: boolean; currentMember?: Member };
-        if (requestedTripId !== activeTripIdRef.current) return;
+        if (disposed || requestedTripId !== activeTripIdRef.current) return;
         if (payload.unchanged) {
           if (Array.isArray(payload.members)) {
             setMembers((current) => JSON.stringify(current) === JSON.stringify(payload.members) ? current : payload.members);
@@ -840,8 +841,22 @@ export default function Home() {
         setSyncStatus("offline");
       }
     };
+    const events = typeof EventSource === "undefined" ? null : new EventSource(`/api/trips/${activeTripId}/events`);
+    events?.addEventListener("trip-update", (rawEvent) => {
+      try {
+        const event = JSON.parse((rawEvent as MessageEvent<string>).data) as { version?: number };
+        if (typeof event.version === "number" && event.version <= tripVersionRef.current) return;
+      } catch {
+        // A malformed notification is harmless: the safety poll will recover.
+      }
+      void poll();
+    });
     const timer = window.setInterval(() => void poll(), 2500);
-    return () => window.clearInterval(timer);
+    return () => {
+      disposed = true;
+      events?.close();
+      window.clearInterval(timer);
+    };
   }, [accountReady, activeTripId, teamReady]);
 
   useEffect(() => {

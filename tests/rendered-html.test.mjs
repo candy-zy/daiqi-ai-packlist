@@ -173,21 +173,29 @@ test("AI suggestions use a prompt-first ranked model response and a server-only 
   assert.match(route, /existingItems/);
 });
 
-test("team chat uses an authenticated atomic message endpoint and shared polling", async () => {
-  const [page, route] = await Promise.all([
+test("team chat uses an authenticated atomic endpoint, realtime events, and polling fallback", async () => {
+  const [page, route, eventsRoute, realtime] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trips/[tripId]/messages/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trips/[tripId]/events/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/_shared/realtime.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /fetch\(`\/api\/trips\/\$\{activeTripId\}\/messages`/);
   assert.match(page, /chatSyncInFlightRef/);
   assert.match(page, /Math\.floor\(Math\.random\(\) \* 1_000_000_000\) \+ 1/);
   assert.match(page, /persistedMessages/);
+  assert.match(page, /new EventSource\(`\/api\/trips\/\$\{activeTripId\}\/events`\)/);
+  assert.match(page, /addEventListener\("trip-update"/);
   assert.match(page, /setInterval\(\(\) => void poll\(\), 2500\)/);
   assert.match(route, /getMembership/);
   assert.match(route, /membership\.slotName/);
   assert.match(route, /messages: \[\.\.\.current\.state\.messages/);
   assert.match(route, /UPDATE trips SET version = version \+ 1/);
   assert.match(route, /chat_message_sent/);
+  assert.match(route, /publishTripEvent/);
+  assert.match(eventsRoute, /text\/event-stream/);
+  assert.match(eventsRoute, /subscribeToTrip/);
+  assert.match(realtime, /__daiqiTripRealtimeListeners/);
 });
 
 test("onboarding resolves weather only after submission and keeps it as hidden AI context", async () => {

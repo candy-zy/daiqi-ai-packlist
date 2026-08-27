@@ -1,4 +1,5 @@
 import { ensureUser, getDatabase, getMembership, getRequestUser, jsonError, loadSnapshot, touchMembership, unauthorized } from "../../../_shared/server";
+import { publishTripEvent } from "../../../_shared/realtime";
 
 type RouteContext = { params: Promise<{ tripId: string }> };
 type AssignmentDecision = "accept" | "decline";
@@ -68,6 +69,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
     await db.batch(statements);
     await touchMembership(db, tripId, user.userId);
+    publishTripEvent({ type: "trip_updated", tripId, version: updated.version, reason: "assignment" });
     return Response.json({ ok: true, version: updated.version, itemId, decision, member: membership.slotName });
   }
 
