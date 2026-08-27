@@ -572,6 +572,7 @@ export default function Home() {
   const [members, setMembers] = useState<MemberRecord[]>(demoMembers);
   const [currentMember, setCurrentMember] = useState<Member>("我");
   const [demoMemberMode, setDemoMemberMode] = useState(false);
+  const [demoIdentity, setDemoIdentity] = useState<Member>("我");
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [tripVersion, setTripVersion] = useState(0);
   const [inviteCode, setInviteCode] = useState("");
@@ -630,14 +631,10 @@ export default function Home() {
   const verifiedCount = verifyItems.length - status.total;
   const myRemaining = items.filter((item) => (isPersonalItem(item) || item.owners.includes(currentMember)) && !item.checked[currentMember]).length;
   const presenceMembers = useMemo(() => {
-    if (demoMemberMode) {
-      return demoMembers.map((member) => ({ ...member, online: member.name === currentMember }));
-    }
-
     if (members.some((member) => member.name === currentMember)) return members;
     const currentMemberFallback = demoMembers.find((member) => member.name === currentMember);
     return currentMemberFallback ? [...members, { ...currentMemberFallback, online: true }] : members;
-  }, [currentMember, demoMemberMode, members]);
+  }, [currentMember, members]);
   const activeItem = activeItemId === null ? null : items.find((item) => item.id === activeItemId) ?? null;
   const activeItemNotes = activeItem ? itemNotes.filter((note) => note.itemId === activeItem.id) : [];
   const todayValue = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -756,9 +753,14 @@ export default function Home() {
           return;
         }
         if (!sessionResponse.ok) throw new Error("账号服务暂不可用");
-        const session = await sessionResponse.json() as { trips?: TripSummary[] };
+        const session = await sessionResponse.json() as { user?: { demoIdentity?: Member }; trips?: TripSummary[] };
         if (cancelled) return;
         const trips = Array.isArray(session.trips) ? session.trips : [];
+        const activeIdentity = session.user?.demoIdentity ?? "我";
+        setDemoIdentity(activeIdentity);
+        setDemoMemberMode(activeIdentity !== "我");
+        setCurrentMember(activeIdentity);
+        setViewedMember(activeIdentity);
         setAvailableTrips(trips);
         setNeedsSignIn(false);
         const profileResponse = await fetch("/api/profile", { cache: "no-store" });
@@ -790,7 +792,7 @@ export default function Home() {
   }, [storageReady]);
 
   useEffect(() => {
-    if (!activeTripId || !teamReady || !accountReady || demoMemberMode) return;
+    if (!activeTripId || !teamReady || !accountReady) return;
     pendingSharedStateRef.current = { items, suggestions, messages, itemNotes, assignmentProposals, tripContext: { startDate, endDate, place: selectedPlace, weather: weatherContext } };
     const serialized = JSON.stringify(pendingSharedStateRef.current);
     if (serialized === lastSyncedStateRef.current || syncInFlightRef.current || syncTimerRef.current !== null) return;
@@ -801,10 +803,10 @@ export default function Home() {
         syncTimerRef.current = null;
       }
     };
-  }, [accountReady, activeTripId, assignmentProposals, demoMemberMode, endDate, itemNotes, items, messages, selectedPlace, startDate, suggestions, teamReady, weatherContext]);
+  }, [accountReady, activeTripId, assignmentProposals, endDate, itemNotes, items, messages, selectedPlace, startDate, suggestions, teamReady, weatherContext]);
 
   useEffect(() => {
-    if (!activeTripId || !teamReady || !accountReady || demoMemberMode) return;
+    if (!activeTripId || !teamReady || !accountReady) return;
     const poll = async () => {
       if (syncInFlightRef.current || syncTimerRef.current !== null || hasPendingCloudChanges()) return;
       const requestedTripId = activeTripIdRef.current;
@@ -825,7 +827,7 @@ export default function Home() {
     };
     const timer = window.setInterval(() => void poll(), 2500);
     return () => window.clearInterval(timer);
-  }, [accountReady, activeTripId, demoMemberMode, teamReady]);
+  }, [accountReady, activeTripId, teamReady]);
 
   useEffect(() => {
     if (!activeTripId || !teamReady || !accountReady) return;
@@ -913,10 +915,8 @@ export default function Home() {
     setDestination(payload.trip.destination);
     setInviteCode(payload.trip.inviteCode);
     cloudMemberRef.current = payload.trip.currentMember;
-    if (!demoMemberMode) {
-      setCurrentMember(payload.trip.currentMember);
-      setViewedMember(payload.trip.currentMember);
-    }
+    setCurrentMember(payload.trip.currentMember);
+    setViewedMember(payload.trip.currentMember);
     setActiveTripId(payload.trip.id);
     activeTripIdRef.current = payload.trip.id;
     setTripVersion(payload.version ?? payload.trip.version);
@@ -939,23 +939,57 @@ export default function Home() {
     applyCloudPayload(await response.json() as ServerTripPayload);
   }
 
-  function switchDemoMember(member: Member) {
-    setDemoMemberMode(true);
-    setCurrentMember(member);
-    setViewedMember(member);
-    setProfileView("home");
-    setShowProfile(false);
-    notify(`演示身份已切换为${member}`, 1800);
+  async function switchDemoMember(member: Member) {
+    if (member === demoIdentity) return;
+    if (activeTripIdRef.current && hasPendingCloudChanges()) await flushCloudStateRef.current();
+    setCloudError("");
+    try {
+      const response = await fetch("/api/demo-session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ identity: member }),
+      });
+      if (!response.ok) throw new Error("身份切换失败");
+      const sessionResponse = await fetch("/api/session", { cache: "no-store" });
+      if (!sessionResponse.ok) throw new Error("无法读取该身份的队伍");
+      const session = await sessionResponse.json() as { trips?: TripSummary[] };
+      const profileResponse = await fetch("/api/profile", { cache: "no-store" });
+      if (profileResponse.ok) {
+        const result = await profileResponse.json() as { profile?: Partial<TravelProfile> };
+        if (result.profile) {
+          const nextProfile = normalizeTravelProfile(result.profile);
+          profileRef.current = nextProfile;
+          setProfile(nextProfile);
+          setProfileDraft(nextProfile);
+        }
+      } else {
+        profileRef.current = defaultProfile;
+        setProfile(defaultProfile);
+        setProfileDraft(defaultProfile);
+      }
+      setDemoIdentity(member);
+      setDemoMemberMode(member !== "我");
+      setCurrentMember(member);
+      setViewedMember(member);
+      setAvailableTrips(Array.isArray(session.trips) ? session.trips : []);
+      setActiveTripId(null);
+      activeTripIdRef.current = null;
+      setTripVersion(0);
+      tripVersionRef.current = 0;
+      pendingSharedStateRef.current = null;
+      lastSyncedStateRef.current = "";
+      window.localStorage.removeItem(cloudTripKey);
+      setTeamReady(false);
+      setProfileView("home");
+      setShowProfile(false);
+      notify(member === "我" ? "已恢复我的账号" : `已切换为${member}的独立测试账号`, 2200);
+    } catch (error) {
+      setCloudError(error instanceof Error ? error.message : "身份切换失败");
+    }
   }
 
   async function exitDemoMemberMode() {
-    setDemoMemberMode(false);
-    const member = cloudMemberRef.current;
-    setCurrentMember(member);
-    setViewedMember(member);
-    if (activeTripIdRef.current) {
-      try { await openCloudTripRef.current(activeTripIdRef.current); } catch { /* 保留当前本地状态，稍后轮询恢复 */ }
-    }
+    await switchDemoMember("我");
   }
 
   async function flushCloudState() {
@@ -1362,7 +1396,7 @@ export default function Home() {
             </section>
             <section className="demo-switcher" aria-label="演示成员切换">
               <div><b>演示身份</b><small>录制 Demo 时快速模拟队友操作</small></div>
-              <div className="demo-switcher-options">{demoMembers.map((member) => <button key={member.name} className={demoMemberMode && currentMember === member.name ? "active" : ""} onClick={() => switchDemoMember(member.name)}>{member.short}</button>)}</div>
+              <div className="demo-switcher-options">{demoMembers.map((member) => <button key={member.name} className={demoIdentity === member.name ? "active" : ""} onClick={() => void switchDemoMember(member.name)}>{member.short}</button>)}</div>
               {demoMemberMode && <button className="demo-exit-button" onClick={() => void exitDemoMemberMode()}>恢复我的账号</button>}
             </section>
             <a className="signout-button" href="/signout-with-chatgpt?return_to=%2F"><LogOut aria-hidden="true" /><span>退出登录</span><span aria-hidden="true">›</span></a>

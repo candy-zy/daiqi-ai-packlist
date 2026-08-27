@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 
-export type AuthenticatedUser = { userId: string; email: string; displayName: string };
+export type AuthenticatedUser = { userId: string; email: string; displayName: string; demoIdentity?: "阿哲" | "小雨" };
 export type TripMember = { name: string; short: string; profile: string; className: string; online: boolean };
 export type SharedTripContext = {
   startDate: string;
@@ -19,13 +19,15 @@ export type SharedTripState = {
 
 const MEMBER_SLOTS = ["我", "阿哲", "小雨", "小安"];
 const AVATAR_CLASSES = ["member-me", "member-zhe", "member-yu", "member-an"];
+const DEMO_IDENTITY_COOKIE = "daiqi_demo_identity";
+const DEMO_IDENTITIES = new Set(["阿哲", "小雨"]);
 
 export function getDatabase(): D1Database {
   if (!env.DB) throw new Error("DATABASE_UNAVAILABLE");
   return env.DB;
 }
 
-export function getRequestUser(request: Request): AuthenticatedUser | null {
+export function getBaseRequestUser(request: Request): AuthenticatedUser | null {
   const userId = request.headers.get("oai-authenticated-user-id");
   const email = request.headers.get("oai-authenticated-user-email");
   if (!userId || !email) return null;
@@ -36,6 +38,34 @@ export function getRequestUser(request: Request): AuthenticatedUser | null {
     try { displayName = decodeURIComponent(encodedName); } catch { /* keep email fallback */ }
   }
   return { userId, email, displayName: displayName.slice(0, 20) };
+}
+
+function cookieValue(request: Request, name: string) {
+  const cookie = request.headers.get("cookie") ?? "";
+  for (const part of cookie.split(";")) {
+    const [rawKey, ...rawValue] = part.trim().split("=");
+    if (rawKey !== name) continue;
+    try { return decodeURIComponent(rawValue.join("=")); } catch { return ""; }
+  }
+  return "";
+}
+
+export function getRequestUser(request: Request): AuthenticatedUser | null {
+  const base = getBaseRequestUser(request);
+  if (!base) return null;
+  const demoIdentity = cookieValue(request, DEMO_IDENTITY_COOKIE);
+  if (!DEMO_IDENTITIES.has(demoIdentity)) return base;
+  const identity = demoIdentity as "阿哲" | "小雨";
+  return {
+    userId: `${base.userId}:demo:${identity}`,
+    email: `${encodeURIComponent(base.userId)}.${encodeURIComponent(identity)}@demo.daiqi.local`,
+    displayName: identity,
+    demoIdentity: identity,
+  };
+}
+
+export function demoIdentityCookieName() {
+  return DEMO_IDENTITY_COOKIE;
 }
 
 export function unauthorized() {

@@ -383,7 +383,8 @@ test("personal earphones and demo identities keep complete avatar context", asyn
   assert.match(page, /"牙刷", "毛巾", "耳机", "流量卡"/);
   assert.match(page, /members\.find\(\(member\) => member\.name === owner\) \?\? demoMembers\.find/);
   assert.match(page, /const presenceMembers = useMemo/);
-  assert.match(page, /demoMembers\.map\(\(member\) => \(\{ \.\.\.member, online: member\.name === currentMember \}\)\)/);
+  assert.match(page, /fetch\("\/api\/demo-session"/);
+  assert.match(page, /setAvailableTrips\(Array\.isArray\(session\.trips\) \? session\.trips : \[\]\)/);
   assert.match(page, /presenceMembers\.map/);
 });
 
@@ -599,11 +600,12 @@ test("claim actions stay quiet and AI suggestions use two compact fixed cards", 
 });
 
 test("ships authenticated cloud collaboration with invite codes and server-authoritative state", async () => {
-  const [hosting, schema, migration, shared, session, trips, join, state, page] = await Promise.all([
+  const [hosting, schema, migration, shared, demoSession, session, trips, join, state, page] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0000_stormy_darkhawk.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/api/_shared/server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/demo-session/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/session/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trips/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trips/join/route.ts", import.meta.url), "utf8"),
@@ -617,6 +619,10 @@ test("ships authenticated cloud collaboration with invite codes and server-autho
   assert.match(schema, /export const users/);
   assert.match(schema, /export const tripMembers/);
   assert.match(shared, /oai-authenticated-user-id/);
+  assert.match(shared, /daiqi_demo_identity/);
+  assert.match(shared, /:demo:\$\{identity\}/);
+  assert.match(demoSession, /HttpOnly/);
+  assert.match(demoSession, /SameSite=Lax/);
   assert.match(shared, /actorSlot && previous && slot !== actorSlot/);
   assert.match(shared, /owner !== actorSlot/);
   assert.match(shared, /existing\?\.author \?\? actorSlot/);
